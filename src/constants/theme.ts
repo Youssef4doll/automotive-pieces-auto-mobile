@@ -15,8 +15,6 @@
  *   for anything a finger touches; 48 is what a primary action gets.
  */
 
-import '@/global.css';
-
 import { Platform } from 'react-native';
 
 /** The brand ramp, whole. Prefer a semantic colour below where one exists. */
@@ -47,35 +45,110 @@ export const Brand = {
 export const Colors = {
   light: {
     text: Brand.navy900,
+    /** Anything secondary: hints, counts, the line under a row. */
+    textMuted: '#4b5563',
+    /** On a navy surface. */
+    textInverse: Brand.white,
     background: Brand.white,
-    backgroundElement: Brand.navy50,
-    backgroundSelected: Brand.navy300,
-    textSecondary: '#4b5563',
-  },
-  dark: {
-    text: Brand.white,
-    background: Brand.navy950,
-    backgroundElement: Brand.navy800,
-    backgroundSelected: Brand.navy700,
-    textSecondary: Brand.navy300,
+    /** Cards, list rows, the inside of a search field. */
+    surface: Brand.navy50,
+    /** The navy header and anything else painted with the brand. */
+    surfaceBrand: Brand.navy900,
+    border: '#dbe3f0',
+    /** The one accent. Fill only — never text on white; see above. */
+    accent: Brand.gold500,
+    /** Text and icons that sit ON the accent. */
+    onAccent: Brand.navy900,
+    danger: Brand.red600,
   },
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+/**
+ * There is one theme, and it is the shop's.
+ *
+ * The website has no dark mode — white with a navy header, in daylight and at
+ * night — and `userInterfaceStyle` is pinned to light in app.json for the same
+ * reason. The scaffold shipped a `Colors.dark` next to this whose values were
+ * invented here rather than taken from the site; keeping it would have meant
+ * the app quietly rendering a skin the shop has never approved on any phone
+ * whose owner has dark mode switched on. It is gone. If the shop ever wants a
+ * dark mode, it is designed on the website first and copied here, like every
+ * other token in this file.
+ */
+export const C = Colors.light;
+
+export type ThemeColor = keyof typeof Colors.light;
 
 /**
+ * The four families, with the weights the screens actually use.
+ *
  * Barlow for body, Barlow Semi Condensed for the uppercase labels and
  * buttons, Archivo for headings. Cairo for Arabic, because none of the other
  * three has Arabic glyphs — under RTL the whole stack swaps, headings
- * included. The families still have to be loaded with expo-font before these
- * names resolve; until then React Native silently falls back to the system
- * face, which is why this is a task and not a decoration.
+ * included, which is what `familyFor` below is for.
+ *
+ * React Native does not synthesise a bold: setting `fontWeight: '700'` on a
+ * face that was loaded as Regular gives a fake, badly spaced bold on Android
+ * and is silently ignored on iOS. So a weight here is a separate loaded face
+ * with its own name, and nothing in this app sets `fontWeight` — it picks a
+ * family. The names match the keys in `useAppFonts`; a typo in one of them
+ * falls back to the system face with no error anywhere, so they are written
+ * once, here.
  */
 export const Fonts = {
-  body: 'Barlow',
-  display: 'BarlowSemiCondensed',
-  heading: 'Archivo',
-  arabic: 'Cairo',
+  body: 'Barlow_400Regular',
+  bodyMedium: 'Barlow_500Medium',
+  bodySemi: 'Barlow_600SemiBold',
+  display: 'BarlowSemiCondensed_600SemiBold',
+  heading: 'Archivo_700Bold',
+  headingStrong: 'Archivo_800ExtraBold',
+  arabic: 'Cairo_400Regular',
+  arabicSemi: 'Cairo_700Bold',
+  arabicHeading: 'Cairo_800ExtraBold',
+} as const;
+
+export type FontRole = 'body' | 'bodyMedium' | 'bodySemi' | 'display' | 'heading' | 'headingStrong';
+
+/**
+ * The family for a role, in the language being rendered.
+ *
+ * Arabic gets Cairo for every role rather than only for body text. The first
+ * draft swapped the body face and left the headings on Archivo, which has no
+ * Arabic glyphs: every screen title rendered as boxes. Three weights of Cairo
+ * do not map one-to-one onto six roles of three Latin families, and pretending
+ * otherwise would be worse than this — the roles collapse onto the nearest
+ * Cairo weight and the hierarchy survives.
+ */
+export function familyFor(role: FontRole, isArabic: boolean): string {
+  if (!isArabic) return Fonts[role];
+  switch (role) {
+    case 'heading':
+    case 'headingStrong':
+      return Fonts.arabicHeading;
+    case 'display':
+    case 'bodySemi':
+      return Fonts.arabicSemi;
+    default:
+      return Fonts.arabic;
+  }
+}
+
+/**
+ * Type sizes, in points.
+ *
+ * `lineHeight` is stated for every one of them. React Native's default
+ * leading depends on the font's own metrics, and Cairo's are taller than
+ * Barlow's — left to themselves, the same screen in Arabic came out about a
+ * line and a half longer than in French and the last row fell under the tab
+ * bar. Fixing the leading here makes the three languages lay out the same.
+ */
+export const Type = {
+  screenTitle: { fontSize: 28, lineHeight: 34 },
+  sectionTitle: { fontSize: 20, lineHeight: 26 },
+  rowTitle: { fontSize: 17, lineHeight: 22 },
+  body: { fontSize: 15, lineHeight: 21 },
+  label: { fontSize: 13, lineHeight: 17, letterSpacing: 0.6 },
+  hint: { fontSize: 13, lineHeight: 18 },
 } as const;
 
 /** Minimum touch target sizes, in points. Not negotiable downwards. */
@@ -95,5 +168,19 @@ export const Spacing = {
   six: 64,
 } as const;
 
+export const Radius = {
+  row: 12,
+  card: 16,
+  pill: 999,
+} as const;
+
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+
+/**
+ * A phone's worth of width, centred, on anything wider.
+ *
+ * The app runs on tablets and in a browser during development, and a list of
+ * makes stretched to 1400px is unreadable — the tap target for "Renault" ends
+ * up a metre from the name. 800 is the website's own content width.
+ */
 export const MaxContentWidth = 800;
