@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
 import type { Resource } from '@/hooks/use-resource';
+import { Trail, type TrailStep } from '@/components/ui/chip';
 import { FilterField, fold } from '@/components/ui/filter-field';
 import { ListRow } from '@/components/ui/list-row';
 import { Screen } from '@/components/ui/screen';
 import { Empty, Failed, Loading } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
+import { Tile } from '@/components/ui/tile';
 import { C, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
 
@@ -17,7 +19,13 @@ import { useI18n } from '@/i18n/provider';
  * different row. Writing it once is not only less code — it is the only way
  * the three steps agree about the things that are easy to get subtly
  * different: when the filter box appears, what an empty list says, what a
- * failed request says, and where the step counter sits.
+ * failed request says, and how the breadcrumb reads.
+ *
+ * `layout` chooses between a list of cards and a grid of tiles. The first two
+ * steps are lists because a make is picked from ten or forty and scanned down
+ * a column; the motorisation is a grid because it is the last choice, there
+ * are rarely more than four, and they are compared against each other rather
+ * than searched for.
  */
 
 export type PickerItem = {
@@ -27,6 +35,8 @@ export type PickerItem = {
   note: string | null;
   /** What the filter box matches against — the name, plus anything else useful. */
   haystack: string;
+  /** Grid only: draws the accent outline and a check. */
+  marked?: boolean;
   onPress: () => void;
 };
 
@@ -39,22 +49,32 @@ export type PickerItem = {
 const FILTER_THRESHOLD = 12;
 
 export function PickerScreen<T>({
-  step,
+  trail,
   heading,
+  layout = 'list',
   resource,
   toItems,
   emptyTitle,
   emptyBody,
   footer,
 }: {
-  /** 1, 2 or 3. Shown as "Étape n sur 3". */
-  step: 1 | 2 | 3;
+  /** Marque → Modèle → Motorisation, with what has been chosen so far. */
+  trail: TrailStep[];
   heading: string;
+  layout?: 'list' | 'grid';
   resource: Resource<T[]>;
   toItems: (data: T[]) => PickerItem[];
   emptyTitle: string;
   emptyBody?: string | null;
-  /** A line under the list — where the picker admits what it does not have. */
+  /**
+   * Where the picker admits what it does not have.
+   *
+   * Pinned to the bottom of the screen rather than appended to the list. It
+   * used to ride under the last row, which on the engine grid — two tiles and
+   * then nothing — left it stranded in the middle of an empty screen looking
+   * like a failed load. It is a standing caveat about the shop's data, not a
+   * list item, so it sits where a standing caveat belongs.
+   */
   footer?: string | null;
 }) {
   const { t, rtl } = useI18n();
@@ -71,11 +91,15 @@ export function PickerScreen<T>({
     [items, needle],
   );
 
+  const grid = layout === 'grid';
+
   return (
     <Screen edges={['left', 'right', 'bottom']}>
       <View style={styles.head}>
-        <Text variant="label">{t('picker.step', { n: step })}</Text>
-        <Text variant="screenTitle">{heading}</Text>
+        <Trail steps={trail} />
+        <Text variant="screenTitle" style={styles.heading}>
+          {heading}
+        </Text>
       </View>
 
       {resource.status === 'loading' ? <Loading /> : null}
@@ -103,56 +127,80 @@ export function PickerScreen<T>({
               <FlatList
                 data={shown}
                 keyExtractor={(item) => item.key}
-                renderItem={({ item }) => (
-                  <ListRow
-                    title={item.title}
-                    subtitle={item.subtitle}
-                    note={item.note}
-                    onPress={item.onPress}
-                  />
-                )}
-                ItemSeparatorComponent={Separator}
+                // Remounting the list when the layout changes is deliberate:
+                // FlatList caches item heights, and switching column count on
+                // a live list leaves it measuring a grid with a list's
+                // geometry.
+                key={layout}
+                numColumns={grid ? 2 : 1}
+                columnWrapperStyle={grid ? styles.gridRow : undefined}
+                renderItem={({ item }) =>
+                  grid ? (
+                    <Tile
+                      title={item.title}
+                      detail={item.subtitle}
+                      note={item.note}
+                      marked={item.marked}
+                      onPress={item.onPress}
+                    />
+                  ) : (
+                    <ListRow
+                      title={item.title}
+                      subtitle={item.subtitle}
+                      note={item.note}
+                      onPress={item.onPress}
+                    />
+                  )
+                }
+                ItemSeparatorComponent={Gap}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.list}
-                ListFooterComponent={
-                  footer ? (
-                    <Text
-                      variant="hint"
-                      style={[styles.footer, { textAlign: rtl ? 'right' : 'left' }]}
-                    >
-                      {footer}
-                    </Text>
-                  ) : null
-                }
+                showsVerticalScrollIndicator={false}
               />
             )}
           </>
         )
       ) : null}
+
+      {footer ? (
+        <View style={styles.footerBar}>
+          <Text variant="hint" tone={C.textFaint} style={{ textAlign: rtl ? 'right' : 'left' }}>
+            {footer}
+          </Text>
+        </View>
+      ) : null}
     </Screen>
   );
 }
 
-function Separator() {
-  return <View style={styles.separator} />;
+/** Air between cards. Replaces the hairline the rows used to be split by. */
+function Gap() {
+  return <View style={styles.gap} />;
 }
 
 const styles = StyleSheet.create({
   head: {
-    paddingTop: Spacing.three,
+    paddingTop: Spacing.two,
     paddingBottom: Spacing.three,
     gap: Spacing.one,
+  },
+  heading: {
+    paddingTop: Spacing.two,
   },
   list: {
     paddingBottom: Spacing.six,
   },
-  separator: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: C.border,
-    marginHorizontal: Spacing.three,
+  gap: {
+    height: Spacing.two,
   },
-  footer: {
+  gridRow: {
+    gap: Spacing.two,
+  },
+  footerBar: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: C.border,
     paddingHorizontal: Spacing.three,
-    paddingTop: Spacing.four,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
   },
 });

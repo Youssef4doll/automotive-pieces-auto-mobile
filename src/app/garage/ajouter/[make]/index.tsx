@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 
 import { vehiclesApi, yearRange, type Model } from '@/api/vehicles';
 import { PickerScreen, type PickerItem } from '@/components/picker-screen';
+import type { TrailStep } from '@/components/ui/chip';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
 
@@ -53,13 +54,21 @@ export default function ModelsScreen() {
     [make, makeName, makeId, router, t],
   );
 
+  const trail: TrailStep[] = [
+    // The first step shows what was chosen, not what it asked, and goes back
+    // to it. That is the breadcrumb doing two jobs at once.
+    { label: makeName || t('picker.stepMake'), state: 'done', onPress: () => router.back() },
+    { label: t('picker.stepModel'), state: 'current' },
+    { label: t('picker.stepEngine'), state: 'upcoming' },
+  ];
+
   return (
     <>
       {/* The make's name is the title — "Renault", not "Modèle". The customer
           has just chosen it and the header is where they check they did. */}
       <Stack.Screen options={{ title: makeName || t('picker.stepModel') }} />
       <PickerScreen
-        step={2}
+        trail={trail}
         heading={t('picker.chooseModel')}
         resource={resource}
         toItems={toItems}

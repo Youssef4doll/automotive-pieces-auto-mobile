@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { C, Radius, Spacing, Tap } from '@/constants/theme';
@@ -5,24 +6,26 @@ import { useI18n } from '@/i18n/provider';
 import { Text } from './text';
 
 /**
- * One tappable row: a title, an optional line under it, an optional trailing
- * note, and a chevron.
+ * One tappable row, as a card.
  *
- * The garage is three screens of these, so the details are worth stating.
+ * The garage's first two steps are screens of these, so the details matter.
  *
- * The whole row is the touch target, 56pt tall rather than the 44 minimum —
- * this is a list somebody scrolls with a thumb while holding a gearbox part
- * in the other hand, and the rows are mostly short words with a lot of space
- * between them.
+ * It is a card rather than a hairline-separated row because a list of ten
+ * makes separated by 1px lines reads as a settings screen, and this is the
+ * shop's front door. Cards with air between them also give the count on the
+ * right somewhere to sit without colliding with the name.
+ *
+ * The whole card is the touch target, 64pt tall against the 44 minimum —
+ * this is scrolled with a thumb by somebody holding a gearbox part in the
+ * other hand.
  *
  * `subtitle` and `note` are `string | null`, not `string | undefined`, and a
  * null renders nothing. That is the shop's rule in the type system: a row
- * about a model with no recorded years shows the model and stops. There is no
+ * about a model with no recorded years shows the model and stops. No
  * placeholder, no "—", no "année inconnue".
  *
- * The chevron flips under RTL, and so does the row, because a right-to-left
- * list with the chevron still on the right points back the way the customer
- * came.
+ * The chevron flips under RTL, and so does the row — a right-to-left list
+ * with the chevron still on the right points back the way the customer came.
  */
 export function ListRow({
   title,
@@ -57,49 +60,54 @@ export function ListRow({
         {subtitle ? <Text variant="hint">{subtitle}</Text> : null}
       </View>
 
+      {/* The count is a quiet pill, not a sentence in grey. It is a fact
+          about the catalogue and it should read as a tag, not as a caption
+          competing with the model's years on the line above. */}
       {note ? (
-        <Text variant="hint" style={styles.note}>
-          {note}
-        </Text>
+        <View style={styles.noteChip}>
+          <Text variant="hint" tone={C.textMuted} numberOfLines={1}>
+            {note}
+          </Text>
+        </View>
       ) : null}
 
-      <Text variant="rowTitle" tone={C.textMuted} style={styles.chevron}>
-        {rtl ? '‹' : '›'}
-      </Text>
+      <Feather
+        name={rtl ? 'chevron-left' : 'chevron-right'}
+        size={20}
+        color={C.textFaint}
+      />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    minHeight: 56,
+    minHeight: 64,
     alignItems: 'center',
-    gap: Spacing.three,
+    gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    borderRadius: Radius.row,
+    borderRadius: Radius.card,
+    backgroundColor: C.surface,
   },
   text: {
     flex: 1,
     gap: 1,
   },
-  note: {
-    // The count must not push the name off the row on a narrow phone, and it
-    // must not wrap onto two lines either.
+  noteChip: {
     flexShrink: 0,
-    textAlign: 'right',
-  },
-  chevron: {
-    flexShrink: 0,
-    minWidth: Spacing.three,
-    textAlign: 'center',
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.half,
+    borderRadius: Radius.chip,
+    backgroundColor: C.background,
   },
   selected: {
-    backgroundColor: C.surface,
+    borderWidth: 1.5,
+    borderColor: C.accent,
   },
   pressed: {
-    backgroundColor: C.surface,
+    backgroundColor: C.surfacePressed,
   },
 });
 
-export const ROW_MIN_HEIGHT = Math.max(56, Tap.min);
+export const ROW_MIN_HEIGHT = Math.max(64, Tap.min);

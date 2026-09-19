@@ -29,7 +29,8 @@ src/
     vehicles.ts           the vehicle endpoints, their types, their formatters
   components/
     picker-screen.tsx     one step of the picker; all three steps are this
-    ui/                   text, screen, button, list-row, states, filter-field
+    ui/                   text, screen, button, list-row, tile, chip (the
+                          breadcrumb), states, filter-field
   constants/
     theme.ts              the brand — colours, faces, type sizes, tap sizes
     config.ts             where the shop is, and how long to wait for it
@@ -229,7 +230,70 @@ the last row fell under the tab bar.
 
 ---
 
-## 7. The brand
+## 7. The visual language
+
+Drawn from two references the owner pointed at — a booking app and a template
+browser — and reduced to the handful of moves that actually carry them.
+
+**A hero with a sheet pulled over it.** The home screen is a navy panel with
+the customer's car set large in it, and a light rounded panel overlapping its
+bottom edge by 28pt. The overlap is the whole effect; without the negative
+margin these are two stacked blocks and the screen looks assembled rather than
+designed. The hero runs under the status bar and carries the safe-area inset
+in its own padding, because an inset applied outside it leaves a white band
+over the navy.
+
+**There is no photography, and that is a decision, not an omission.** Both
+references get most of their impact from a full-bleed photograph. This shop
+has almost no product photographs and no lifestyle photography at all — see
+`BRIEF.md` §8. A stock photograph of somebody else's workshop behind the
+headline would invent the shop's premises exactly the way a fake stock count
+invents its shelves, and it would also be somebody else's asset. So the hero
+is navy, and the presence comes from type size and the overlap instead. It
+costs nothing and it is true. When the shop has its own photographs, the hero
+is where the first one goes.
+
+**The other thing the references do that this app must not.** They are full of
+"Top 10", "123K users", "Trendy" — social proof with nothing behind it. That
+is the form this app takes the structure from and refuses the content of. The
+counts on a picker row are distinct active parts with a recorded fitment,
+counted by Postgres; there is no badge in this app that is not a fact.
+
+**Accent discipline.** Gold marks exactly two things: the one primary action
+on a screen, and state (the current breadcrumb step, the active car, a
+selected tile). Everything else is navy, the light surface, or nothing. The
+moment gold marks a third category it stops meaning anything.
+
+**Depth in two steps.** `Elevation.resting` for cards sitting on the
+background, `Elevation.lifted` for a sheet over a hero. There is no third.
+Tuned dark and wide — navy at low opacity over a long radius — because black
+at high opacity over a short one reads as a border someone got wrong.
+
+**Two layouts for a choice, picked by what the choice is.** Makes and models
+are lists of cards: scanned down a column, sometimes filtered, occasionally
+forty of them. The motorisation is a grid of tiles: it is the last choice and
+the one the whole app hangs off, there are rarely more than four, and they are
+compared against each other rather than searched for. A tile already in the
+garage gets the accent outline and a check — "already chosen" and "chosen now"
+are the same fact from the customer's side.
+
+**The breadcrumb replaced the step counter.** "ÉTAPE 1 SUR 3" said how far
+along the customer was and nothing else. `Renault › Clio IV › Motorisation`
+says the same thing, plus what they have already picked — which is the
+question they actually have at step three — and the completed steps are the
+way back. A step that looks pressable is pressable; the ones not reached yet
+are outlined and inert.
+
+**Icons are Feather, from `@expo/vector-icons`.** An earlier note in this file
+said the project could not use an icon set without breaking the shop's rule
+about not copying another party's assets. That was wrong, and the rule it
+cited is about not copying *another shop's* branding — a permissively licensed
+icon font is a dependency like Barlow is, not a competitor's logo. The
+placeholder geometric marks it caused are gone.
+
+---
+
+## 8. The brand
 
 `src/constants/theme.ts`, copied from the website's `globals.css`. Change it
 there, in one place.
@@ -248,7 +312,7 @@ for inline secondary controls.
 
 ---
 
-## 8. Two decisions the brief asked to be made early
+## 9. Two decisions the brief asked to be made early
 
 ### "À vérifier" is the normal case, and the app is built for that
 
@@ -309,7 +373,7 @@ Specifically, and to be built with the checkout:
 
 ---
 
-## 9. Running it
+## 10. Running it
 
 ```bash
 npm install
@@ -336,16 +400,21 @@ surface. The website is the website.
 
 ---
 
-## 10. How this repo is worked on
+## 11. How this repo is worked on
 
 The website's four lines, which apply here and earned their place again this
 session:
 
 - **Measure, don't assert.** Build it, run it, screenshot it, and read the
-  screenshot. Three bugs in this session were invisible to a clean typecheck
-  and obvious in a screenshot: the RTL restart prompt on an English screen,
-  tab labels sheared off along the bottom edge, and then — after the first
-  "fix" — tab labels gone entirely while the bar still looked deliberate.
+  screenshot. Everything that has gone wrong here was invisible to a clean
+  typecheck and obvious in a screenshot: the RTL restart prompt on an English
+  screen, and the tab bar's height wrong three separate times — labels sheared
+  off, then gone entirely while the bar still looked deliberate, then sheared
+  again once the placeholder glyphs became real icons. That number cannot be
+  reasoned about from the font size, because the navigator adds margins of its
+  own. It is also worth screenshotting what looks broken before fixing it: the
+  grid tiles appeared to have a hard dark edge at 2x, and at 4x it was just
+  the shadow rendering correctly.
 - **A missing precondition is a FAIL, not a skip.**
 - **One copy of a rule.** Validation, price formatting, availability logic and
   the dictionaries exist on the website. Share or port them deliberately;

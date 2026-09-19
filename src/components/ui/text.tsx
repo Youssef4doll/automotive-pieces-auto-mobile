@@ -18,9 +18,17 @@ import { useI18n } from '@/i18n/provider';
  * ("Clio IV" in a right-to-left list) laid itself out left-aligned in a
  * right-aligned row and the punctuation ended up on the wrong side.
  */
-export type Variant = 'screenTitle' | 'sectionTitle' | 'rowTitle' | 'body' | 'label' | 'hint';
+export type Variant =
+  | 'hero'
+  | 'screenTitle'
+  | 'sectionTitle'
+  | 'rowTitle'
+  | 'body'
+  | 'label'
+  | 'hint';
 
 const ROLE: Record<Variant, FontRole> = {
+  hero: 'headingStrong',
   screenTitle: 'headingStrong',
   sectionTitle: 'heading',
   rowTitle: 'bodySemi',
@@ -30,6 +38,7 @@ const ROLE: Record<Variant, FontRole> = {
 };
 
 const TONE: Record<Variant, string> = {
+  hero: C.text,
   screenTitle: C.text,
   sectionTitle: C.text,
   rowTitle: C.text,

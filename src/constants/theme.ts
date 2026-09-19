@@ -54,12 +54,32 @@ export const Colors = {
     surface: Brand.navy50,
     /** The navy header and anything else painted with the brand. */
     surfaceBrand: Brand.navy900,
+    /** A surface being pressed. Darker than `surface`, never an opacity fade. */
+    surfacePressed: '#e2e9f5',
     border: '#dbe3f0',
+    /** Dimmed to the edge of legibility: a step not reached, a disabled row. */
+    textFaint: '#9aa3b2',
     /** The one accent. Fill only — never text on white; see above. */
     accent: Brand.gold500,
     /** Text and icons that sit ON the accent. */
     onAccent: Brand.navy900,
     danger: Brand.red600,
+
+    /**
+     * On the navy hero.
+     *
+     * Separate entries rather than reusing `textInverse` everywhere, because
+     * the hero needs a second, quieter tone for the line under the headline
+     * and plain white at 60% opacity is not it — a translucent white over
+     * navy goes grey-blue and muddy. navy300 is the shop's own answer, and it
+     * measures 6.9:1 on navy950.
+     */
+    heroText: Brand.white,
+    heroTextMuted: Brand.navy300,
+    /** A control sitting on the hero — a chip, a button. */
+    heroSurface: Brand.navy800,
+    /** A divider drawn ON navy — the light border disappears there. */
+    navy700: Brand.navy700,
   },
 } as const;
 
@@ -143,6 +163,14 @@ export function familyFor(role: FontRole, isArabic: boolean): string {
  * bar. Fixing the leading here makes the three languages lay out the same.
  */
 export const Type = {
+  /**
+   * The one oversized size, for a headline on the navy hero.
+   *
+   * Tight leading (40 on 38) because it is set in two or three short lines —
+   * a make on one, a model on the next — and default leading pulls those
+   * apart until they stop reading as one object.
+   */
+  hero: { fontSize: 38, lineHeight: 40, letterSpacing: -0.8 },
   screenTitle: { fontSize: 28, lineHeight: 34 },
   sectionTitle: { fontSize: 20, lineHeight: 26 },
   rowTitle: { fontSize: 17, lineHeight: 22 },
@@ -168,10 +196,59 @@ export const Spacing = {
   six: 64,
 } as const;
 
+/**
+ * Corner radii.
+ *
+ * Bigger than the first pass, and deliberately so: a 12pt radius on a phone
+ * card reads as a 2018 list, and the shop's own storefront is softer than
+ * that. The scale steps rather than drifting — a `sheet` beside a `card`
+ * beside a `tile` should look like three sizes of the same idea, not three
+ * separate decisions.
+ *
+ * `sheet` is the big one: a light panel that overlaps a navy hero. `hero` is
+ * the bottom corners of the hero itself, slightly larger so the two nest
+ * without the inner corner looking pinched.
+ */
 export const Radius = {
-  row: 12,
-  card: 16,
+  chip: 999,
+  tile: 18,
+  card: 20,
+  sheet: 28,
+  hero: 32,
   pill: 999,
+} as const;
+
+/**
+ * Depth, in two steps and no more.
+ *
+ * The references this was drawn from get most of their modernity from
+ * layering — a light sheet sitting over a darker surface, with a soft shadow
+ * selling the gap. What they do not have is six elevation levels: every
+ * shadow in a well-behaved phone UI is either "this floats a little" or
+ * "this floats over everything".
+ *
+ * Tuned dark and wide rather than black and tight. `#081633` at low opacity
+ * spread over 24pt reads as depth; `#000` at high opacity over 4pt reads as a
+ * border someone got wrong. Android takes `elevation` and ignores the rest,
+ * which is why both are set.
+ */
+export const Elevation = {
+  /** Cards and tiles resting on the background. */
+  resting: {
+    shadowColor: Brand.navy950,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  /** A sheet overlapping a hero, or anything the eye should read as on top. */
+  lifted: {
+    shadowColor: Brand.navy950,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 28,
+    elevation: 8,
+  },
 } as const;
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;

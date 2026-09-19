@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 
 import { engineDetail, vehiclesApi, type Engine } from '@/api/vehicles';
 import { PickerScreen, type PickerItem } from '@/components/picker-screen';
+import type { TrailStep } from '@/components/ui/chip';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
@@ -85,11 +86,15 @@ export default function EnginesScreen() {
         key: engine.id,
         title: engine.name,
         subtitle: engineDetail(engine),
+        // A tile that is already in the garage says so instead of repeating
+        // the part count — "déjà dans votre garage" is the more useful fact
+        // at the moment of choosing, and the count is on the row behind it.
         note: isSaved(engine.id)
           ? t('picker.alreadySaved')
           : engine.partCount > 0
             ? t('picker.partCount', { n: engine.partCount })
             : null,
+        marked: isSaved(engine.id),
         haystack: [engine.name, engine.fuel, engine.engineCode].filter(Boolean).join(' '),
         onPress: () => choose(engine),
       })),
@@ -99,12 +104,28 @@ export default function EnginesScreen() {
     [choose, isSaved, t, vehicles],
   );
 
+  const trail: TrailStep[] = [
+    // Two taps back, not one. `router.back()` twice would animate through
+    // the model list; `dismissTo` goes straight there.
+    {
+      label: makeName || t('picker.stepMake'),
+      state: 'done',
+      onPress: () => router.dismissTo('/garage/ajouter'),
+    },
+    { label: modelName || t('picker.stepModel'), state: 'done', onPress: () => router.back() },
+    { label: t('picker.stepEngine'), state: 'current' },
+  ];
+
   return (
     <>
       <Stack.Screen options={{ title: modelName || t('picker.stepEngine') }} />
       <PickerScreen
-        step={3}
+        trail={trail}
         heading={t('picker.chooseEngine')}
+        // A grid, not a list. This is the last choice and the one the whole
+        // app hangs off; there are rarely more than four, and they are
+        // compared side by side rather than scanned down a column.
+        layout="grid"
         resource={resource}
         toItems={toItems}
         emptyTitle={t('picker.noEngines')}

@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
     backgroundColor: C.surface,
-    borderRadius: Radius.row,
+    borderRadius: Radius.card,
     paddingHorizontal: Spacing.three,
     minHeight: Tap.primary,
     marginBottom: Spacing.two,

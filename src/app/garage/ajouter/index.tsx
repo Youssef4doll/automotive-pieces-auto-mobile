@@ -3,6 +3,7 @@ import { useCallback } from 'react';
 
 import { vehiclesApi, type Make } from '@/api/vehicles';
 import { PickerScreen, type PickerItem } from '@/components/picker-screen';
+import type { TrailStep } from '@/components/ui/chip';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
 
@@ -44,11 +45,17 @@ export default function MakesScreen() {
     [router, t],
   );
 
+  const trail: TrailStep[] = [
+    { label: t('picker.stepMake'), state: 'current' },
+    { label: t('picker.stepModel'), state: 'upcoming' },
+    { label: t('picker.stepEngine'), state: 'upcoming' },
+  ];
+
   return (
     <>
       <Stack.Screen options={{ title: t('picker.stepMake') }} />
       <PickerScreen
-        step={1}
+        trail={trail}
         heading={t('picker.chooseMake')}
         resource={resource}
         toItems={toItems}

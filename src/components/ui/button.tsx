@@ -68,7 +68,7 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     minHeight: Tap.primary,
-    borderRadius: Radius.row,
+    borderRadius: Radius.card,
     justifyContent: 'center',
     paddingHorizontal: Spacing.four,
   },

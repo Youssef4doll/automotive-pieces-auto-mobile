@@ -26,6 +26,9 @@ const dict = {
     'home.noVehicleWhy':
       "Dites-la une fois. Ensuite chaque pièce indique si elle lui va — ou si c'est à vérifier.",
     'home.yourVehicle': 'Votre véhicule',
+    'home.heroLine1': 'Les bonnes',
+    'home.heroLine2': 'pièces.',
+    'home.changeCarWhy': 'Voir le garage, ou ajouter une autre voiture',
 
     'garage.title': 'Mon garage',
     'garage.active': 'Actif',
@@ -94,6 +97,9 @@ const dict = {
     'home.noVehicleWhy':
       'Tell it once. After that every part says whether it fits — or that it needs checking.',
     'home.yourVehicle': 'Your vehicle',
+    'home.heroLine1': 'The right',
+    'home.heroLine2': 'parts.',
+    'home.changeCarWhy': 'See the garage, or add another car',
 
     'garage.title': 'My garage',
     'garage.active': 'Active',
@@ -159,6 +165,9 @@ const dict = {
     'home.noVehicleWhy':
       'أخبرنا بها مرّة واحدة. بعدها تُظهر كل قطعة إن كانت تناسبها، أو أنّها تحتاج تحقّقاً.',
     'home.yourVehicle': 'سيارتك',
+    'home.heroLine1': 'القطع',
+    'home.heroLine2': 'المناسبة.',
+    'home.changeCarWhy': 'اعرض المرآب، أو أضف سيارة أخرى',
 
     'garage.title': 'مرآبي',
     'garage.active': 'نشطة',

@@ -1,8 +1,7 @@
+import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Text } from '@/components/ui/text';
 import { C, familyFor, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
 
@@ -29,14 +28,18 @@ export default function TabsLayout() {
    * sheared off along the bottom edge — visible in a screenshot, invisible to
    * a typecheck.
    *
-   * 64 is measured rather than guessed: the mark is 21pt of line box and the
-   * label another 15, so the content needs about 44 before padding. A first
-   * fix set 56 with 8pt of padding at each end, which left 40 — and the
-   * labels did not clip, they disappeared entirely, which is the worse
-   * failure because the tab bar still looked deliberate. Screenshot every
-   * change to this number.
+   * The number has now been wrong three times, in three different ways: 48
+   * sheared the descenders off "Mon garage", 56 with 8pt of padding at each
+   * end made the labels vanish entirely while the bar still looked
+   * deliberate, and 64 sheared them again once the placeholder glyphs became
+   * 20pt icons. 76 leaves the icon (20), the label (17 of line box) and the
+   * gap between them about 12pt of slack.
+   *
+   * The lesson, written here because it keeps being relearned: this cannot
+   * be reasoned about from the font size, because the navigator adds margins
+   * of its own. Screenshot the bar after every change to it.
    */
-  const barHeight = 64 + insets.bottom;
+  const barHeight = 76 + insets.bottom;
 
   return (
     <Tabs
@@ -51,7 +54,7 @@ export default function TabsLayout() {
           borderTopColor: C.border,
           height: barHeight,
           paddingTop: Spacing.two,
-          paddingBottom: insets.bottom + Spacing.one,
+          paddingBottom: insets.bottom + Spacing.two,
         },
         tabBarLabelStyle: { fontFamily: familyFor('display', rtl), fontSize: 12 },
       }}
@@ -59,9 +62,12 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          // The hero is the header on this screen. A navy bar above a navy
+          // hero is two headers with a seam between them.
+          headerShown: false,
           title: t('app.name'),
           tabBarLabel: t('tab.home'),
-          tabBarIcon: ({ focused }) => <TabMark glyph="◆" focused={focused} />,
+          tabBarIcon: ({ color }) => <Feather name="home" size={20} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -69,37 +75,9 @@ export default function TabsLayout() {
         options={{
           title: t('garage.title'),
           tabBarLabel: t('tab.garage'),
-          tabBarIcon: ({ focused }) => <TabMark glyph="▮" focused={focused} />,
+          tabBarIcon: ({ color }) => <Feather name="disc" size={20} color={color} />,
         }}
       />
     </Tabs>
   );
 }
-
-/**
- * A mark rather than an icon, for now.
- *
- * There is no icon set in this project and no drawings from the shop. A
- * borrowed icon pack would be the fastest way to put a wrench and a car in
- * the tab bar and it is also the shop's rule about not using another party's
- * assets, so: two geometric marks, the label doing the real work, until the
- * shop's own icons exist. The website has the same problem and solves it with
- * per-family line drawings it owns.
- */
-function TabMark({ glyph, focused }: { glyph: string; focused: boolean }) {
-  return (
-    <View style={styles.mark}>
-      <Text variant="body" tone={focused ? C.text : C.textMuted}>
-        {glyph}
-      </Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  mark: {
-    width: Spacing.four,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
