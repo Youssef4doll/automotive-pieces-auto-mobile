@@ -529,6 +529,20 @@ the developer's LAN address there.
 To run the website locally, see its `HANDOVER.md` — `npm run db:migrate`,
 `npm run db:seed`, `npm run dev`.
 
+**`expo.extra.apiBaseUrl` must be absent when it is not wanted, never
+`null`.** Expo resolves a `null` there to an empty object at runtime, and `{}`
+is truthy — so `configured ?? fallback` kept it and the app died at import
+time on `.replace is not a function`, taking every screen down with it.
+`constants/config.ts` now validates the value and falls back with a warning
+that names the file, the key and what it found, because a config mistake
+should cost a line in the console rather than the whole app.
+
+It shipped because a long-running dev server was serving a bundle from before
+the key existed; it failed the moment anybody started cold. Worth remembering
+when testing anything that comes from app.json: **restart the dev server and
+clear `/tmp/metro-cache`**, because `--clear` alone did not evict the stale
+value here.
+
 **`web.output` is `single`, not `static`.** The scaffold's `static` makes
 expo-router pre-render each route in Node, where there is no `window` — which
 crashed `expo start --web` on startup the first time the garage store existed,

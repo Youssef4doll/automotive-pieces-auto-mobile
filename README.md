@@ -23,8 +23,16 @@ npx expo start --web    # or in a browser
 looks for one at `http://localhost:3000` (`10.0.2.2:3000` on the Android
 emulator), so start the website first — see its `HANDOVER.md` for
 `db:migrate`, `db:seed` and `dev`. Point a build somewhere else through
-`expo.extra.apiBaseUrl` in `app.json`; a real handset on Expo Go needs the
-developer's LAN address there rather than `localhost`.
+`expo.extra.apiBaseUrl` in `app.json` — **a plain string holding a full URL**,
+nothing else:
+
+```json
+"extra": { "apiBaseUrl": "http://192.168.1.20:3000" }
+```
+
+A real handset on Expo Go needs the developer's LAN address there rather than
+`localhost`. Anything that is not a usable URL is ignored with a warning in
+the console naming the key; the app still starts on the default.
 
 ## Where things are
 

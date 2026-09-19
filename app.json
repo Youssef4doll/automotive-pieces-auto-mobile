@@ -35,9 +35,6 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    },
-    "extra": {
-      "apiBaseUrl": null
     }
   }
 }
