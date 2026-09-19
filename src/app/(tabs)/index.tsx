@@ -8,6 +8,7 @@ import { catalogueApi, type Family } from '@/api/catalogue';
 import { Button } from '@/components/ui/button';
 import { EntryCard } from '@/components/ui/entry-card';
 import { PartBadge } from '@/components/ui/part-badge';
+import { PromoBanner } from '@/components/ui/promo-banner';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -79,7 +80,7 @@ export default function HomeScreen() {
           <View style={[styles.hero, { paddingTop: insets.top + Spacing.four }]}>
             {/* The logo itself, not the shop's name set as an eyebrow. This
                 is the one place in the app it appears at full size. */}
-            <Logo size={40} tone="onNavy" />
+            <Logo size={34} />
             <Text variant="hero" tone={C.heroText} style={{ fontSize: heroSize, lineHeight: heroSize + 5 }}>
               {t('home.heroTitle')}
             </Text>
@@ -165,6 +166,12 @@ export default function HomeScreen() {
               />
             </View>
           </View>
+
+          {/* The shop's banner space. It renders nothing at all when no
+              campaign is running, which is most of the time — and it sits
+              below the ways in, because merchandising never outranks the
+              thing the customer opened the app to do. */}
+          <PromoBanner />
 
           {/* The families, as a peeking horizontal rail. The peek is what
               says "this scrolls" without a row of dots under it. */}

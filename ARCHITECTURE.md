@@ -36,12 +36,13 @@ src/
                           entry-card, section-header, skeleton, states,
                           filter-field
   illustrations/
-    logo.tsx              the mark, and the full lockup
-    logo-paths.ts         its geometry, shared with the icon script
+    logo.tsx              the shop's artwork, lockup and mark
     parts.tsx             the sixteen part families, drawn
     paths.tsx             the ways into the catalogue, drawn
+assets/images/
+  logo-lockup.webp        the file the owner supplied — the only brand source
 scripts/
-  make-icons.mjs          bakes the launcher artwork from the same vector
+  make-icons.mjs          cuts every square icon out of that file
   constants/
     theme.ts              the brand — colours, faces, type sizes, tap sizes
     config.ts             where the shop is, and how long to wait for it
@@ -325,31 +326,42 @@ question they actually have at step three — and the completed steps are the
 way back. A step that looks pressable is pressable; the ones not reached yet
 are outlined and inert.
 
-**The logo is vector, and it is the app's icon too.** `illustrations/logo.tsx`
-draws the hexagon, the A and the red underline from path data in
-`logo-paths.ts`; `scripts/make-icons.mjs` renders the same paths to the PNGs
-the stores need. One source of geometry, so the mark on a customer's home
-screen cannot drift from the one inside the app — they were two copies for
-about an hour, which is exactly how that happens.
+**The logo is the shop's file, not a drawing of it.**
+`assets/images/logo-lockup.webp` is the artwork the owner supplied, and it is
+the only source of brand imagery in the repo. `scripts/make-icons.mjs` cuts
+everything square out of those same pixels — the launcher icon, the Android
+foreground and monochrome layers, the splash mark, the favicon — so nothing
+can drift from it.
 
-Three notes on it:
+An earlier pass rebuilt the mark as SVG paths so it could take any colour and
+scale for free. That was the wrong trade and it is gone: a reconstruction
+that is 98% right is a different logo, and the wordmark's real lettering is
+visibly not Archivo ExtraBold. The lesson generalises — a shop's logo is the
+one asset in an app that has to be exactly itself.
 
-- It is **rebuilt from a raster the owner supplied**, not the original
-  artwork. If the shop has the vector file, that is what should be in
-  `logo-paths.ts`. The wordmark in particular is set in the app's own Archivo
-  ExtraBold rather than the logo's lettering — close, and not the same.
+Three things to know about the file:
+
+- **Its wordmark is white.** It is the version for dark surfaces, which is
+  correct on the navy hero where the app uses it, and it would disappear on a
+  light one. A light-background version has to come from the shop; tinting
+  theirs is not the same thing.
 - Red appears **nowhere else in this app**, which is what makes it read as a
   signature rather than as an alert.
 - The lockup mirrors under RTL — the mark moves to the right — but the
-  wordmark itself stays left-to-right. It is the shop's name as painted on
-  the shopfront, not a string to translate.
+  artwork itself is never flipped. It is the shop's name as painted on the
+  shopfront.
+
+The script finds the hexagon by looking for the artwork's only large gold
+region rather than hard-coding a crop, so replacing the logo file with one
+that has different padding does not silently produce an off-centre icon. The
+monochrome Android layer is derived from the same pixels: gold becomes white
+and everything else, the navy A included, becomes transparent, so the letter
+is knocked out exactly as it is in the real mark.
 
 The launcher icons were Expo's scaffold artwork until now, and `app.json`
 pointed iOS at Expo's icon-composer bundle, so the app would have shipped
 under somebody else's mark on iPhone and the right one on Android. Both are
-fixed. The monochrome Android icon concatenates the hexagon and the letter
-into one path and lets even-odd knock the A out; two paths cannot do it,
-because painting the letter transparent just paints nothing.
+fixed.
 
 **The illustrations are the shop's own, in `src/illustrations/`.** Sixteen
 part families and the ways into the catalogue, drawn as SVG on one 24×24 grid
@@ -387,6 +399,24 @@ are worth singling out:
   seven viewports found filter chips, "Voir tout" and the garage's row actions
   sitting at 40pt, under the 44 accessibility floor. Anything pressable is now
   `Tap.min` at least.
+
+**The banner space renders nothing far more often than it renders
+something.** `ui/promo-banner.tsx` shows whatever the shop has running in
+`/admin/promotions` — the same list the storefront's own promo band reads, so
+the shop changes a campaign once and both front doors move. When there is no
+campaign the component returns null and the space goes back to the catalogue.
+There is no placeholder, no evergreen "bienvenue" slide and no house ad:
+inventing something to fill that gap is the same habit as inventing stock.
+
+Two details it inherits and one it does not. The promotion's `title` is
+written by the shop as the image's alt text, so it becomes the accessible
+name and is never drawn over the artwork as a headline. A banner whose href
+has no equivalent in the app — `/#magasin` is an anchor on the website's home
+page — is simply not tappable, rather than throwing the customer into a web
+view of the shop they are already standing in. And unlike the website's band
+it **does not auto-advance**: on a phone a banner that moves while somebody
+is reading it, or shifts the tap target mid-press, is the first thing under a
+scrolling thumb.
 
 **Compatibility is one component, four states.** `ui/compatibility.tsx`.
 *Fits*, *unknown*, *does not fit*, and *no vehicle chosen* — four genuinely

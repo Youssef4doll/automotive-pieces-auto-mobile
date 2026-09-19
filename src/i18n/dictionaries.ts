@@ -38,6 +38,10 @@ const dict = {
     'entry.browse': 'Je sais quelle pièce',
     'entry.browseHint': 'Freinage, filtres, suspension…',
 
+    'promo.seasonal': 'Campagne de saison',
+    'promo.new': 'Nouveautés',
+    'promo.deal': 'Bon plan',
+
     'catalog.title': 'Catalogue',
     'catalog.allFamilies': 'Toutes les familles de pièces',
     'catalog.families': 'Familles de pièces',
@@ -140,6 +144,10 @@ const dict = {
     'entry.browse': 'I know which part',
     'entry.browseHint': 'Brakes, filters, suspension…',
 
+    'promo.seasonal': 'Seasonal campaign',
+    'promo.new': 'New arrivals',
+    'promo.deal': 'Deal',
+
     'catalog.title': 'Catalogue',
     'catalog.allFamilies': 'All part families',
     'catalog.families': 'Part families',
@@ -238,6 +246,10 @@ const dict = {
     'entry.knowCarHint': 'الماركة، الطراز، المحرّك',
     'entry.browse': 'أعرف القطعة',
     'entry.browseHint': 'الفرامل، الفلاتر، التعليق…',
+
+    'promo.seasonal': 'حملة موسمية',
+    'promo.new': 'وصل حديثًا',
+    'promo.deal': 'عرض خاص',
 
     'catalog.title': 'الكتالوج',
     'catalog.allFamilies': 'كل عائلات القطع',
