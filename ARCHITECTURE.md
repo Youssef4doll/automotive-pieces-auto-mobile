@@ -19,7 +19,9 @@ src/
     (tabs)/               the tab bar and the screens inside it
       _layout.tsx
       index.tsx           Accueil
+      catalogue.tsx       the part families
       garage.tsx          Mon garage — the saved cars
+    famille/[family].tsx  one family: subcategory filter + its parts
     garage/ajouter/       the three-step picker, pushed over the tabs
       index.tsx             step 1 — make
       [make]/index.tsx      step 2 — model
@@ -30,7 +32,12 @@ src/
   components/
     picker-screen.tsx     one step of the picker; all three steps are this
     ui/                   text, screen, button, list-row, tile, chip (the
-                          breadcrumb), states, filter-field
+                          breadcrumb), product-card, compatibility, price,
+                          entry-card, section-header, skeleton, states,
+                          filter-field
+  illustrations/
+    parts.tsx             the sixteen part families, drawn
+    paths.tsx             the ways into the catalogue, drawn
   constants/
     theme.ts              the brand — colours, faces, type sizes, tap sizes
     config.ts             where the shop is, and how long to wait for it
@@ -230,7 +237,37 @@ the last row fell under the tab bar.
 
 ---
 
-## 7. The visual language
+## 7. Information architecture
+
+The customer's journey, and where each screen sits in it:
+
+```
+DISCOVER   Accueil            what this is, and the ways in
+IDENTIFY   Mon garage         make → model → engine, kept on the phone
+BROWSE     Catalogue          the families the shop actually stocks
+           Famille            its parts, filtered by subcategory
+EVALUATE   (product page)     not built — see §12
+BUY        (cart, checkout)   not built
+TRACK      (orders)           not built
+```
+
+Every screen answers one question and offers one primary action. The home
+screen's is "which way do you want to start"; the garage's is "which car";
+a family's is "which of these parts".
+
+**The vehicle is the app's running context.** Once a car is in the garage it
+changes what every other screen says — the home screen leads with it, and
+every product card is judged against its engine. It is chosen once and
+carried, never asked for twice.
+
+**Two reads, one cache.** A family screen needs the subcategories (from the
+families endpoint) and the products (from the products endpoint). The first
+is already cached from the moment the customer opened the Catalogue tab, so
+switching filter chips re-fetches only the parts.
+
+---
+
+## 8. The visual language
 
 Drawn from two references the owner pointed at — a booking app and a template
 browser — and reduced to the handful of moves that actually carry them.
@@ -284,6 +321,43 @@ question they actually have at step three — and the completed steps are the
 way back. A step that looks pressable is pressable; the ones not reached yet
 are outlined and inert.
 
+**The illustrations are the shop's own, in `src/illustrations/`.** Sixteen
+part families and the ways into the catalogue, drawn as SVG on one 24×24 grid
+with one stroke weight. Sixteen drawings that visibly belong to each other are
+a brand; sixteen icons from three different sets are a template. The rules
+that keep them a family are written at the top of `parts.tsx` — one viewport,
+strokes at 1.6, exactly one flat accent shape per drawing, readable at 20pt,
+and the recognisable silhouette rather than the accurate one.
+
+They also *are* the product imagery. Almost nothing in this catalogue is
+photographed, so a product card with no photo draws its family instead of
+showing a picture of a different part — the same answer the website gives, in
+vector rather than a rasterised SVG endpoint. `PartArtwork` falls back to a
+generic part for a family slug it has never seen, because families come from
+the database and the shop can add one from the admin at any time.
+
+**Design tokens, in `constants/theme.ts`.** Colour, type, spacing, radius,
+border, elevation, motion, icon size, z-index, breakpoints, tab bar height.
+Nothing in a screen should invent a value that belongs in here. Two of them
+are worth singling out:
+
+- **Green is not in the brief's palette and is in the shop.** `BRIEF.md` §4
+  lists navy, gold and red; the website paints "En stock" and "Compatible"
+  green in about a hundred places. The tokens are the Tailwind greens those
+  classes resolve to, read off the storefront rather than chosen here — a
+  success state the app picked its own green for would put the two front
+  doors in different skins on the one signal a parts shop cannot get wrong.
+- **`Tap.compact` (40) is no longer used as a control height.** A sweep across
+  seven viewports found filter chips, "Voir tout" and the garage's row actions
+  sitting at 40pt, under the 44 accessibility floor. Anything pressable is now
+  `Tap.min` at least.
+
+**Compatibility is one component, four states.** `ui/compatibility.tsx`.
+*Fits*, *unknown*, *does not fit*, and *no vehicle chosen* — four genuinely
+different sentences, never collapsed. Every state carries an icon and a
+sentence, never colour alone. It looks the same on a card, in a list and
+(when it exists) on a product page.
+
 **Icons are Feather, from `@expo/vector-icons`.** An earlier note in this file
 said the project could not use an icon set without breaking the shop's rule
 about not copying another party's assets. That was wrong, and the rule it
@@ -293,7 +367,7 @@ placeholder geometric marks it caused are gone.
 
 ---
 
-## 8. The brand
+## 9. The brand
 
 `src/constants/theme.ts`, copied from the website's `globals.css`. Change it
 there, in one place.
@@ -312,7 +386,7 @@ for inline secondary controls.
 
 ---
 
-## 9. Two decisions the brief asked to be made early
+## 10. Two decisions the brief asked to be made early
 
 ### "À vérifier" is the normal case, and the app is built for that
 
@@ -373,7 +447,7 @@ Specifically, and to be built with the checkout:
 
 ---
 
-## 10. Running it
+## 11. Running it
 
 ```bash
 npm install
@@ -400,7 +474,7 @@ surface. The website is the website.
 
 ---
 
-## 11. How this repo is worked on
+## 12. How this repo is worked on
 
 The website's four lines, which apply here and earned their place again this
 session:
@@ -425,14 +499,62 @@ session:
 
 ### What is not done
 
-- Only two of the brief's seven screens exist: Accueil (small and honest) and
-  Mon garage with its picker.
-- No search, no product screen, no cart, no checkout, no order tracking, no
-  account. The API endpoints behind them are not written either.
-- The garage does not sync to an account, because there is no account yet.
-- There are no automated tests. The website's answer is Playwright against a
-  real database; the app's equivalent needs choosing. Everything in this
-  session was verified by driving the real app in a browser and reading the
-  screenshots, which is a starting point and not a substitute.
-- VIN entry, which the brief lists as a second way into the garage, is not
-  built. The website has `src/lib/vin.ts` to port rather than rewrite.
+Sequenced rather than dropped. The order below is the order the endpoints
+have to land in, because most of these screens are blocked on data rather
+than on design.
+
+**Built and working on real data:** Accueil, Mon garage and its three-step
+picker, Catalogue, a part family with its subcategory filter and its parts —
+each part carrying brand, name, price, availability and a compatibility
+verdict against the car in the garage.
+
+**Next, and they are one unit:** product page → basket → checkout → order
+confirmation → tracking. A product page with no "Ajouter au panier" has no
+primary action, and a basket with nothing to put in it is not a feature, so
+these ship together or not at all. Needs `/api/v1/products/:slug`,
+`POST /api/v1/orders` and `GET /api/v1/orders/:ref` — and the order-ownership
+token decided in §10, which is the reason that decision was made early.
+
+**Then search**, which is the single most valuable thing this app will have
+and is deliberately absent rather than stubbed. The home screen has no search
+box, because a box that focuses and then cannot answer teaches the customer
+that search is broken — which is the one thing a parts search cannot afford.
+Needs `/api/v1/search` and `/api/v1/reference/:ref`; the website already has
+the index, the ranking and the synonym handling in its `lib/search`, so this
+is an endpoint over existing machinery rather than new machinery.
+
+**Then the remaining two ways in.** "Que cherchez-vous ?" currently offers
+two routes because two are built. "J'ai la référence" arrives with search;
+"Je ne sais pas comment ça s'appelle" arrives with the photo/expert flow.
+Four cards where two open onto nothing would be the app advertising what it
+does not have.
+
+**Also outstanding:**
+
+- The account and the basket tabs. Three tabs today, because three screens
+  are finished.
+- VIN / carte grise entry, the brief's second way into the garage. The
+  website has `src/lib/vin.ts` to port rather than rewrite, and the carte
+  grise illustration belongs in `src/illustrations/`.
+- Symptom-based discovery ("ma voiture freine mal"). Needs a mapping from
+  symptom to families that nobody has written yet, and it must never read as
+  a diagnosis — "pièces pouvant être liées à ce problème", and no further.
+- Pagination on a family. The endpoint pages and returns `hasMore`; the
+  screen shows the first page only. Fine at 16 products a family, not fine
+  at 500.
+- The garage does not sync to an account, because there is no account.
+- **There are no automated tests.** The website's answer is Playwright
+  against a real database. Everything here was verified by driving the real
+  app in a browser — a behaviour suite, an offline/recovery pass, an
+  Arabic/RTL pass, and a seven-viewport sweep checking overflow, clipped
+  text and touch-target sizes. Those scripts live in a scratchpad, not in
+  the repo, which is the gap: they should be committed and run on a branch.
+
+### One assumption worth checking
+
+The redesign brief this work came from says to keep Next.js, React and
+Tailwind. This repository is Expo / React Native, and the mockups that came
+with the brief show a native tab bar and an iOS status bar, so that line was
+read as carried over from the website's own brief and the work was done in
+the app. If the intent was the website's mobile web instead, the design
+decisions here port but none of the code does.

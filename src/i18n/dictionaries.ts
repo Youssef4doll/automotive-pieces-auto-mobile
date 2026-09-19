@@ -18,16 +18,47 @@ const dict = {
   fr: {
     'app.name': 'Automotive Pièces Auto',
 
+    'fit.fits': 'Compatible avec votre véhicule',
+    'fit.unknown': 'Compatibilité à vérifier',
+    'fit.no': 'Ne correspond pas à votre véhicule',
+    'fit.noVehicle': 'Sélectionnez votre véhicule',
+
+    'stock.inStock': 'En stock',
+    'stock.onOrder': 'Sur commande',
+    'stock.unavailable': 'Indisponible',
+    'stock.low': '{n} en stock',
+
+    'home.heroTitle': 'Trouvez la bonne pièce',
+    'home.heroTitle2': 'pour votre voiture.',
+    'home.whatLooking': 'Que cherchez-vous ?',
+    'home.whatLookingWhy': "Choisissez la façon qui vous arrange. On s'occupe du reste.",
+
+    'entry.knowCar': 'Je connais ma voiture',
+    'entry.knowCarHint': 'Marque, modèle, motorisation',
+    'entry.browse': 'Je sais quelle pièce',
+    'entry.browseHint': 'Freinage, filtres, suspension…',
+
+    'catalog.title': 'Catalogue',
+    'catalog.allFamilies': 'Toutes les familles de pièces',
+    'catalog.families': 'Familles de pièces',
+    'catalog.seeAll': 'Voir tout',
+    'catalog.partCount': '{n} pièce(s)',
+    'catalog.resultCount': '{n} résultat(s)',
+    'catalog.refine': 'Affiner',
+    'catalog.allOf': 'Tout',
+    'catalog.empty': 'Aucune pièce dans cette catégorie.',
+    'catalog.emptyWhy': "Le catalogue s'étoffe. Écrivez-nous si vous cherchez une pièce précise.",
+    'catalog.noFamilies': "Le catalogue n'est pas encore en ligne.",
+
     'tab.home': 'Accueil',
     'tab.garage': 'Mon garage',
+    'tab.catalog': 'Catalogue',
 
     'home.greeting': 'Vos pièces auto',
     'home.noVehicle': "L'app ne connaît pas encore votre voiture.",
     'home.noVehicleWhy':
       "Dites-la une fois. Ensuite chaque pièce indique si elle lui va — ou si c'est à vérifier.",
     'home.yourVehicle': 'Votre véhicule',
-    'home.heroLine1': 'Les bonnes',
-    'home.heroLine2': 'pièces.',
     'home.changeCarWhy': 'Voir le garage, ou ajouter une autre voiture',
 
     'garage.title': 'Mon garage',
@@ -89,16 +120,47 @@ const dict = {
   en: {
     'app.name': 'Automotive Pièces Auto',
 
+    'fit.fits': 'Fits your vehicle',
+    'fit.unknown': 'Compatibility to check',
+    'fit.no': 'Does not fit your vehicle',
+    'fit.noVehicle': 'Select your vehicle',
+
+    'stock.inStock': 'In stock',
+    'stock.onOrder': 'On order',
+    'stock.unavailable': 'Unavailable',
+    'stock.low': '{n} in stock',
+
+    'home.heroTitle': 'Find the right part',
+    'home.heroTitle2': 'for your car.',
+    'home.whatLooking': 'What are you looking for?',
+    'home.whatLookingWhy': 'Pick whichever way suits you. We handle the rest.',
+
+    'entry.knowCar': 'I know my car',
+    'entry.knowCarHint': 'Make, model, engine',
+    'entry.browse': 'I know which part',
+    'entry.browseHint': 'Brakes, filters, suspension…',
+
+    'catalog.title': 'Catalogue',
+    'catalog.allFamilies': 'All part families',
+    'catalog.families': 'Part families',
+    'catalog.seeAll': 'See all',
+    'catalog.partCount': '{n} part(s)',
+    'catalog.resultCount': '{n} result(s)',
+    'catalog.refine': 'Refine',
+    'catalog.allOf': 'All',
+    'catalog.empty': 'No parts in this category.',
+    'catalog.emptyWhy': 'The catalogue is still filling up. Write to us if you need something specific.',
+    'catalog.noFamilies': 'The catalogue is not online yet.',
+
     'tab.home': 'Home',
     'tab.garage': 'My garage',
+    'tab.catalog': 'Catalogue',
 
     'home.greeting': 'Your car parts',
     'home.noVehicle': "The app doesn't know your car yet.",
     'home.noVehicleWhy':
       'Tell it once. After that every part says whether it fits — or that it needs checking.',
     'home.yourVehicle': 'Your vehicle',
-    'home.heroLine1': 'The right',
-    'home.heroLine2': 'parts.',
     'home.changeCarWhy': 'See the garage, or add another car',
 
     'garage.title': 'My garage',
@@ -157,16 +219,47 @@ const dict = {
   ar: {
     'app.name': 'Automotive Pièces Auto',
 
+    'fit.fits': 'متوافقة مع سيارتك',
+    'fit.unknown': 'التوافق يحتاج تحقّقاً',
+    'fit.no': 'لا تناسب سيارتك',
+    'fit.noVehicle': 'اختر سيارتك',
+
+    'stock.inStock': 'متوفّرة',
+    'stock.onOrder': 'عند الطلب',
+    'stock.unavailable': 'غير متوفّرة',
+    'stock.low': '{n} متوفّرة',
+
+    'home.heroTitle': 'اعثر على القطعة',
+    'home.heroTitle2': 'المناسبة لسيارتك.',
+    'home.whatLooking': 'عمّ تبحث؟',
+    'home.whatLookingWhy': 'اختر الطريقة التي تناسبك. نحن نتكفّل بالباقي.',
+
+    'entry.knowCar': 'أعرف سيارتي',
+    'entry.knowCarHint': 'الماركة، الطراز، المحرّك',
+    'entry.browse': 'أعرف القطعة',
+    'entry.browseHint': 'الفرامل، الفلاتر، التعليق…',
+
+    'catalog.title': 'الكتالوج',
+    'catalog.allFamilies': 'كل عائلات القطع',
+    'catalog.families': 'عائلات القطع',
+    'catalog.seeAll': 'عرض الكل',
+    'catalog.partCount': '{n} قطعة',
+    'catalog.resultCount': '{n} نتيجة',
+    'catalog.refine': 'تصفية',
+    'catalog.allOf': 'الكل',
+    'catalog.empty': 'لا قطع في هذه الفئة.',
+    'catalog.emptyWhy': 'الكتالوج يتوسّع. راسلنا إن كنت تبحث عن قطعة محدّدة.',
+    'catalog.noFamilies': 'الكتالوج ليس متاحاً بعد.',
+
     'tab.home': 'الرئيسية',
     'tab.garage': 'مرآبي',
+    'tab.catalog': 'الكتالوج',
 
     'home.greeting': 'قطع غيار سيارتك',
     'home.noVehicle': 'التطبيق لا يعرف سيارتك بعد.',
     'home.noVehicleWhy':
       'أخبرنا بها مرّة واحدة. بعدها تُظهر كل قطعة إن كانت تناسبها، أو أنّها تحتاج تحقّقاً.',
     'home.yourVehicle': 'سيارتك',
-    'home.heroLine1': 'القطع',
-    'home.heroLine2': 'المناسبة.',
     'home.changeCarWhy': 'اعرض المرآب، أو أضف سيارة أخرى',
 
     'garage.title': 'مرآبي',

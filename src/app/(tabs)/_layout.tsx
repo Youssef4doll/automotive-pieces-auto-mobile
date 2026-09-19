@@ -2,15 +2,16 @@ import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { C, familyFor, Spacing } from '@/constants/theme';
+import { C, familyFor, Spacing, TabBarHeight } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
 
 /**
- * Two tabs, because two screens are finished.
+ * Three tabs, because three screens are finished.
  *
  * The brief lists seven screens for v1 — accueil, garage, recherche, fiche
  * produit, panier, commande, suivi, compte. They arrive as tabs as they are
- * built. Shipping five tabs now, three of which open onto "bientôt
+ * built. Panier and Compte arrive with the basket
+ * and the account. Shipping five tabs now, two of which open onto "bientôt
  * disponible", would be the app telling the customer about features it does
  * not have, which is the same habit as inventing stock: it just happens to be
  * about the app rather than about a part.
@@ -39,7 +40,7 @@ export default function TabsLayout() {
    * be reasoned about from the font size, because the navigator adds margins
    * of its own. Screenshot the bar after every change to it.
    */
-  const barHeight = 76 + insets.bottom;
+  const barHeight = TabBarHeight + insets.bottom;
 
   return (
     <Tabs
@@ -68,6 +69,14 @@ export default function TabsLayout() {
           title: t('app.name'),
           tabBarLabel: t('tab.home'),
           tabBarIcon: ({ color }) => <Feather name="home" size={20} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="catalogue"
+        options={{
+          title: t('catalog.title'),
+          tabBarLabel: t('tab.catalog'),
+          tabBarIcon: ({ color }) => <Feather name="grid" size={20} color={color} />,
         }}
       />
       <Tabs.Screen

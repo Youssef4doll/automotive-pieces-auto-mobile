@@ -15,7 +15,7 @@
  *   for anything a finger touches; 48 is what a primary action gets.
  */
 
-import { Platform } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 /** The brand ramp, whole. Prefer a semantic colour below where one exists. */
 export const Brand = {
@@ -33,6 +33,22 @@ export const Brand = {
   red600: '#c50e26',
   red500: '#e1112c',
   white: '#ffffff',
+
+  /**
+   * Green, which is not in the brief's palette and is in the shop.
+   *
+   * `BRIEF.md` §4 lists navy, gold and red, and the website nonetheless
+   * paints "En stock" and "Compatible" green in about a hundred places —
+   * `AVAILABILITY_TONE` in its `lib/availability.ts` is the canonical one.
+   * These are the Tailwind greens those classes resolve to, read off the
+   * storefront rather than chosen here, because a success state the app
+   * invented its own colour for would put the two front doors in different
+   * skins on the one signal a parts shop cannot afford to get wrong.
+   */
+  green700: '#15803d',
+  green600: '#16a34a',
+  green200: '#bbf7d0',
+  green50: '#f0fdf4',
 } as const;
 
 /**
@@ -64,6 +80,16 @@ export const Colors = {
     /** Text and icons that sit ON the accent. */
     onAccent: Brand.navy900,
     danger: Brand.red600,
+    dangerSurface: '#fdf2f3',
+
+    /** Yes: in stock, fits your car. Always with an icon — never colour alone. */
+    success: Brand.green700,
+    successSurface: Brand.green50,
+    successBorder: Brand.green200,
+    /** Careful: we do not know whether this fits. Gold, the shop's attention. */
+    caution: Brand.gold600,
+    cautionSurface: '#fffbeb',
+    cautionBorder: '#fde68a',
 
     /**
      * On the navy hero.
@@ -164,13 +190,19 @@ export function familyFor(role: FontRole, isArabic: boolean): string {
  */
 export const Type = {
   /**
-   * The one oversized size, for a headline on the navy hero.
+   * The headline on the navy hero.
    *
-   * Tight leading (40 on 38) because it is set in two or three short lines —
-   * a make on one, a model on the next — and default leading pulls those
-   * apart until they stop reading as one object.
+   * 26, not the 38 it started at. At 38 the home screen's two-line headline
+   * wrapped to three and the hero took 45% of a 390pt phone before the
+   * customer reached a single control — the desktop hero habit that a mobile
+   * redesign exists to remove. A home screen's job is to get somebody moving,
+   * and confidence here comes from the weight and the navy behind it rather
+   * than from the point size.
+   *
+   * Leading is tight (31 on 26) because it is set in short stacked lines and
+   * default leading pulls them apart until they stop reading as one object.
    */
-  hero: { fontSize: 38, lineHeight: 40, letterSpacing: -0.8 },
+  hero: { fontSize: 26, lineHeight: 31, letterSpacing: -0.4 },
   screenTitle: { fontSize: 28, lineHeight: 34 },
   sectionTitle: { fontSize: 20, lineHeight: 26 },
   rowTitle: { fontSize: 17, lineHeight: 22 },
@@ -179,7 +211,19 @@ export const Type = {
   hint: { fontSize: 13, lineHeight: 18 },
 } as const;
 
-/** Minimum touch target sizes, in points. Not negotiable downwards. */
+/**
+ * Touch target sizes, in points. Not negotiable downwards.
+ *
+ * `compact` is 40 and the brief allows it for "inline secondary controls",
+ * but nothing in this app uses it as the height of something a finger hits
+ * any more — a sweep across seven viewports found filter chips, "Voir tout"
+ * and the garage's row actions all sitting at 40, which is under the 44
+ * accessibility floor whatever the control is called. It survives for insets
+ * and for sizing things that are not targets.
+ *
+ * Anything pressable gets `min` at least, and a screen's one primary action
+ * gets `primary`.
+ */
 export const Tap = {
   primary: 48,
   min: 44,
@@ -251,7 +295,18 @@ export const Elevation = {
   },
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+/**
+ * How tall the tab bar is, before the home-indicator inset.
+ *
+ * One number, read by the navigator that draws the bar AND by every screen
+ * that has to keep its last row out from under it. They were separate once
+ * and the home screen's part-family rail spent a release half-hidden behind
+ * the bar, because the bar knew its height and the scroll view did not.
+ *
+ * `useTabBarSpace` in hooks/ adds the safe-area inset and the breathing room;
+ * screens should use that rather than this constant directly.
+ */
+export const TabBarHeight = 76;
 
 /**
  * A phone's worth of width, centred, on anything wider.
@@ -261,3 +316,89 @@ export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
  * up a metre from the name. 800 is the website's own content width.
  */
 export const MaxContentWidth = 800;
+
+/**
+ * Stroke weights.
+ *
+ * Three, because a border is either a hairline separating things that belong
+ * together, a visible edge around a control, or a selection mark. `hairline`
+ * is the platform's thinnest real line — 1 physical pixel, which is 0.33pt on
+ * a 3x screen — and hard-coding 1 instead makes it three times too heavy on
+ * exactly the devices the shop's customers carry.
+ */
+export const Border = {
+  hairline: StyleSheet.hairlineWidth,
+  thin: 1,
+  selected: 1.5,
+} as const;
+
+/** Icon sizes, matched to the type they sit beside rather than picked freely. */
+export const IconSize = {
+  /** Inline with `hint` and `label`. */
+  small: 14,
+  /** Inline with `body` and `rowTitle`; the default. */
+  medium: 18,
+  /** A chevron at the end of a row, a tab bar glyph. */
+  large: 20,
+  /** Inside a soft square on a card. */
+  feature: 22,
+} as const;
+
+/**
+ * Motion.
+ *
+ * Fast, and fewer options than a design system usually ships, because motion
+ * here is information rather than decoration: it says where a thing came from
+ * and whether a tap registered. Anything above `slow` on a phone reads as the
+ * app hesitating.
+ *
+ * `press` is deliberately near-instant. The one thing a tap must never do is
+ * look dead, and a 200ms fade-in on a pressed state is long enough to feel
+ * like lag on a mid-range Android.
+ */
+export const Motion = {
+  press: 80,
+  fast: 140,
+  normal: 220,
+  slow: 320,
+  /** A sheet or a screen arriving. Slightly overshooting, never bouncy. */
+  spring: { damping: 22, stiffness: 240, mass: 0.9 },
+} as const;
+
+/**
+ * Stacking order, named so two overlays cannot quietly disagree.
+ *
+ * The gaps are 10 so something can be slipped between two layers later
+ * without renumbering everything below it.
+ */
+export const ZIndex = {
+  base: 0,
+  sticky: 10,
+  header: 20,
+  sheet: 30,
+  toast: 40,
+} as const;
+
+/**
+ * The widths this app is actually used at.
+ *
+ * Not invented: these are the viewport widths of the handsets the shop's
+ * customers carry, plus a tablet. `small` is the one that catches layout
+ * bugs — a 320pt screen is where a two-column grid of tiles stops fitting and
+ * a price runs into a badge.
+ *
+ * Used for judgement in a layout, never for a fixed width. Nothing in this
+ * app should be sized in pixels when it could flex.
+ */
+export const Breakpoint = {
+  /** iPhone SE 1st gen and similar. The floor. */
+  small: 320,
+  /** The common Android width. */
+  standard: 360,
+  /** iPhone 12–16 and most of the modern range. */
+  large: 390,
+  /** iPhone Pro Max. */
+  xlarge: 430,
+  /** Tablet, and the browser during development. */
+  tablet: 768,
+} as const;

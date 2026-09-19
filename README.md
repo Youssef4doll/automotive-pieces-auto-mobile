@@ -46,5 +46,8 @@ The website, the database and the admin live in
 the same stock through a JSON API that repo exposes; it never gets its own
 copy of the data.
 
-`/api/v1/vehicles/{makes,models,engines}` is built and is what the garage
-runs on. The rest of the endpoints in `BRIEF.md` §6 are not written yet.
+Built so far: `/api/v1/vehicles/{makes,models,engines}` behind the garage, and
+`/api/v1/catalogue/{families,products}` behind the catalogue. The rest of the
+endpoints in `BRIEF.md` §6 — search, a single product, orders, the account —
+are not written yet, and `ARCHITECTURE.md` §12 says in which order they have
+to land.

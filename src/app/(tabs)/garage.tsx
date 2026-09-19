@@ -7,6 +7,7 @@ import { Screen } from '@/components/ui/screen';
 import { Empty } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
 import { C, Elevation, Radius, Spacing, Tap } from '@/constants/theme';
+import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel, type SavedVehicle } from '@/store/garage';
 
@@ -27,6 +28,7 @@ import { useGarage, vehicleLabel, type SavedVehicle } from '@/store/garage';
 export default function GarageScreen() {
   const router = useRouter();
   const { t, rtl } = useI18n();
+  const tabBarSpace = useTabBarSpace();
 
   const vehicles = useGarage((s) => s.vehicles);
   const active = useGarage((s) => s.active);
@@ -59,7 +61,7 @@ export default function GarageScreen() {
         <FlatList
           data={vehicles}
           keyExtractor={(v) => v.engineId}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
           showsVerticalScrollIndicator={false}
           ItemSeparatorComponent={Gap}
           renderItem={({ item }) => {
@@ -191,7 +193,6 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingTop: Spacing.three,
-    paddingBottom: Spacing.six,
   },
   gap: {
     height: Spacing.two,
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
   action: {
     alignItems: 'center',
     gap: Spacing.two,
-    minHeight: Tap.compact,
+    minHeight: Tap.min,
   },
   footer: {
     paddingTop: Spacing.four,

@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.half,
   },
   chip: {
-    minHeight: Tap.compact,
+    minHeight: Tap.min,
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.chip,

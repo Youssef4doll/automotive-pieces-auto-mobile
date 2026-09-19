@@ -105,8 +105,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   clear: {
-    width: Tap.compact,
-    height: Tap.compact,
+    width: Tap.min,
+    height: Tap.min,
     alignItems: 'center',
     justifyContent: 'center',
   },
