@@ -11,7 +11,7 @@ import { Text } from '@/components/ui/text';
 import { Border, C, IconSize, Radius, Spacing } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
-import { PartArtwork } from '@/illustrations/parts';
+import { PartBadge } from '@/components/ui/part-badge';
 import { useI18n } from '@/i18n/provider';
 
 /**
@@ -110,9 +110,7 @@ function FamilyRow({
         pressed && styles.pressed,
       ]}
     >
-      <View style={styles.art}>
-        <PartArtwork slug={family.slug} size={30} />
-      </View>
+      <PartBadge slug={family.slug} size={48} />
 
       <View style={styles.text}>
         <Text variant="rowTitle" numberOfLines={2}>
@@ -148,14 +146,6 @@ const styles = StyleSheet.create({
     backgroundColor: C.background,
   },
   pressed: { backgroundColor: C.surface },
-  art: {
-    width: 48,
-    height: 48,
-    borderRadius: Radius.tile,
-    backgroundColor: C.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   text: { flex: 1, gap: 1 },
   rowSkeleton: { height: 68, borderRadius: Radius.card },
 });

@@ -36,8 +36,12 @@ src/
                           entry-card, section-header, skeleton, states,
                           filter-field
   illustrations/
+    logo.tsx              the mark, and the full lockup
+    logo-paths.ts         its geometry, shared with the icon script
     parts.tsx             the sixteen part families, drawn
     paths.tsx             the ways into the catalogue, drawn
+scripts/
+  make-icons.mjs          bakes the launcher artwork from the same vector
   constants/
     theme.ts              the brand — colours, faces, type sizes, tap sizes
     config.ts             where the shop is, and how long to wait for it
@@ -321,6 +325,32 @@ question they actually have at step three — and the completed steps are the
 way back. A step that looks pressable is pressable; the ones not reached yet
 are outlined and inert.
 
+**The logo is vector, and it is the app's icon too.** `illustrations/logo.tsx`
+draws the hexagon, the A and the red underline from path data in
+`logo-paths.ts`; `scripts/make-icons.mjs` renders the same paths to the PNGs
+the stores need. One source of geometry, so the mark on a customer's home
+screen cannot drift from the one inside the app — they were two copies for
+about an hour, which is exactly how that happens.
+
+Three notes on it:
+
+- It is **rebuilt from a raster the owner supplied**, not the original
+  artwork. If the shop has the vector file, that is what should be in
+  `logo-paths.ts`. The wordmark in particular is set in the app's own Archivo
+  ExtraBold rather than the logo's lettering — close, and not the same.
+- Red appears **nowhere else in this app**, which is what makes it read as a
+  signature rather than as an alert.
+- The lockup mirrors under RTL — the mark moves to the right — but the
+  wordmark itself stays left-to-right. It is the shop's name as painted on
+  the shopfront, not a string to translate.
+
+The launcher icons were Expo's scaffold artwork until now, and `app.json`
+pointed iOS at Expo's icon-composer bundle, so the app would have shipped
+under somebody else's mark on iPhone and the right one on Android. Both are
+fixed. The monochrome Android icon concatenates the hexagon and the letter
+into one path and lets even-odd knock the A out; two paths cannot do it,
+because painting the letter transparent just paints nothing.
+
 **The illustrations are the shop's own, in `src/illustrations/`.** Sixteen
 part families and the ways into the catalogue, drawn as SVG on one 24×24 grid
 with one stroke weight. Sixteen drawings that visibly belong to each other are
@@ -328,6 +358,12 @@ a brand; sixteen icons from three different sets are a template. The rules
 that keep them a family are written at the top of `parts.tsx` — one viewport,
 strokes at 1.6, exactly one flat accent shape per drawing, readable at 20pt,
 and the recognisable silhouette rather than the accurate one.
+
+A family's drawing always appears in a disc (`ui/part-badge.tsx`), and a
+product's always in a rounded tile. That is not decoration: a product tile
+holds either a photograph of the actual part or — for most of this catalogue
+— the same family drawing, so the two slots have to look like the same slot.
+Circles mean "a category", tiles mean "a thing".
 
 They also *are* the product imagery. Almost nothing in this catalogue is
 photographed, so a product card with no photo draws its family instead of

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { Button } from '@/components/ui/button';
 import { EntryCard } from '@/components/ui/entry-card';
+import { PartBadge } from '@/components/ui/part-badge';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -16,7 +17,8 @@ import {
 import { useResource } from '@/hooks/use-resource';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { ArtKnowCar, ArtKnowPart } from '@/illustrations/paths';
-import { PartArtwork } from '@/illustrations/parts';
+import { Logo } from '@/illustrations/logo';
+
 import { localeMeta, locales } from '@/i18n/locales';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
@@ -75,9 +77,9 @@ export default function HomeScreen() {
       >
         <View style={styles.column}>
           <View style={[styles.hero, { paddingTop: insets.top + Spacing.four }]}>
-            <Text variant="label" tone={C.accent}>
-              {t('app.name')}
-            </Text>
+            {/* The logo itself, not the shop's name set as an eyebrow. This
+                is the one place in the app it appears at full size. */}
+            <Logo size={40} tone="onNavy" />
             <Text variant="hero" tone={C.heroText} style={{ fontSize: heroSize, lineHeight: heroSize + 5 }}>
               {t('home.heroTitle')}
             </Text>
@@ -259,9 +261,7 @@ function FamilyTile({ family, onPress }: { family: Family; onPress: () => void }
       onPress={onPress}
       style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}
     >
-      <View style={styles.tileArt}>
-        <PartArtwork slug={family.slug} size={34} />
-      </View>
+      <PartBadge slug={family.slug} size={46} />
       <Text variant="hint" tone={C.text} numberOfLines={2} style={styles.tileName}>
         {family.name}
       </Text>
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     // Room for the sheet that overlaps it, and nothing more.
     paddingBottom: Spacing.four + 32,
-    gap: Spacing.one,
+    gap: Spacing.three,
   },
   sheet: {
     marginTop: -32,
@@ -332,22 +332,14 @@ const styles = StyleSheet.create({
   tile: {
     width: 104,
     padding: Spacing.three,
+    // The disc, then air, then the name.
+    gap: Spacing.two,
     borderRadius: Radius.card,
     borderWidth: Border.thin,
     borderColor: C.border,
     backgroundColor: C.background,
-    gap: Spacing.one,
   },
   tilePressed: { backgroundColor: C.surface },
-  tileArt: {
-    width: 46,
-    height: 46,
-    borderRadius: Radius.tile,
-    backgroundColor: C.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.two,
-  },
   tileName: { minHeight: 36 },
   tileSkeleton: { width: 104, height: 128, borderRadius: Radius.card },
 

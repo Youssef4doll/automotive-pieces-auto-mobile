@@ -7,9 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "automotivepiecesauto",
     "userInterfaceStyle": "light",
-    "ios": {
-      "icon": "./assets/expo.icon"
-    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#081633",
@@ -30,7 +27,7 @@
         {
           "backgroundColor": "#081633",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 140
         }
       ],
       "expo-localization"
