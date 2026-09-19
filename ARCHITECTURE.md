@@ -520,11 +520,15 @@ npm install
 npx expo start --web     # or --android / --ios
 ```
 
-The app reads a website. `API_BASE_URL` in `src/constants/config.ts` defaults
-to `http://localhost:3000` in development (`10.0.2.2` on the Android
-emulator), and is overridable through `expo.extra.apiBaseUrl` in `app.json` so
-a build can be pointed at staging without a code change. A real handset needs
-the developer's LAN address there.
+The app reads a website. `API_BASE_URL` in `src/constants/config.ts` works it
+out rather than being told: on a real handset in Expo Go the bundle came from
+the developer's machine, so `Constants.expoConfig.hostUri` already holds the
+address the website is on. Only a bare IPv4 is accepted from it — `expo start
+--tunnel` puts an ngrok domain there and there is no website on port 3000 of
+an ngrok domain. Failing that it is `10.0.2.2:3000` on the Android emulator
+and `localhost:3000` everywhere else, and `expo.extra.apiBaseUrl` overrides
+all of it. Start the website with `npm run dev:lan` so it listens on the LAN
+rather than loopback.
 
 To run the website locally, see its `HANDOVER.md` — `npm run db:migrate`,
 `npm run db:seed`, `npm run dev`.

@@ -19,20 +19,45 @@ npx expo start          # then scan the QR code with Expo Go
 npx expo start --web    # or in a browser
 ```
 
-**The app reads a website; it has no data of its own.** In development it
-looks for one at `http://localhost:3000` (`10.0.2.2:3000` on the Android
-emulator), so start the website first — see its `HANDOVER.md` for
-`db:migrate`, `db:seed` and `dev`. Point a build somewhere else through
-`expo.extra.apiBaseUrl` in `app.json` — **a plain string holding a full URL**,
-nothing else:
+**The app reads a website; it has no data of its own.** Start the website
+first — see its `HANDOVER.md` for `db:migrate`, `db:seed` and `dev`. The app
+finds it on its own in every normal case:
+
+| Running on | Where it looks |
+|---|---|
+| Browser, iOS simulator | `http://localhost:3000` |
+| Android emulator | `http://10.0.2.2:3000` |
+| A real phone, Expo Go | `http://<the machine running Metro>:3000` |
+
+The last row is the one that used to need configuring. Expo Go tells the app
+which address it loaded the bundle from, which is by definition the
+developer's machine, so the app derives the website's address from it. Start
+the website with **`npm run dev:lan`** in the website repo so it accepts
+connections from the LAN rather than loopback only, and that is the whole
+setup.
+
+To point a build somewhere else — a staging shop, a website on another port —
+set `expo.extra.apiBaseUrl` in `app.json` to **a plain string holding a full
+URL**:
 
 ```json
 "extra": { "apiBaseUrl": "http://192.168.1.20:3000" }
 ```
 
-A real handset on Expo Go needs the developer's LAN address there rather than
-`localhost`. Anything that is not a usable URL is ignored with a warning in
-the console naming the key; the app still starts on the default.
+When you do not want it, **leave the key out entirely**. `null` is not the
+same as absent: Expo resolves it to an empty object and the app used to crash
+on it. Anything unusable is now ignored with a console warning naming the key
+and the value, and the app starts on the default.
+
+**After editing `app.json`, clear Metro's cache** — `npx expo start --clear`
+on its own has not been enough:
+
+```bash
+# macOS / Linux
+rm -rf /tmp/metro-cache && npx expo start --clear
+# Windows PowerShell
+Remove-Item -Recurse -Force $env:TEMP\metro-cache; npx expo start --clear
+```
 
 ## Where things are
 

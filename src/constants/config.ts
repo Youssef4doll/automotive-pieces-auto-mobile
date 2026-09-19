@@ -20,17 +20,72 @@ import { Platform } from 'react-native';
 /** The shop, in production. */
 const PRODUCTION = 'https://automotive-pieces-auto.vercel.app';
 
+/** The port `next dev` serves the website on. */
+const DEV_PORT = 3000;
+
+/**
+ * The machine running Metro, as an IPv4 address — or null.
+ *
+ * Expo Go tells the app where it loaded its bundle from, and that is by
+ * definition the developer's machine on the LAN. So the website is almost
+ * certainly on that same address, and the app can work it out instead of
+ * asking somebody to find their IP and type it into app.json.
+ *
+ * Only a bare IPv4 is accepted. `expo start --tunnel` puts an ngrok domain
+ * here, and there is no website on port 3000 of an ngrok domain — falling
+ * through to the platform default is wrong there too, but it is wrong in a
+ * way that says "pas de connexion" instead of silently talking to a stranger.
+ */
+function devServerHost(): string | null {
+  const constants = Constants as unknown as {
+    expoGoConfig?: { debuggerHost?: string };
+    linkingUri?: string;
+  };
+
+  const candidates = [
+    Constants.expoConfig?.hostUri,
+    constants.expoGoConfig?.debuggerHost,
+    constants.linkingUri,
+  ];
+
+  for (const candidate of candidates) {
+    const host = hostOf(candidate);
+    if (host && /^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return host;
+  }
+  return null;
+}
+
+/** The host out of `192.168.1.20:8081`, `http://192.168.1.20:8081`, or similar. */
+export function hostOf(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const withoutScheme = value.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
+  const host = withoutScheme.split('/')[0].split('?')[0].split(':')[0];
+  return host || null;
+}
+
 /**
  * Development points at a website running on the same machine.
  *
- * `localhost` means the phone itself on a device or an emulator, so it can
- * only ever work in a browser or on the iOS simulator. Android's emulator
- * reaches the host at 10.0.2.2. A real handset needs the developer's LAN
- * address, which is what `expo.extra.apiBaseUrl` is for.
+ * Three cases, in the order they are worth trying:
+ *
+ *   On a real handset in Expo Go, the bundle came from the developer's LAN
+ *   address, so the website is on that address too. This is the case that
+ *   used to need a hand-written `expo.extra.apiBaseUrl` and now does not.
+ *
+ *   On the Android emulator, `localhost` is the emulator itself; the host
+ *   machine is 10.0.2.2.
+ *
+ *   In a browser or the iOS simulator, `localhost` is the host machine and
+ *   is correct as it stands.
+ *
+ * `expo.extra.apiBaseUrl` still wins over all of it, for a staging shop or a
+ * website on a different port.
  */
 function devDefault() {
-  if (Platform.OS === 'android') return 'http://10.0.2.2:3000';
-  return 'http://localhost:3000';
+  const host = devServerHost();
+  if (host) return `http://${host}:${DEV_PORT}`;
+  if (Platform.OS === 'android') return `http://10.0.2.2:${DEV_PORT}`;
+  return `http://localhost:${DEV_PORT}`;
 }
 
 /**
