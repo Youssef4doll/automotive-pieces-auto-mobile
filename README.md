@@ -67,10 +67,26 @@ src/api/          the one place the app talks to the shop
 src/components/   shared UI, and the picker every garage step is built from
 src/constants/    theme.ts — the shop's colours, fonts and touch sizes
 src/i18n/         fr / en / ar, and the RTL handling
+src/illustrations/ the drawings: part families, the car, the logo
 src/store/        the customer's cars, on this phone
+e2e/              checks that drive the real app in a browser
 ```
 
 `ARCHITECTURE.md` explains the shape and the reasoning behind each of these.
+
+## Checking a change
+
+```bash
+npx tsc --noEmit              # types
+npx expo start --web          # leave running in one terminal
+npm run e2e                   # in another
+```
+
+`npm run e2e` opens the app in Chromium, puts a car in the garage through the
+real picker, and measures the result: layout at seven viewport widths, the
+home screen's discovery arc, and Arabic mirroring. `e2e/README.md` says why
+each check is there — every one of them is something that shipped broken
+once and was invisible to a clean typecheck.
 
 ## The other repo
 
@@ -80,7 +96,8 @@ the same stock through a JSON API that repo exposes; it never gets its own
 copy of the data.
 
 Built so far: `/api/v1/vehicles/{makes,models,engines}` behind the garage,
-`/api/v1/catalogue/{families,products}` behind the catalogue, and
+`/api/v1/catalogue/{families,products}` behind the catalogue and behind
+`Pièces compatibles` (which uses its `fits=1` filter), and
 `/api/v1/promotions` behind the banner space. The rest of the
 endpoints in `BRIEF.md` §6 — search, a single product, orders, the account —
 are not written yet, and `ARCHITECTURE.md` §12 says in which order they have

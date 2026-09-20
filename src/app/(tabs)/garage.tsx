@@ -1,29 +1,52 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Alert, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { BottomSheet, SheetAction } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
-import { Empty } from '@/components/ui/states';
+import { SectionHeader } from '@/components/ui/section-header';
 import { Text } from '@/components/ui/text';
-import { C, Elevation, Radius, Spacing, Tap } from '@/constants/theme';
+import { Border, Brand, C, Elevation, IconSize, Radius, Spacing, Tap } from '@/constants/theme';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
+import { CarProfile, EmptyBay } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel, type SavedVehicle } from '@/store/garage';
 
 /**
- * Mon garage — the cars this phone knows about.
+ * Mon garage — the customer's own corner of the app.
  *
- * The only screen in the app so far that reads nothing from the network: the
- * garage lives on the device. That is what makes it work in a basement car
- * park, and it is also why it has no loading state and no failure state —
- * only the brief moment before the store has been read back off disk, which
+ * The first version of this screen was a list with two buttons under every
+ * row, and it was a CRUD page for a table called Vehicle. This one is built
+ * around the fact that one car matters far more than the others: the active
+ * one is what every compatibility badge in the app is measured against, so it
+ * gets the picture, the name, the space and the actions, and the rest are a
+ * short list underneath that exists to switch between them.
+ *
+ * The only screen in the app that reads nothing from the network: the garage
+ * lives on the device. That is what makes it work in a basement car park, and
+ * it is also why it has no loading state and no failure state — only the
+ * brief moment before the store has been read back off disk, which
  * `hydrated` covers.
  *
- * The active car is a navy card and the rest are light ones. That reads at a
- * glance from across a workshop, which an accent border alone did not: the
- * first version marked it with a gold outline and a badge, and in a list of
- * three the badge was the only thing separating them.
+ * ## Where the destructive action went
+ *
+ * Behind the "…" on each row, in a sheet, with its own confirmation step.
+ * Removing a car is not dangerous in any absolute sense — it is three taps to
+ * add it back — but it is invisible when it goes wrong: a customer who loses
+ * the engine variant they picked three months ago has no way of knowing which
+ * of the four "1.6 HDi" entries was theirs. So it does not sit next to
+ * anything, and it asks.
+ *
+ * ## What is not here
+ *
+ * "Historique des commandes" and "Informations du véhicule", both of which
+ * the design calls for. There are no orders in this build — no basket, no
+ * checkout, no `GET /api/v1/orders` — and the database holds a make, a model
+ * and an engine for a car and nothing else, so a vehicle-information screen
+ * would be the three lines already on this one, reprinted. Both are tiles
+ * that would open onto a page apologising for itself.
  */
 export default function GarageScreen() {
   const router = useRouter();
@@ -37,218 +60,335 @@ export default function GarageScreen() {
   const remove = useGarage((s) => s.remove);
   const isFull = useGarage((s) => s.isFull);
 
+  /** The car whose options sheet is open, and whether it is asking to confirm. */
+  const [sheet, setSheet] = useState<SavedVehicle | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  const closeSheet = () => {
+    setSheet(null);
+    setConfirming(false);
+  };
+
   // Before the store has been read back, `vehicles` is the empty array it was
   // created with — which is indistinguishable from an empty garage. Showing
   // "aucun véhicule enregistré" here and then replacing it with three cars is
   // the app appearing to have forgotten them.
   if (!hydrated) return <Screen edges={['left', 'right']} />;
 
-  const confirmRemove = (vehicle: SavedVehicle) => {
-    Alert.alert(t('garage.removeConfirmTitle'), vehicleLabel(vehicle) ?? '', [
-      { text: t('a11y.back'), style: 'cancel' },
-      { text: t('garage.remove'), style: 'destructive', onPress: () => remove(vehicle.engineId) },
-    ]);
-  };
+  if (!active) {
+    return (
+      <Screen edges={['left', 'right']} style={styles.emptyWrap}>
+        <EmptyBay width={200} />
+        <Text variant="screenTitle" style={styles.centred}>
+          {t('garage.empty')}
+        </Text>
+        <Text variant="hint" style={styles.centred}>
+          {t('garage.emptyWhy')}
+        </Text>
+        <Button label={t('home.chooseCar')} onPress={() => router.push('/garage/ajouter')} />
+      </Screen>
+    );
+  }
+
+  const others = vehicles.filter((v) => v.engineId !== active.engineId);
+  const row = rtl ? ('row-reverse' as const) : ('row' as const);
 
   return (
     <Screen edges={['left', 'right']}>
-      {vehicles.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Empty title={t('garage.empty')} body={t('garage.emptyWhy')} />
-          <Button label={t('garage.add')} onPress={() => router.push('/garage/ajouter')} />
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* The customer's car, as a picture rather than as a row of text.
+            This is the identity the rest of the app answers for, and it is
+            the one place in the garage that gets to be generous. */}
+        <Text variant="label" style={styles.eyebrow}>
+          {t('garage.yourCar')}
+        </Text>
+
+        {/* `alignItems` is set per-language: this is a column, and a column
+            does not mirror under RTL the way `row-reverse` mirrors a row. The
+            engine line and the "véhicule principal" badge are both narrower
+            than the card, and both sat against the left edge of an otherwise
+            right-aligned Arabic screen before this. */}
+        <View
+          style={[
+            styles.hero,
+            Elevation.resting,
+            { alignItems: rtl ? 'flex-end' : 'flex-start' },
+          ]}
+        >
+          <View style={styles.heroArt}>
+            {/* White, not the default navy-50: this card IS navy-50, and a
+                body filled with its own background reads as an outline with
+                the shape knocked out of it. */}
+            <CarProfile width={220} accent={Brand.white} ground />
+          </View>
+          <Text variant="screenTitle" numberOfLines={2}>
+            {active.makeName} {active.modelName}
+          </Text>
+          <View style={[styles.engineLine, { flexDirection: row }]}>
+            <Feather name="settings" size={IconSize.small} color={C.textMuted} />
+            <Text variant="hint">{active.engineName}</Text>
+          </View>
+          <View style={[styles.badge, { flexDirection: row }]}>
+            <Feather name="check" size={IconSize.small} color={C.onAccent} />
+            <Text variant="label" tone={C.onAccent}>
+              {t('garage.primary')}
+            </Text>
+          </View>
         </View>
-      ) : (
-        <FlatList
-          data={vehicles}
-          keyExtractor={(v) => v.engineId}
-          contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
-          showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={Gap}
-          renderItem={({ item }) => {
-            const isActive = active?.engineId === item.engineId;
-            return (
-              <View
-                style={[
-                  styles.card,
-                  Elevation.resting,
-                  isActive ? styles.cardActive : styles.cardIdle,
-                ]}
-              >
-                <View style={[styles.cardHead, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-                  <View style={styles.cardText}>
-                    <Text
-                      variant="sectionTitle"
-                      tone={isActive ? C.heroText : C.text}
-                      numberOfLines={2}
-                    >
-                      {item.makeName} {item.modelName}
-                    </Text>
-                    <View
-                      style={[
-                        styles.engineLine,
-                        { flexDirection: rtl ? 'row-reverse' : 'row' },
-                      ]}
-                    >
-                      <Feather
-                        name="settings"
-                        size={13}
-                        color={isActive ? C.heroTextMuted : C.textMuted}
-                      />
-                      <Text variant="hint" tone={isActive ? C.heroTextMuted : C.textMuted}>
-                        {item.engineName}
+
+        {/* Two actions, both of which do something today. */}
+        <View style={styles.section}>
+          <SectionHeader title={t('garage.quickActions')} />
+          <View style={[styles.bento, { flexDirection: row }]}>
+            <ActionTile
+              icon="check-circle"
+              tint={C.success}
+              label={t('home.seeCompatible')}
+              onPress={() =>
+                router.push({
+                  pathname: '/pieces-compatibles',
+                  params: { engine: active.engineId },
+                })
+              }
+            />
+            <ActionTile
+              icon="plus-circle"
+              tint={C.text}
+              label={t('garage.add')}
+              onPress={() => router.push('/garage/ajouter')}
+              disabled={isFull()}
+              note={isFull() ? t('garage.full') : undefined}
+            />
+          </View>
+        </View>
+
+        {others.length > 0 ? (
+          <View style={styles.section}>
+            <SectionHeader title={t('garage.others')} />
+            <View style={styles.others}>
+              {others.map((vehicle) => (
+                <View key={vehicle.engineId} style={[styles.otherRow, { flexDirection: row }]}>
+                  {/* The row itself switches car. It is the only thing anybody
+                      comes to this list to do, so it is the whole row rather
+                      than a button inside it. */}
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t('garage.use')}. ${vehicleLabel(vehicle)}`}
+                    onPress={() => setActive(vehicle.engineId)}
+                    style={({ pressed }) => [
+                      styles.otherMain,
+                      { flexDirection: row },
+                      pressed && styles.otherPressed,
+                    ]}
+                  >
+                    <CarProfile width={52} />
+                    <View style={styles.otherText}>
+                      <Text variant="rowTitle" numberOfLines={1}>
+                        {vehicle.makeName} {vehicle.modelName}
+                      </Text>
+                      <Text variant="hint" numberOfLines={1}>
+                        {vehicle.engineName}
                       </Text>
                     </View>
-                  </View>
-
-                  {isActive ? (
-                    <View style={styles.badge}>
-                      <Feather name="check" size={12} color={C.onAccent} />
-                      <Text variant="label" tone={C.onAccent}>
-                        {t('garage.active')}
-                      </Text>
-                    </View>
-                  ) : null}
-                </View>
-
-                <View
-                  style={[
-                    styles.actions,
-                    { flexDirection: rtl ? 'row-reverse' : 'row' },
-                    isActive && styles.actionsOnNavy,
-                  ]}
-                >
-                  {/* "Rendre actif" is offered only where it would do
-                      something. A button that is already true is a button the
-                      customer taps once to find out it does nothing. */}
-                  {!isActive ? (
-                    <Pressable
-                      accessibilityRole="button"
-                      onPress={() => setActive(item.engineId)}
-                      style={[styles.action, { flexDirection: rtl ? 'row-reverse' : 'row' }]}
-                    >
-                      <Feather name="check-circle" size={15} color={C.text} />
-                      <Text variant="hint" tone={C.text}>
-                        {t('garage.setActive')}
-                      </Text>
-                    </Pressable>
-                  ) : null}
+                  </Pressable>
 
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={t('garage.remove')}
-                    onPress={() => confirmRemove(item)}
-                    style={[styles.action, { flexDirection: rtl ? 'row-reverse' : 'row' }]}
+                    accessibilityLabel={`${t('garage.options')}. ${vehicleLabel(vehicle)}`}
+                    onPress={() => setSheet(vehicle)}
+                    style={({ pressed }) => [styles.more, pressed && styles.otherPressed]}
                   >
-                    {/* On the navy card this is white, not red. The shop's
-                        red is red-600, which measures 3.4:1 on navy-900 and
-                        fails — and there is no lighter red in the brand to
-                        reach for, so inventing one here would put a colour on
-                        screen that the website has never seen. The trash icon
-                        and the confirmation dialog carry the meaning instead,
-                        and the label stays readable. */}
-                    <Feather
-                      name="trash-2"
-                      size={15}
-                      color={isActive ? C.heroText : C.danger}
-                    />
-                    <Text variant="hint" tone={isActive ? C.heroText : C.danger}>
-                      {t('garage.remove')}
-                    </Text>
+                    <Feather name="more-horizontal" size={IconSize.large} color={C.textMuted} />
                   </Pressable>
                 </View>
-              </View>
-            );
-          }}
-          ListFooterComponent={
-            <View style={styles.footer}>
-              <Button
-                label={t('garage.addAnother')}
-                variant="secondary"
-                onPress={() => router.push('/garage/ajouter')}
-              />
-              {/* The ceiling is stated where it bites, not in a help page. */}
-              {isFull() ? (
-                <Text variant="hint" style={styles.footerNote}>
-                  {t('garage.full')}
-                </Text>
-              ) : null}
+              ))}
             </View>
-          }
-        />
-      )}
+          </View>
+        ) : null}
+      </ScrollView>
+
+      <BottomSheet
+        visible={sheet !== null}
+        onClose={closeSheet}
+        title={vehicleLabel(sheet) ?? t('garage.options')}
+      >
+        {confirming ? (
+          <View style={styles.confirm}>
+            <Text variant="rowTitle">{t('garage.removeConfirmTitle')}</Text>
+            <Text variant="hint">{t('garage.removeConfirmBody')}</Text>
+            <View style={[styles.confirmRow, { flexDirection: row }]}>
+              <Button
+                label={t('garage.cancel')}
+                variant="secondary"
+                onPress={closeSheet}
+                style={styles.confirmButton}
+              />
+              <Button
+                label={t('garage.remove')}
+                variant="danger"
+                onPress={() => {
+                  if (sheet) remove(sheet.engineId);
+                  closeSheet();
+                }}
+                style={styles.confirmButton}
+              />
+            </View>
+          </View>
+        ) : (
+          <>
+            <SheetAction
+              icon="check-circle"
+              label={t('garage.use')}
+              onPress={() => {
+                if (sheet) setActive(sheet.engineId);
+                closeSheet();
+              }}
+            />
+            {/* Last, separated by a rule, and red. Three signals, because
+                colour on its own is not one everybody receives. */}
+            <SheetAction
+              icon="trash-2"
+              tone="danger"
+              separated
+              label={t('garage.remove')}
+              onPress={() => setConfirming(true)}
+            />
+          </>
+        )}
+      </BottomSheet>
     </Screen>
   );
 }
 
-function Gap() {
-  return <View style={styles.gap} />;
+/** One tile in the quick-actions bento. */
+function ActionTile({
+  icon,
+  label,
+  tint,
+  onPress,
+  disabled = false,
+  note,
+}: {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  label: string;
+  tint: string;
+  onPress: () => void;
+  disabled?: boolean;
+  note?: string;
+}) {
+  const { rtl } = useI18n();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.tile,
+        // Another column that has to be told which way it reads: the icon
+        // sat top-left above right-aligned Arabic text.
+        { alignItems: rtl ? 'flex-end' : 'flex-start' },
+        disabled && styles.tileDisabled,
+        pressed && !disabled && styles.tilePressed,
+      ]}
+    >
+      <Feather name={icon} size={IconSize.feature} color={disabled ? C.textFaint : tint} />
+      <Text variant="rowTitle" tone={disabled ? C.textFaint : C.text} numberOfLines={2}>
+        {label}
+      </Text>
+      {/* The ceiling is stated where it bites, not in a help page. */}
+      {note ? (
+        <Text variant="hint" tone={C.textFaint} numberOfLines={3}>
+          {note}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
   emptyWrap: {
     flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.three,
     paddingBottom: Spacing.six,
-    gap: Spacing.three,
   },
-  list: {
-    paddingTop: Spacing.three,
-  },
-  gap: {
-    height: Spacing.two,
-  },
-  card: {
-    borderRadius: Radius.card,
-    padding: Spacing.three,
-    gap: Spacing.three,
-  },
-  cardIdle: {
+  centred: { textAlign: 'center' },
+
+  scroll: { paddingTop: Spacing.three },
+  eyebrow: { paddingBottom: Spacing.two },
+  hero: {
     backgroundColor: C.surface,
-  },
-  cardActive: {
-    backgroundColor: C.surfaceBrand,
-  },
-  cardHead: {
-    alignItems: 'flex-start',
-    gap: Spacing.two,
-  },
-  cardText: {
-    flex: 1,
+    borderRadius: Radius.sheet,
+    padding: Spacing.three,
     gap: Spacing.one,
   },
-  engineLine: {
+  heroArt: {
+    width: '100%',
     alignItems: 'center',
-    gap: Spacing.two,
+    paddingVertical: Spacing.two,
   },
+  engineLine: { alignItems: 'center', gap: Spacing.two },
   badge: {
-    flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
+    marginTop: Spacing.two,
     backgroundColor: C.accent,
     borderRadius: Radius.chip,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.half,
   },
-  actions: {
-    gap: Spacing.four,
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: C.border,
-    paddingTop: Spacing.two,
-  },
-  actionsOnNavy: {
-    borderTopColor: C.navy700,
-  },
-  action: {
-    alignItems: 'center',
+
+  section: { paddingTop: Spacing.five },
+  bento: { gap: Spacing.two },
+  tile: {
+    flex: 1,
+    minHeight: 112,
     gap: Spacing.two,
-    minHeight: Tap.min,
+    padding: Spacing.three,
+    borderRadius: Radius.card,
+    borderWidth: Border.thin,
+    borderColor: C.border,
+    backgroundColor: C.background,
+    justifyContent: 'flex-start',
   },
-  footer: {
-    paddingTop: Spacing.four,
-    gap: Spacing.two,
+  tilePressed: { backgroundColor: C.surface },
+  tileDisabled: { backgroundColor: C.surface, borderColor: C.surface },
+
+  others: { gap: Spacing.two },
+  otherRow: {
+    alignItems: 'center',
+    borderRadius: Radius.card,
+    borderWidth: Border.thin,
+    borderColor: C.border,
+    backgroundColor: C.background,
+    paddingRight: Spacing.one,
+    paddingLeft: Spacing.one,
   },
-  footerNote: {
-    textAlign: 'center',
+  otherMain: {
+    flex: 1,
+    alignItems: 'center',
+    gap: Spacing.three,
+    minHeight: 68,
+    paddingHorizontal: Spacing.two,
+    borderRadius: Radius.card,
   },
+  otherPressed: { backgroundColor: C.surface },
+  otherText: { flex: 1, gap: 1 },
+  more: {
+    width: Tap.min,
+    height: Tap.min,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.chip,
+  },
+
+  confirm: { gap: Spacing.two, paddingBottom: Spacing.two },
+  confirmRow: { gap: Spacing.two, paddingTop: Spacing.two },
+  confirmButton: { flex: 1 },
 });

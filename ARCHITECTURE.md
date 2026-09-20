@@ -144,7 +144,21 @@ flow, under `src/app/api/v1/`:
 GET /api/v1/vehicles/makes
 GET /api/v1/vehicles/models?make=<slug>
 GET /api/v1/vehicles/engines?make=<slug>&model=<slug>
+GET /api/v1/catalogue/families
+GET /api/v1/catalogue/products?family=&subcategory=&engine=&fits=1&page=
+GET /api/v1/promotions
 ```
+
+`fits=1` is the narrow one and it earns its place: it returns only the parts
+that have a `ProductFitment` row for that engine — the shop's confirmed list
+for one car, which is what `Pièces compatibles` renders. It has to be a
+server-side filter. Filtering a page of twenty client-side would report
+"nothing fits your car" whenever the confirmed parts happened to sit on page
+two, and that is not hypothetical: on the BMW 116i in the shop's own data,
+page one holds one of the two confirmed parts. It narrows to FITS only, never
+FITS plus UNKNOWN — a part with no fitment rows is one nobody has checked,
+and folding those in turns "confirmed for your car" into "probably fine".
+Asking for it without an `engine` is a 400 rather than a silently empty page.
 
 Conventions they set, which the rest of `/api/v1` should follow:
 
@@ -251,9 +265,22 @@ DISCOVER   Accueil            what this is, and the ways in
 IDENTIFY   Mon garage         make → model → engine, kept on the phone
 BROWSE     Catalogue          the families the shop actually stocks
            Famille            its parts, filtered by subcategory
+           Pièces compatibles what the shop has confirmed fits this engine
 EVALUATE   (product page)     not built — see §12
 BUY        (cart, checkout)   not built
 TRACK      (orders)           not built
+```
+
+The home screen, top to bottom, is the order of the job rather than the order
+of the marketing:
+
+```
+logo + promise      whose shop this is, and what it is for
+your vehicle        the context every answer below depends on
+Que cherchez-vous ? the ways in, along an arc
+Familles de pièces  browsing, for anyone who knows none of the above
+the shop's banner   only when a campaign is actually running
+language
 ```
 
 Every screen answers one question and offers one primary action. The home
@@ -284,6 +311,40 @@ margin these are two stacked blocks and the screen looks assembled rather than
 designed. The hero runs under the status bar and carries the safe-area inset
 in its own padding, because an inset applied outside it leaves a white band
 over the navy.
+
+**The discovery arc.** "Que cherchez-vous ?" is a horizontally snapping row
+whose cards sit on a shallow dome: the active one upright at full strength,
+its neighbours 16pt lower and 6% smaller, the next 30pt lower again. It is
+the home screen's signature interaction and the reasoning is in
+`src/components/ui/discovery-arc.tsx`, but the short version is that a parts
+shop's hardest moment is the first one — somebody holding a broken thing who
+does not know whether they know its name — and a path is a smaller question
+than a grid of equal cards.
+
+Three constraints kept it from becoming a gimmick. The lift is small enough
+to read as a curve rather than a carousel. There are no pagination dots and
+no scrollbar: the affordance is the peek, because a slide is 62% of the
+container, so the next card is always a third visible at the edge — which
+shows *what* is next rather than how many there are, and costs no vertical
+space. And the whole gesture runs on the UI thread: one shared value written
+by `useAnimatedScrollHandler`, read by each card inside a worklet. React
+renders a card once and is not involved in the scroll at all. The only thing
+that crosses back to JavaScript is the active index, and only when it
+changes, because the selected state has to reach the accessibility tree.
+
+Emphasis is never carried by scale and opacity alone — under Reduce Motion
+there is no arc at all — so the active card also darkens its border and shows
+a gold marker, and each card is numbered.
+
+**Where a destructive action lives.** Never beside the action it could be
+mistaken for. The garage's "retirer ce véhicule" sits behind a "…" on each
+row, opens a bottom sheet, and asks before it acts — and the confirm button
+is red, not gold. That last part was a real bug: gold is the shop's
+yes-do-this colour, and a gold "retirer" next to a grey "annuler" reads as a
+choice between proceeding and cancelling rather than between deleting and
+keeping. `Button` gained a `danger` variant copied from the website's own
+`bg-red-600 … text-white`. Red is never the only signal either: the row is
+last, separated by a rule, and carries a bin icon.
 
 **There is no photography, and that is a decision, not an omission.** Both
 references get most of their impact from a full-bleed photograph. This shop
@@ -607,11 +668,16 @@ Needs `/api/v1/search` and `/api/v1/reference/:ref`; the website already has
 the index, the ranking and the synonym handling in its `lib/search`, so this
 is an endpoint over existing machinery rather than new machinery.
 
-**Then the remaining two ways in.** "Que cherchez-vous ?" currently offers
-two routes because two are built. "J'ai la référence" arrives with search;
-"Je ne sais pas comment ça s'appelle" arrives with the photo/expert flow.
-Four cards where two open onto nothing would be the app advertising what it
-does not have.
+**Then the remaining ways in.** The arc offers three routes with a car in the
+garage and two without, because that is how many lead somewhere. The design
+it was drawn from lists six. "J'ai la référence" needs a search index the API
+does not expose yet. "Je ne sais pas comment ça s'appelle" needs the shop's
+WhatsApp number, which is a placeholder in production and is the owner's to
+fill in (`BRIEF.md` §8). "Par symptôme" needs a symptom→family mapping that
+does not exist in the database at all, and must never read as a diagnosis
+when it does. A front door with six handles of which three are painted on is
+how an app teaches its customer to stop trusting it; the component takes any
+number and they arrive as their endpoints do.
 
 **Also outstanding:**
 
@@ -627,12 +693,14 @@ does not have.
   screen shows the first page only. Fine at 16 products a family, not fine
   at 500.
 - The garage does not sync to an account, because there is no account.
-- **There are no automated tests.** The website's answer is Playwright
-  against a real database. Everything here was verified by driving the real
-  app in a browser — a behaviour suite, an offline/recovery pass, an
-  Arabic/RTL pass, and a seven-viewport sweep checking overflow, clipped
-  text and touch-target sizes. Those scripts live in a scratchpad, not in
-  the repo, which is the gap: they should be committed and run on a branch.
+- **The committed suite is `e2e/` and it is not complete.** `npm run e2e`
+  drives the real app in Chromium and checks layout at seven viewports, the
+  arc's transforms and snapping, and Arabic mirroring — see `e2e/README.md`
+  for why each check exists. What is still only in a scratchpad: the
+  offline/recovery pass and the behaviour walk-through of the picker. And it
+  runs against the web build, so it proves layout, text fitting, target size
+  and direction, not platform behaviour — the phones are still verified by
+  hand.
 
 ### One assumption worth checking
 

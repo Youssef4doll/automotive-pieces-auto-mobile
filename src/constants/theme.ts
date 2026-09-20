@@ -32,6 +32,18 @@ export const Brand = {
   gold400: '#ffd23d',
   red600: '#c50e26',
   red500: '#e1112c',
+  /**
+   * The pressed state of a red button, which the shop's own palette has no
+   * entry for.
+   *
+   * `globals.css` defines red-600 and red-500 and nothing darker, and the
+   * website's destructive buttons are `bg-red-600 hover:bg-red-700` — so the
+   * hover they actually render is Tailwind's stock red-700 rather than a shop
+   * colour. This is that value, written down rather than invented, so the two
+   * front doors darken a delete button to the same red. If the shop ever adds
+   * a real red-700 to globals.css, this is the line that changes.
+   */
+  red700: '#b91c1c',
   white: '#ffffff',
 
   /**
@@ -80,6 +92,8 @@ export const Colors = {
     /** Text and icons that sit ON the accent. */
     onAccent: Brand.navy900,
     danger: Brand.red600,
+    /** A red button being pressed. See `Brand.red700`. */
+    dangerPressed: Brand.red700,
     dangerSurface: '#fdf2f3',
 
     /** Yes: in stock, fits your car. Always with an icon — never colour alone. */
@@ -401,4 +415,40 @@ export const Breakpoint = {
   xlarge: 430,
   /** Tablet, and the browser during development. */
   tablet: 768,
+} as const;
+
+/**
+ * The geometry of the home screen's discovery arc.
+ *
+ * These live here rather than inside the component because they are the one
+ * place the arc can be made gimmicky, and a number buried in a transform is a
+ * number nobody reviews. Every one of them is deliberately small.
+ *
+ * `lift` is the whole trick. A card one step off centre sits 16pt lower than
+ * the active one and 30pt lower two steps out, which traces a shallow dome
+ * across the row — enough that the eye reads a path rather than a shelf, not
+ * enough to look like a carousel from a 2013 jQuery plugin. It was 40 in the
+ * first pass and the row looked like it was falling off the screen.
+ *
+ * `slideRatio` is what makes the next card peek. At 0.62 of the viewport a
+ * 390pt phone shows the active card and about 75pt of each neighbour, which
+ * is the whole scroll affordance — no dots, no scrollbar, no arrows. Below
+ * about 0.55 three cards compete for attention and none of them wins; above
+ * about 0.7 the peek disappears and the row looks like it ends.
+ */
+export const Arc = {
+  slideRatio: 0.62,
+  /** A slide never grows past this on a tablet, or the arc spans a metre. */
+  slideMax: 260,
+  /** …and never shrinks below this, or the title wraps to four lines. */
+  slideMin: 196,
+  /** How far a neighbour drops, one step out and two steps out. */
+  lift: 16,
+  liftFar: 30,
+  /** Scale of a card one step off centre, and two steps off. */
+  scaleIdle: 0.94,
+  scaleFar: 0.9,
+  /** Opacity of the same. Never below ~0.6: the text must stay readable. */
+  opacityIdle: 0.78,
+  opacityFar: 0.62,
 } as const;

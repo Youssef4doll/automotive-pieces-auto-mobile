@@ -38,6 +38,34 @@ const dict = {
     'entry.browse': 'Je sais quelle pièce',
     'entry.browseHint': 'Freinage, filtres, suspension…',
 
+    // The discovery arc, the garage and the compatible-parts screen.
+    'arc.position': 'Option {n} sur {total}',
+    'entry.forMyCar': 'Pour mon véhicule',
+    'entry.forMyCarHint': 'Les pièces confirmées compatibles',
+    'entry.changeCar': 'Changer de voiture',
+    'entry.changeCarHint': 'Une autre marque, un autre modèle',
+
+    'home.seeCompatible': 'Voir les pièces compatibles',
+    'home.change': 'Changer',
+    'home.chooseCar': 'Choisir ma voiture',
+
+    'fits.title': 'Pièces compatibles',
+    'fits.for': 'Confirmées pour votre {vehicle}',
+    'fits.count': '{n} pièce(s) confirmée(s)',
+    'fits.empty': 'Aucune pièce confirmée pour ce véhicule.',
+    'fits.emptyWhy':
+      "La compatibilité est renseignée pièce par pièce, et elle est encore partielle. Parcourez le catalogue : chaque fiche dit si la pièce convient, ou si c'est à vérifier.",
+    'fits.browse': 'Parcourir le catalogue',
+
+    'garage.yourCar': 'Votre voiture',
+    'garage.primary': 'Véhicule principal',
+    'garage.count': '{n} véhicule(s)',
+    'garage.quickActions': 'Actions rapides',
+    'garage.others': 'Autres véhicules',
+    'garage.options': 'Options du véhicule',
+    'garage.cancel': 'Annuler',
+    'garage.use': 'Utiliser cette voiture',
+
     'promo.seasonal': 'Campagne de saison',
     'promo.new': 'Nouveautés',
     'promo.deal': 'Bon plan',
@@ -144,6 +172,34 @@ const dict = {
     'entry.browse': 'I know which part',
     'entry.browseHint': 'Brakes, filters, suspension…',
 
+    // The discovery arc, the garage and the compatible-parts screen.
+    'arc.position': 'Option {n} of {total}',
+    'entry.forMyCar': 'For my vehicle',
+    'entry.forMyCarHint': 'Parts confirmed to fit',
+    'entry.changeCar': 'Change car',
+    'entry.changeCarHint': 'Another make, another model',
+
+    'home.seeCompatible': 'See parts that fit',
+    'home.change': 'Change',
+    'home.chooseCar': 'Choose my car',
+
+    'fits.title': 'Parts that fit',
+    'fits.for': 'Confirmed for your {vehicle}',
+    'fits.count': '{n} confirmed part(s)',
+    'fits.empty': 'No part is confirmed for this vehicle yet.',
+    'fits.emptyWhy':
+      'Fitment is recorded part by part and is still partial. Browse the catalogue: every part says whether it fits, or whether that needs checking.',
+    'fits.browse': 'Browse the catalogue',
+
+    'garage.yourCar': 'Your car',
+    'garage.primary': 'Primary vehicle',
+    'garage.count': '{n} vehicle(s)',
+    'garage.quickActions': 'Quick actions',
+    'garage.others': 'Other vehicles',
+    'garage.options': 'Vehicle options',
+    'garage.cancel': 'Cancel',
+    'garage.use': 'Use this car',
+
     'promo.seasonal': 'Seasonal campaign',
     'promo.new': 'New arrivals',
     'promo.deal': 'Deal',
@@ -246,6 +302,34 @@ const dict = {
     'entry.knowCarHint': 'الماركة، الطراز، المحرّك',
     'entry.browse': 'أعرف القطعة',
     'entry.browseHint': 'الفرامل، الفلاتر، التعليق…',
+
+    // The discovery arc, the garage and the compatible-parts screen.
+    'arc.position': 'الخيار {n} من {total}',
+    'entry.forMyCar': 'لسيارتي',
+    'entry.forMyCarHint': 'القطع المؤكَّد توافقها',
+    'entry.changeCar': 'تغيير السيارة',
+    'entry.changeCarHint': 'ماركة أخرى، طراز آخر',
+
+    'home.seeCompatible': 'عرض القطع المتوافقة',
+    'home.change': 'تغيير',
+    'home.chooseCar': 'اختيار سيارتي',
+
+    'fits.title': 'القطع المتوافقة',
+    'fits.for': 'مؤكَّدة لسيارتك {vehicle}',
+    'fits.count': '{n} قطعة مؤكَّدة',
+    'fits.empty': 'لا توجد بعد قطعة مؤكَّدة لهذه السيارة.',
+    'fits.emptyWhy':
+      'التوافق يُسجَّل قطعة بقطعة وهو لا يزال جزئيًا. تصفّح الكتالوج: كل قطعة تبيّن إن كانت تناسب سيارتك أو إن كان الأمر يحتاج إلى تحقّق.',
+    'fits.browse': 'تصفّح الكتالوج',
+
+    'garage.yourCar': 'سيارتك',
+    'garage.primary': 'السيارة الأساسية',
+    'garage.count': '{n} سيارة',
+    'garage.quickActions': 'إجراءات سريعة',
+    'garage.others': 'سيارات أخرى',
+    'garage.options': 'خيارات السيارة',
+    'garage.cancel': 'إلغاء',
+    'garage.use': 'استخدام هذه السيارة',
 
     'promo.seasonal': 'حملة موسمية',
     'promo.new': 'وصل حديثًا',

@@ -74,6 +74,27 @@ export type ProductPage = {
 };
 
 export const productsApi = {
+  /**
+   * Everything the shop has confirmed fits one engine.
+   *
+   * Narrower than `inFamily` with an engine: that returns the whole family
+   * with a verdict stamped on each row, most of them UNKNOWN. This returns
+   * only the parts with a real fitment row for that engine, which is the
+   * shop's answer to "what fits my car" and the only list that can honestly
+   * carry that title.
+   *
+   * The filtering happens on the server (`fits=1`). Doing it here would mean
+   * filtering one page of twenty and reporting "nothing fits your car"
+   * whenever the confirmed parts happened to sit on page two — which is not
+   * hypothetical: on the BMW 116i in the shop's own data, page one holds one
+   * of the two confirmed parts.
+   */
+  fitsEngine: (engineId: string, options: { page?: number } = {}, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ engine: engineId, fits: '1' });
+    if (options.page && options.page > 1) params.set('page', String(options.page));
+    return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
+  },
+
   inFamily: (
     familySlug: string,
     options: { engineId?: string; subcategorySlug?: string; page?: number } = {},
