@@ -1,4 +1,5 @@
 import { commerce } from './commerce';
+import { look } from './look';
 import { staff } from './staff';
 import type { Locale } from './locales';
 
@@ -85,7 +86,7 @@ const base = {
     'catalog.noFamilies': "Le catalogue n'est pas encore en ligne.",
 
     'tab.home': 'Accueil',
-    'tab.garage': 'Mon garage',
+    'tab.garage': 'Garage',
     'tab.catalog': 'Catalogue',
 
     'home.greeting': 'Vos pièces auto',
@@ -219,7 +220,7 @@ const base = {
     'catalog.noFamilies': 'The catalogue is not online yet.',
 
     'tab.home': 'Home',
-    'tab.garage': 'My garage',
+    'tab.garage': 'Garage',
     'tab.catalog': 'Catalogue',
 
     'home.greeting': 'Your car parts',
@@ -350,7 +351,7 @@ const base = {
     'catalog.noFamilies': 'الكتالوج ليس متاحاً بعد.',
 
     'tab.home': 'الرئيسية',
-    'tab.garage': 'مرآبي',
+    'tab.garage': 'المرآب',
     'tab.catalog': 'الكتالوج',
 
     'home.greeting': 'قطع غيار سيارتك',
@@ -414,9 +415,9 @@ const base = {
 
 /** The first dictionary, the buying one (commerce.ts) and the shop's own (staff.ts), as one. */
 const dict = {
-  fr: { ...base.fr, ...commerce.fr, ...staff.fr },
-  en: { ...base.en, ...commerce.en, ...staff.en },
-  ar: { ...base.ar, ...commerce.ar, ...staff.ar },
+  fr: { ...base.fr, ...commerce.fr, ...staff.fr, ...look.fr },
+  en: { ...base.en, ...commerce.en, ...staff.en, ...look.en },
+  ar: { ...base.ar, ...commerce.ar, ...staff.ar, ...look.ar },
 } as const;
 
 export type DictKey = keyof (typeof dict)['fr'];

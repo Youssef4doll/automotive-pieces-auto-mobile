@@ -9,10 +9,10 @@ import { PickerScreen, type PickerItem } from '@/components/picker-screen';
 import type { TrailStep } from '@/components/ui/chip';
 import { Text } from '@/components/ui/text';
 import { API_BASE_URL } from '@/constants/config';
-import { Border, C, familyFor, IconSize, Radius, Spacing, Tap } from '@/constants/theme';
+import { Border, C, Elevation, familyFor, IconSize, Radius, Spacing } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { CarteGrise } from '@/illustrations/carte-grise';
-import { CarProfile } from '@/illustrations/vehicle';
+import { VehicleCard } from '@/components/ui/vehicle-card';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 
@@ -89,7 +89,10 @@ export default function MakesScreen() {
       <Stack.Screen options={{ title: t('home.chooseCar') }} />
       <PickerScreen
         trail={trail}
-        heading={t('picker.chooseMake')}
+        heading={t('look.whichMake')}
+        subtitle={t('look.pickerWhy')}
+        filterPlaceholder={t('look.brandSearch')}
+        alwaysFilter
         resource={resource}
         toItems={toItems}
         emptyTitle={t('picker.noMakes')}
@@ -110,87 +113,65 @@ function Shortcuts({ topMakes, onMake }: { topMakes: Make[]; onMake: (make: Make
 
   return (
     <>
+      {topMakes.length ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.railBar} contentContainerStyle={[styles.rail, row]}>
+          {topMakes.map((m) => (
+            <Pressable
+              key={m.id}
+              accessibilityRole="button"
+              accessibilityLabel={`${m.name}, ${t('picker.partCount', { n: m.partCount })}`}
+              onPress={() => onMake(m)}
+              style={({ pressed }) => [styles.badge, pressed && styles.pressed]}
+            >
+              <View style={styles.disc}>
+                {m.logoUrl ? (
+                  <Image source={{ uri: m.logoUrl.startsWith('http') ? m.logoUrl : `${API_BASE_URL}${m.logoUrl}` }} style={styles.logo} contentFit="contain" />
+                ) : (
+                  <Text style={{ fontFamily: familyFor('headingStrong', false), fontSize: 18, lineHeight: 22, color: C.text }}>{monogram(m.name)}</Text>
+                )}
+              </View>
+              <Text variant="hint" tone={C.text} numberOfLines={1} style={styles.badgeName}>
+                {m.name}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
+
+      {vehicles.length ? (
+        <View style={styles.block}>
+          <Text style={[styles.section, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.recentVehicles')}</Text>
+          {vehicles.map((v) => (
+            <VehicleCard
+              key={v.engineId}
+              vehicle={v}
+              principal={v.engineId === active?.engineId}
+              compactArt
+              onPress={() => {
+                setActive(v.engineId);
+                router.dismissAll();
+              }}
+            />
+          ))}
+        </View>
+      ) : null}
+
       <Pressable
         accessibilityRole="button"
         onPress={() => router.push('/garage/vin')}
         style={({ pressed }) => [styles.vin, row, pressed && styles.pressed]}
       >
-        <CarteGrise width={56} compact />
+        <View style={styles.vinIcon}>
+          <CarteGrise width={44} compact />
+        </View>
         <View style={styles.flex}>
-          <Text variant="rowTitle">{t('picker.orVin')}</Text>
-          <Text variant="hint">{t('picker.orVinHint')}</Text>
+          <Text variant="rowTitle">{t('look.scanCard')}</Text>
+          <Text variant="hint">{t('look.scanCardWhy')}</Text>
         </View>
         <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={C.textMuted} />
       </Pressable>
 
-      {vehicles.length ? (
-        <View style={styles.block}>
-          <Text variant="label">{t('picker.yourVehicles')}</Text>
-          {vehicles.map((v) => {
-            const isActive = v.engineId === active?.engineId;
-            return (
-              <Pressable
-                key={v.engineId}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isActive }}
-                onPress={() => {
-                  setActive(v.engineId);
-                  router.dismissAll();
-                }}
-                style={({ pressed }) => [styles.saved, row, isActive && styles.savedActive, pressed && styles.pressed]}
-              >
-                <CarProfile width={56} />
-                <View style={styles.flex}>
-                  <Text variant="body" tone={C.text} numberOfLines={1}>
-                    {`${v.makeName} ${v.modelName}`}
-                  </Text>
-                  <Text variant="hint" numberOfLines={1}>
-                    {isActive ? `${v.engineName} · ${t('garage.primary')}` : v.engineName}
-                  </Text>
-                </View>
-                {isActive ? <Feather name="check-circle" size={IconSize.medium} color={C.success} /> : null}
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
-
-      {topMakes.length ? (
-        <View style={styles.block}>
-          <Text variant="label">{t('picker.topMakes')}</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.railBar}
-            contentContainerStyle={[styles.rail, row]}
-          >
-            {topMakes.map((m) => (
-              <Pressable
-                key={m.id}
-                accessibilityRole="button"
-                accessibilityLabel={`${m.name}, ${t('picker.partCount', { n: m.partCount })}`}
-                onPress={() => onMake(m)}
-                style={({ pressed }) => [styles.badge, pressed && styles.pressed]}
-              >
-                <View style={styles.disc}>
-                  {m.logoUrl ? (
-                    <Image source={{ uri: m.logoUrl.startsWith('http') ? m.logoUrl : `${API_BASE_URL}${m.logoUrl}` }} style={styles.logo} contentFit="contain" />
-                  ) : (
-                    <Text style={{ fontFamily: familyFor('headingStrong', false), fontSize: 17, lineHeight: 22, color: C.text }}>
-                      {monogram(m.name)}
-                    </Text>
-                  )}
-                </View>
-                <Text variant="hint" tone={C.text} numberOfLines={1} style={styles.badgeName}>
-                  {m.name}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-      ) : null}
-
-      <Text variant="label">{t('picker.allMakes')}</Text>
+      <Text style={[styles.section, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('picker.allMakes')}</Text>
     </>
   );
 }
@@ -205,7 +186,8 @@ function monogram(name: string) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, gap: 2 },
-  pressed: { backgroundColor: C.surface },
+  pressed: { opacity: 0.7 },
+  section: { fontSize: 17, lineHeight: 23, color: C.text },
   vin: {
     alignItems: 'center',
     gap: Spacing.three,
@@ -213,42 +195,25 @@ const styles = StyleSheet.create({
     borderRadius: Radius.card,
     borderWidth: Border.thin,
     borderColor: C.border,
+    backgroundColor: C.background,
   },
+  vinIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
   block: { gap: Spacing.two },
-  saved: {
-    alignItems: 'center',
-    gap: Spacing.three,
-    minHeight: Tap.primary + Spacing.two,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: Border.thin,
-    borderColor: C.border,
-  },
-  savedActive: {
-    borderColor: C.successBorder,
-    backgroundColor: C.successSurface,
-  },
-  // The rail bleeds to the screen edge so the next badge peeks — clipped at
-  // the page gutter, eight badges looked like four and the row looked done.
+  // The rail bleeds to the screen edge so the next badge peeks.
   railBar: { flexGrow: 0, flexShrink: 0, marginHorizontal: -Spacing.three },
-  rail: { gap: Spacing.two, paddingVertical: Spacing.one, paddingHorizontal: Spacing.three },
-  badge: {
-    width: 68,
-    alignItems: 'center',
-    gap: Spacing.one,
-    paddingVertical: Spacing.one,
-    borderRadius: Radius.tile,
-  },
+  rail: { gap: Spacing.three, paddingVertical: Spacing.one, paddingHorizontal: Spacing.three },
+  badge: { width: 72, alignItems: 'center', gap: Spacing.one, paddingVertical: Spacing.one, borderRadius: Radius.tile },
   disc: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     borderWidth: Border.thin,
     borderColor: C.border,
     backgroundColor: C.background,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Elevation.resting,
   },
-  logo: { width: 36, height: 36 },
+  logo: { width: 40, height: 40 },
   badgeName: { textAlign: 'center' },
 });

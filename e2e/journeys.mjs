@@ -148,7 +148,7 @@ await journey('6 two cars', async ({ page }) => {
   await page.waitForTimeout(2000);
   const text = await bodyText(page);
   check(
-    says(text, 'Vos véhicules') && says(text, 'BMW Série 1') && says(text, 'Renault Clio IV'),
+    says(text, 'Véhicules récents') && says(text, 'BMW Série 1') && says(text, 'Renault Clio IV'),
     '6 two cars: both are one tap away',
   );
 });

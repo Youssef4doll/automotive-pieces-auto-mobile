@@ -816,3 +816,52 @@ photos, count, price, online, supply), `familles`, `boutique` (settings). The
 way in is the last row of Mon compte, "Espace boutique". Staff screens re-read
 their data whenever they come back into view (`hooks/use-live.ts`), because
 what they show changes underneath them.
+
+---
+
+## 14. The reference pass (September 2026)
+
+The owner sent the full concept board (24 screens) and asked for the app to
+match it as closely as possible. Every screen on the board now has its
+counterpart, built on the shop's data:
+
+| Reference screen | Here |
+|---|---|
+| Accueil (logo, "La bonne pièce, pour la bonne route.", search, Votre véhicule) + "Que recherchez-vous ?" arc | `(tabs)/index.tsx` — one scroll, dark head then white sheet |
+| Catégories populaires, Entretien auto, Nos marques, Besoin d'un conseil | the home sheet; brands from `/api/v1/catalogue/brands` |
+| Toutes les familles de pièces | `(tabs)/catalogue.tsx` — illustrated 4-column grid with a name filter |
+| Freinage (dark head, chips, two-column grid) | `famille/[family].tsx` + `ui/product-grid.tsx` / `ui/product-tile.tsx` |
+| Choisir ma voiture / Quelle est la marque ? | `garage/ajouter/index.tsx` (round make buttons, Véhicules récents, carte grise) |
+| Mon garage (principal card, 2×2 actions, Mes véhicules) | `(tabs)/garage.tsx` |
+| Mes véhicules (select, then act) | `garage/vehicules.tsx` |
+| Ajouter un véhicule (four ways, Continuer) | `trouver.tsx`, linked under the arc |
+| Carte grise / VIN | `garage/vin.tsx` — info box moved under the button, as drawn |
+| Product (heart, share, compat pill, facts, accordions) | `produit/[slug].tsx`; favourites in `store/favourites.ts`, listed at `compte/favoris.tsx` |
+| Search (chips, Suggestions, Récents) | `recherche.tsx` |
+| Tab bar (gold pill on the active tab, "Garage") | `(tabs)/_layout.tsx` |
+
+**Pictures.** The board's photographs of parts and cars are not ours to copy
+and there is no photograph of a real part the shop has not photographed. So:
+a filled illustration set, drawn once on the website (`src/lib/part-art.ts`,
+served at `/api/part-art/<slug>.svg`) and fetched by `PartImage` — navy
+outline, flat metal greys, one yellow accent — replaces the grey line icons
+wherever a family is *the picture*. A shop photo or an uploaded family image
+still wins. Cars are `illustrations/car-art.tsx`: one generic five-door with no
+maker's features, the same for every entry, because the shop knows a make,
+model and engine but not a body style or colour. The header uses the shop's
+own logo lockup.
+
+**Where the board could not be followed honestly** — each of these is data
+the shop does not have, not a style choice:
+
+- no star ratings or review counts on the product page (no reviews exist);
+- no notification bell (the app sends none);
+- "Bonjour Youssef" uses the name given at checkout, or just "Bonjour";
+- no "Nos experts" — the advice card says the shop's team will help, and only
+  appears when the shop has published a way to reach it;
+- "Modifier le véhicule" is not offered: a saved car is a listed make, model
+  and engine; changing it is choosing another car;
+- makers' logos (BMW, Bosch…) appear only when uploaded in the admin; until
+  then the name is set in type, never a drawn copy of a trademark;
+- production years show only where the shop recorded them
+  (`SavedVehicle.yearFrom/yearTo`, new and optional).

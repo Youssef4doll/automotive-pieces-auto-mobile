@@ -68,6 +68,8 @@ export default function EnginesScreen() {
         modelSlug: model,
         engineId: engine.id,
         engineName: engine.name,
+        yearFrom: engine.yearFrom ?? null,
+        yearTo: engine.yearTo ?? null,
       });
 
       // Back to the garage, not forward to a confirmation. The customer came

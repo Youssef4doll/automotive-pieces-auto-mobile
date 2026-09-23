@@ -29,8 +29,12 @@ export type Family = {
   subcategories: Subcategory[];
 };
 
+export type PartsBrand = { id: string; name: string; slug: string; logoUrl: string | null; productCount: number };
+
 export const catalogueApi = {
   families: (signal?: AbortSignal) => get<Family[]>('/api/v1/catalogue/families', { signal }),
+  /** The parts makers with something on sale, most parts first. */
+  brands: (signal?: AbortSignal) => get<PartsBrand[]>('/api/v1/catalogue/brands', { signal }),
 };
 
 /**
@@ -95,6 +99,13 @@ export const productsApi = {
    */
   fitsEngine: (engineId: string, options: { page?: number } = {}, signal?: AbortSignal) => {
     const params = new URLSearchParams({ engine: engineId, fits: '1' });
+    if (options.page && options.page > 1) params.set('page', String(options.page));
+    return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
+  },
+
+  ofBrand: (brandSlug: string, options: { engineId?: string; page?: number } = {}, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ brand: brandSlug });
+    if (options.engineId) params.set('engine', options.engineId);
     if (options.page && options.page > 1) params.set('page', String(options.page));
     return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
   },

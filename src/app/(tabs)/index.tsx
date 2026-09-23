@@ -2,50 +2,49 @@ import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { hasContactChannel } from '@/api/shop';
+import { BrandStrip } from '@/components/ui/brand-strip';
 import { BubbleArc, type BubbleItem } from '@/components/ui/bubble-arc';
 import { PartImage } from '@/components/ui/part-image';
 import { PromoBanner } from '@/components/ui/promo-banner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { Brand, C, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
+import { VehicleCard } from '@/components/ui/vehicle-card';
+import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { BubbleCar, BubblePart, BubblePhoto, BubbleReference } from '@/illustrations/bubbles';
 import { RoadScene } from '@/illustrations/road-scene';
-import { CarProfile } from '@/illustrations/vehicle';
+import { CarArt } from '@/illustrations/car-art';
 import { useI18n } from '@/i18n/provider';
+import { useCheckout } from '@/store/checkout';
 import { useGarage } from '@/store/garage';
 
-/** How tall the night road is before the white sheet pulls over it. */
-const HERO_HEIGHT = 470;
+const LOGO = require('../../../assets/images/logo-lockup.png');
 
 /**
- * Accueil — the reference design's home, built on the shop's data.
+ * Accueil — the reference's home, top to bottom, on the shop's data.
  *
- *   a dark hero: the greeting, "Que recherchez-vous ?", and three round
- *   doors on an arc over a night road, the car in the big one;
- *   a white sheet pulled over its foot: the popular part families, then the
- *   "Entretien auto" card, then the shop's own campaign banners when it is
- *   running one.
+ * On the night road: the shop's own logo and the search, the slogan, a
+ * search box, and "Votre véhicule" — the car in the garage, or the
+ * invitation to choose one. Then "Que recherchez-vous ?" and the three
+ * round doors on their arc.
  *
- * Kept true where the reference could not be:
+ * On the white sheet: the popular families (the four with the most parts,
+ * counted), "Entretien auto" (a way into the filters — navigation, not a
+ * promotion), the parts makers the shop carries, the shop's own campaigns
+ * when it runs one, and "Besoin d'un conseil ?" — only when the shop has
+ * published a way to be reached.
  *
- *   "Bonjour Youssef" is "Bonjour" — there is no sign-in, so there is no
- *   name to say;
- *   "Photo / Expert" is a bubble only when the shop has published a way to
- *   reach a person (production has not yet); until then that slot is
- *   "Quelle pièce", which opens the catalogue;
- *   "Entretien auto" is a way into the filters — the maintenance parts —
- *   and says nothing about price or discount, because it is navigation,
- *   not a promotion. The shop's real promotions follow it when there are any.
- *
- * Search is the magnifier at the top right, one tap to the search screen.
+ * Kept true where the reference could not be: the greeting uses the name the
+ * customer gave at checkout, or none; there is no bell, because the app has
+ * no notifications to ring it.
  */
 export default function HomeScreen() {
   const router = useRouter();
@@ -54,6 +53,9 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { t, rtl } = useI18n();
   const active = useGarage((s) => s.active);
+  const firstName = useCheckout((s) => s.details.customerName.trim().split(/\s+/)[0] ?? '');
+  const [darkHeight, setDarkHeight] = useState(900);
+  const onDarkLayout = useCallback((e: LayoutChangeEvent) => setDarkHeight(Math.round(e.nativeEvent.layout.height)), []);
 
   // Light clock and battery over the night road; dark again on the white
   // screens. The tabs stay mounted, so this follows focus rather than mount.
@@ -113,32 +115,78 @@ export default function HomeScreen() {
   return (
     <View style={styles.root}>
       {focused ? <StatusBar style="light" /> : null}
-      <View style={styles.heroBg} pointerEvents="none">
-        <RoadScene width={width} height={HERO_HEIGHT + insets.top} />
-      </View>
-
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={[styles.column, { paddingTop: insets.top + Spacing.three }]}>
-          <View style={[styles.topRow, row]}>
-            <Text style={[styles.hello, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('home.hello')}</Text>
+        <View onLayout={onDarkLayout}>
+          <View style={styles.heroBg} pointerEvents="none">
+            <RoadScene width={width} height={darkHeight} />
+          </View>
+
+          <View style={[styles.column, { paddingTop: insets.top + Spacing.three }]}>
+            <View style={[styles.topRow, row]}>
+              <Image source={LOGO} style={styles.logo} contentFit="contain" accessibilityLabel={t('app.name')} />
+              <Pressable
+                accessibilityRole="search"
+                accessibilityLabel={t('home.searchA11y')}
+                onPress={() => router.push('/recherche')}
+                style={({ pressed }) => [styles.roundBtn, pressed && styles.roundBtnPressed]}
+              >
+                <Feather name="search" size={20} color={Brand.white} />
+              </Pressable>
+            </View>
+
+            <View style={styles.slogan}>
+              <Text style={[styles.sloganText, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+                {t('look.slogan1')}
+                {'\n'}
+                {t('look.slogan2')}
+                <Text style={[styles.sloganText, styles.sloganAccent, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('look.slogan2Accent')}</Text>
+              </Text>
+              <Text style={[styles.subtitle, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.slogan3')}</Text>
+            </View>
+
             <Pressable
               accessibilityRole="search"
               accessibilityLabel={t('home.searchA11y')}
               onPress={() => router.push('/recherche')}
-              style={({ pressed }) => [styles.searchBtn, pressed && styles.searchBtnPressed]}
+              style={({ pressed }) => [styles.searchPill, row, pressed && styles.searchPillPressed]}
             >
-              <Feather name="search" size={20} color={Brand.white} />
+              <Feather name="search" size={20} color={C.text} />
+              <Text variant="body" tone={C.textMuted} numberOfLines={1} style={styles.flex}>
+                {t('look.search')}
+              </Text>
             </Pressable>
+
+            <VehicleCard
+              vehicle={active}
+              label={t('look.yourVehicle')}
+              empty={{ title: t('home.chooseCar'), line: t('look.chooseWhy') }}
+              onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
+              style={styles.vehicle}
+              compactArt
+            />
+
+            <View style={styles.titles}>
+              <Text style={[styles.hello, { fontFamily: familyFor('bodySemi', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+                {firstName ? t('look.hello', { name: firstName }) : t('look.helloAnon')}
+              </Text>
+              <Text style={[styles.title, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('home.whatLooking')}</Text>
+              <Text style={[styles.subtitle, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('home.whatLookingWhy')}</Text>
+            </View>
           </View>
 
-          <View style={styles.titles}>
-            <Text style={[styles.title, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('home.whatLooking')}</Text>
-            <Text style={[styles.subtitle, { fontFamily: familyFor('body', rtl) }]}>{t('home.whatLookingWhy')}</Text>
+          <View style={styles.arc}>
+            <BubbleArc items={bubbles} initial={1} />
           </View>
-        </View>
-
-        <View style={styles.arc}>
-          <BubbleArc items={bubbles} initial={1} />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/trouver')}
+            style={({ pressed }) => [styles.allWays, row, pressed && { opacity: 0.7 }]}
+          >
+            <Text variant="hint" tone={Brand.white}>
+              {t('look.find')}
+            </Text>
+            <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={Brand.white} />
+          </Pressable>
         </View>
 
         {/* The white sheet, pulled up over the road. */}
@@ -146,12 +194,7 @@ export default function HomeScreen() {
           <View style={styles.column}>
             <View style={[styles.sectionHead, row]}>
               <Text style={[styles.sectionTitle, { fontFamily: familyFor('heading', rtl) }]}>{t('home.popular')}</Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.navigate('/catalogue')}
-                hitSlop={8}
-                style={[styles.seeAll, row]}
-              >
+              <Pressable accessibilityRole="button" onPress={() => router.navigate('/catalogue')} hitSlop={8} style={[styles.seeAll, row]}>
                 <Text variant="hint" tone={C.text}>
                   {t('catalog.seeAll')}
                 </Text>
@@ -175,7 +218,7 @@ export default function HomeScreen() {
                       style={({ pressed }) => [styles.cat, pressed && styles.catPressed]}
                     >
                       <View style={styles.catDisc}>
-                        <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 68 : 40} label={f.name} fit="cover" />
+                        <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 72 : 50} label={f.name} fit="cover" />
                       </View>
                       <Text variant="hint" tone={C.text} numberOfLines={1} style={styles.catName}>
                         {f.name}
@@ -184,8 +227,6 @@ export default function HomeScreen() {
                   ))}
             </View>
 
-            {/* Entretien auto — a way into the maintenance parts, drawn as the
-                reference's dark card. Navigation, not a promotion. */}
             {careFamily ? (
               <Pressable
                 accessibilityRole="button"
@@ -198,20 +239,46 @@ export default function HomeScreen() {
                   <Text style={[styles.careWhy, { fontFamily: familyFor('body', rtl) }]}>{t('home.careWhy')}</Text>
                   <View style={[styles.careCta, row, { alignSelf: rtl ? 'flex-end' : 'flex-start' }]}>
                     <Text style={[styles.careCtaText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('home.careCta')}</Text>
-                    <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={Brand.white} />
+                    <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={Brand.navy900} />
                   </View>
                 </View>
-                <View style={[styles.careArt, rtl ? { left: -28 } : { right: -28 }]} pointerEvents="none">
-                  <CarProfile width={190} color={Brand.navy300} accent={Brand.navy800} />
+                <View style={[styles.careArt, rtl ? { left: -18, transform: [{ scaleX: -1 }] } : { right: -18 }]} pointerEvents="none">
+                  <CarArt width={180} body={Brand.navy600} />
                 </View>
               </Pressable>
             ) : null}
+
+            <View style={styles.block}>
+              <BrandStrip />
+            </View>
           </View>
 
           {/* The shop's real campaigns, when it is running one. */}
           <View style={styles.promo}>
             <PromoBanner />
           </View>
+
+          {canAskShop ? (
+            <View style={styles.column}>
+              <View style={[styles.advice, row]}>
+                <View style={styles.adviceArt}>
+                  <BubblePhoto size={64} />
+                </View>
+                <View style={[styles.flex, { gap: 6, alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+                  <Text style={[styles.careTitle, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('look.advice')}</Text>
+                  <Text style={[styles.careWhy, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.adviceWhy')}</Text>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push('/aide')}
+                    style={({ pressed }) => [styles.adviceCta, row, pressed && { backgroundColor: Brand.gold600 }]}
+                  >
+                    <Feather name="camera" size={16} color={C.onAccent} />
+                    <Text style={[styles.adviceCtaText, { fontFamily: familyFor('display', rtl) }]}>{t('look.adviceCta')}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          ) : null}
         </View>
       </ScrollView>
     </View>
@@ -220,6 +287,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.navy950 },
+  flex: { flex: 1, minWidth: 0 },
   heroBg: { position: 'absolute', top: 0, left: 0, right: 0 },
   column: {
     width: '100%',
@@ -228,8 +296,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
   },
   topRow: { alignItems: 'center', justifyContent: 'space-between' },
-  hello: { fontSize: 18, lineHeight: 24, color: Brand.white },
-  searchBtn: {
+  logo: { width: 176, height: 32 },
+  roundBtn: {
     width: Tap.min,
     height: Tap.min,
     borderRadius: Tap.min / 2,
@@ -237,11 +305,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  searchBtnPressed: { backgroundColor: 'rgba(255,255,255,0.24)' },
-  titles: { paddingTop: Spacing.two, gap: Spacing.two },
-  title: { fontSize: 30, lineHeight: 36, letterSpacing: -0.4, color: Brand.white },
-  subtitle: { fontSize: 15, lineHeight: 21, color: '#c7d1e3', maxWidth: 300 },
-  arc: { marginTop: Spacing.four, height: 250 },
+  roundBtnPressed: { backgroundColor: 'rgba(255,255,255,0.24)' },
+  slogan: { paddingTop: Spacing.four, gap: Spacing.two },
+  sloganText: { fontSize: 30, lineHeight: 36, letterSpacing: -0.4, color: Brand.white },
+  sloganAccent: { color: Brand.gold500 },
+  searchPill: {
+    marginTop: Spacing.four,
+    alignItems: 'center',
+    gap: Spacing.two,
+    minHeight: 52,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    backgroundColor: Brand.white,
+    ...Elevation.resting,
+  },
+  searchPillPressed: { backgroundColor: C.surface },
+  vehicle: { marginTop: Spacing.three },
+  titles: { paddingTop: Spacing.five, gap: Spacing.one },
+  hello: { fontSize: 16, lineHeight: 22, color: Brand.white },
+  title: { fontSize: 28, lineHeight: 34, letterSpacing: -0.4, color: Brand.white },
+  subtitle: { fontSize: 15, lineHeight: 21, color: '#c7d1e3', maxWidth: 320 },
+  arc: { marginTop: Spacing.three, height: 250 },
+  allWays: { alignSelf: 'center', alignItems: 'center', gap: 6, minHeight: Tap.min, paddingHorizontal: Spacing.three, marginBottom: Spacing.four },
   // The white sheet runs to the bottom of the content, so a short page never
   // shows the navy root beneath it.
   scroll: { flexGrow: 1 },
@@ -261,16 +346,18 @@ const styles = StyleSheet.create({
   cat: { flex: 1, alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one, borderRadius: Radius.tile },
   catPressed: { backgroundColor: C.surface },
   catDisc: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    // An uploaded picture fills the circle and is clipped to it.
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     overflow: 'hidden',
-    backgroundColor: C.surface,
+    backgroundColor: Brand.white,
+    borderWidth: 1,
+    borderColor: C.border,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Elevation.resting,
   },
-  catSkeleton: { width: 68, height: 68, borderRadius: 34 },
+  catSkeleton: { width: 72, height: 72, borderRadius: 36 },
   catName: { textAlign: 'center' },
   care: {
     marginTop: Spacing.four,
@@ -291,9 +378,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     minHeight: 36,
     borderRadius: Radius.pill,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: Brand.gold500,
   },
-  careCtaText: { fontSize: 14, lineHeight: 18, color: Brand.white },
-  careArt: { position: 'absolute', bottom: 10, opacity: 0.95 },
+  careCtaText: { fontSize: 14, lineHeight: 18, color: Brand.navy900 },
+  careArt: { position: 'absolute', bottom: 8 },
+  block: { paddingTop: Spacing.four },
   promo: { paddingTop: Spacing.four },
+  advice: {
+    marginTop: Spacing.four,
+    padding: Spacing.four,
+    gap: Spacing.three,
+    borderRadius: Radius.card,
+    backgroundColor: Brand.navy950,
+    alignItems: 'center',
+  },
+  adviceArt: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: Brand.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adviceCta: {
+    marginTop: Spacing.one,
+    alignItems: 'center',
+    gap: 6,
+    minHeight: Tap.min,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    backgroundColor: Brand.gold500,
+  },
+  adviceCtaText: { fontSize: 15, color: C.onAccent },
 });

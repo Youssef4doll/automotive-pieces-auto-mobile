@@ -14,9 +14,10 @@ import { PartArtwork } from '@/illustrations/parts';
  *      from the website's /api/images/<id>) — a product photo from
  *      /admin/catalogue's product form, a family picture from its category
  *      form;
- *   2. otherwise the website's own drawing for the family,
- *      /api/part-icon/<slug>.svg — the same SVG the storefront shows, so an
- *      icon changed on the website changes here with no app release;
+ *   2. otherwise the website's illustration for the family,
+ *      /api/part-art/<slug>.svg — navy outline, flat metal, one yellow
+ *      accent — so a drawing changed on the website changes here with no
+ *      app release;
  *   3. only if the phone cannot reach the shop at all, the copy of those
  *      drawings bundled in the app, so a tile is never an empty square
  *      offline.
@@ -61,7 +62,7 @@ export function PartImage({
   if (!iconFailed) {
     return (
       <Image
-        source={{ uri: `${API_BASE_URL}/api/part-icon/${encodeURIComponent(slug)}.svg` }}
+        source={{ uri: `${API_BASE_URL}/api/part-art/${encodeURIComponent(slug)}.svg` }}
         style={{ width: size, height: size }}
         contentFit="contain"
         // Cached across launches: the drawings change when the shop edits

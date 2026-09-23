@@ -21,6 +21,8 @@ import { useShopSettings } from '@/hooks/use-shop-settings';
 import { PartImage } from '@/components/ui/part-image';
 import { formatDT, yearSpan } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
+import { HeartIcon } from '@/illustrations/heart';
+import { useFavourites } from '@/store/favourites';
 import { useGarage, vehicleLabel } from '@/store/garage';
 
 /**
@@ -59,7 +61,12 @@ export default function ProductScreen() {
         options={{
           title: '',
           headerRight: () =>
-            product.status === 'loaded' ? <ShareButton product={product.data} /> : null,
+            product.status === 'loaded' ? (
+              <View style={styles.headerActions}>
+                <HeartButton product={product.data} />
+                <ShareButton product={product.data} />
+              </View>
+            ) : null,
         }}
       />
       {product.status === 'loading' ? (
@@ -495,6 +502,33 @@ function ShareButton({ product }: { product: ProductDetail }) {
   );
 }
 
+/** Keep this part on the phone — identity only, never its price (see store/favourites). */
+function HeartButton({ product }: { product: ProductDetail }) {
+  const { t } = useI18n();
+  const on = useFavourites((s) => s.items.some((f) => f.slug === product.slug));
+  const toggle = useFavourites((s) => s.toggle);
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={on ? t('look.favRemove') : t('look.favAdd')}
+      accessibilityState={{ selected: on }}
+      hitSlop={8}
+      onPress={() =>
+        toggle({
+          slug: product.slug,
+          name: product.name,
+          brand: product.brand,
+          familySlug: product.familySlug,
+          imageUrl: product.imageUrl,
+        })
+      }
+      style={styles.share}
+    >
+      <HeartIcon filled={on} />
+    </Pressable>
+  );
+}
+
 function ProductSkeleton() {
   return (
     <View style={[styles.column, styles.skeleton]}>
@@ -645,6 +679,7 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingBottom: Spacing.two,
   },
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
   share: {
     width: Tap.min,
     height: Tap.min,

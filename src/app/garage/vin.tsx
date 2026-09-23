@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -33,7 +34,7 @@ const VIN_SHAPE = /^[A-HJ-NPR-Z0-9]{17}$/;
  * number anyway would be a feature in name only.
  */
 export default function VinScreen() {
-  const { t } = useI18n();
+  const { t, rtl } = useI18n();
   const router = useRouter();
   const [vin, setVin] = useState('');
   const [busy, setBusy] = useState(false);
@@ -85,11 +86,6 @@ export default function VinScreen() {
             <CarteGrise width={264} />
           </View>
 
-          <View style={styles.lead}>
-            <Text variant="sectionTitle">{t('vin.lead')}</Text>
-            <Text variant="body">{t('vin.lead2')}</Text>
-          </View>
-
           <FormField
             label={t('vin.label')}
             placeholder={t('vin.placeholder')}
@@ -124,6 +120,16 @@ export default function VinScreen() {
 
           <Button label={t('vin.submit')} onPress={identify} loading={busy} disabled={!valid} />
 
+          {/* The reference's reassurance, under the button rather than above
+              the field: the field is what the customer came to fill in. */}
+          <View style={[styles.info, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+            <Feather name="info" size={18} color={C.text} />
+            <View style={styles.infoText}>
+              <Text variant="rowTitle">{t('vin.lead')}</Text>
+              <Text variant="hint">{t('vin.lead2')}</Text>
+            </View>
+          </View>
+
           <Text variant="hint">{t('vin.scope')}</Text>
         </View>
       </ScrollView>
@@ -133,6 +139,8 @@ export default function VinScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
+  info: { gap: Spacing.three, padding: Spacing.three, borderRadius: 16, backgroundColor: C.surface, alignItems: 'flex-start' },
+  infoText: { flex: 1, gap: 2 },
   scroll: { paddingBottom: Spacing.six },
   column: {
     width: '100%',

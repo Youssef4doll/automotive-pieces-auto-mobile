@@ -115,6 +115,13 @@ for (const width of SCREEN_VIEWPORTS) {
       ['account', `${APP_URL}/compte`],
       ['vin', `${APP_URL}/garage/vin`],
       ['makes', `${APP_URL}/garage/ajouter`],
+      ['catalogue', `${APP_URL}/catalogue`],
+      ['family', `${APP_URL}/famille/freinage`],
+      ['brand', `${APP_URL}/marque/bosch`],
+      ['garage', `${APP_URL}/garage`],
+      ['vehicles', `${APP_URL}/garage/vehicules`],
+      ['find', `${APP_URL}/trouver`],
+      ['favourites', `${APP_URL}/compte/favoris`],
     ]) {
       await page.goto(url, { waitUntil: 'networkidle' });
       await page.waitForTimeout(2800);
@@ -202,9 +209,13 @@ async function readBubbles(page, labels) {
 
     // The greeting sits on the right of an Arabic hero.
     const hello = await page.evaluate(() => {
-      const el = [...document.querySelectorAll('div')].find((d) => d.children.length === 0 && d.textContent.trim() === 'مرحباً 👋');
+      const el = [...document.querySelectorAll('div')].find((d) => d.children.length === 0 && d.textContent.trim() === 'مرحبًا 👋');
       if (!el) return null;
-      const r = el.getBoundingClientRect();
+      // The line is a full-width block aligned right, so the element's box
+      // says nothing; the text's own box does.
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const r = range.getBoundingClientRect();
       return { left: Math.round(r.x), fromRight: Math.round(window.innerWidth - r.right) };
     });
     check(hello && hello.fromRight < hello.left, 'rtl: greeting mirrored', hello);

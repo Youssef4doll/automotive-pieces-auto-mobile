@@ -31,6 +31,13 @@ export type SavedVehicle = {
   modelSlug: string;
   engineId: string;
   engineName: string;
+  /**
+   * Production years as the shop recorded them for the engine, when it did.
+   * Optional: cars saved before this field existed have none, and a card
+   * then shows the engine and stops — it never guesses a year.
+   */
+  yearFrom?: number | null;
+  yearTo?: number | null;
 };
 
 /**

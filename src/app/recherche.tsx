@@ -6,13 +6,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError, type ApiFailure } from '@/api/client';
 import { searchApi, type SearchResult } from '@/api/search';
-import { PartBadge } from '@/components/ui/part-badge';
+import { catalogueApi, type Family } from '@/api/catalogue';
+import { PartImage } from '@/components/ui/part-image';
 import { ProductCard } from '@/components/ui/product-card';
 import { ProductListSkeleton } from '@/components/ui/skeleton';
 import { Failed } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
 import { VehicleBar } from '@/components/ui/vehicle-bar';
 import { Border, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap, Type } from '@/constants/theme';
+import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 import { useRecentSearches } from '@/store/recent-searches';
@@ -55,6 +57,8 @@ export default function SearchScreen() {
 
   const engineId = useGarage((s) => s.active?.engineId);
   const recents = useRecentSearches();
+  const loadFamilies = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
+  const families = useResource(loadFamilies);
 
   const [query, setQuery] = useState(params.q ?? '');
   const [state, setState] = useState<State>({ status: 'idle' });
@@ -174,7 +178,7 @@ export default function SearchScreen() {
 
       {showFamilies ? (
         <View style={styles.group}>
-          <Text variant="label">{t('search.scopeFamilies')}</Text>
+          <Text variant="label">{t('look.suggestions')}</Text>
           {result.families.map((f) => (
             <Pressable
               key={f.slug}
@@ -192,7 +196,9 @@ export default function SearchScreen() {
               }}
               style={({ pressed }) => [styles.row, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.rowPressed]}
             >
-              <PartBadge slug={f.familySlug} size={36} />
+              <View style={styles.thumb}>
+                <PartImage slug={f.familySlug} size={30} />
+              </View>
               <View style={styles.rowText}>
                 <Text variant="rowTitle" numberOfLines={1}>
                   {f.name}
@@ -315,7 +321,7 @@ export default function SearchScreen() {
           {recents.queries.length ? (
             <View style={styles.group}>
               <View style={[styles.groupHead, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-                <Text variant="label">{t('search.recent')}</Text>
+                <Text variant="label">{t('look.recents')}</Text>
                 <Pressable
                   accessibilityRole="button"
                   onPress={recents.clear}
@@ -327,32 +333,44 @@ export default function SearchScreen() {
                   </Text>
                 </Pressable>
               </View>
-              {recents.queries.map((q) => (
-                <View key={q} style={[styles.recentRow, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+              <View style={[styles.chipWrap, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+                {recents.queries.map((q) => (
                   <Pressable
+                    key={q}
                     accessibilityRole="button"
+                    accessibilityHint={t('search.removeRecent', { q })}
                     onPress={() => submit(q)}
-                    style={({ pressed }) => [
-                      styles.recent,
-                      { flexDirection: rtl ? 'row-reverse' : 'row' },
-                      pressed && styles.rowPressed,
-                    ]}
+                    onLongPress={() => recents.remove(q)}
+                    style={({ pressed }) => [styles.idleChip, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.rowPressed]}
                   >
-                    <Feather name="clock" size={IconSize.medium} color={C.textMuted} />
-                    <Text variant="body" numberOfLines={1} style={styles.rowText}>
+                    <Feather name="clock" size={14} color={C.textMuted} />
+                    <Text variant="hint" tone={C.text} numberOfLines={1}>
                       {q}
                     </Text>
                   </Pressable>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {families.status === 'loaded' && families.data.length ? (
+            <View style={styles.group}>
+              <Text variant="label">{t('search.scopeFamilies')}</Text>
+              <View style={[styles.chipWrap, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+                {families.data.map((f: Family) => (
                   <Pressable
+                    key={f.id}
                     accessibilityRole="button"
-                    accessibilityLabel={t('search.removeRecent', { q })}
-                    onPress={() => recents.remove(q)}
-                    style={({ pressed }) => [styles.iconButton, pressed && styles.rowPressed]}
+                    onPress={() => router.push({ pathname: '/famille/[family]', params: { family: f.slug, familyName: f.name } })}
+                    style={({ pressed }) => [styles.idleChip, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.rowPressed]}
                   >
-                    <Feather name="x" size={IconSize.medium} color={C.textMuted} />
+                    <PartImage slug={f.slug} size={20} />
+                    <Text variant="hint" tone={C.text} numberOfLines={1}>
+                      {f.name}
+                    </Text>
                   </Pressable>
-                </View>
-              ))}
+                ))}
+              </View>
             </View>
           ) : null}
 
@@ -542,6 +560,25 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
+    backgroundColor: C.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipWrap: { flexWrap: 'wrap', gap: Spacing.two },
+  idleChip: {
+    alignItems: 'center',
+    gap: 6,
+    minHeight: Tap.min,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    borderWidth: Border.thin,
+    borderColor: C.border,
+    backgroundColor: C.background,
+  },
+  thumb: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: C.surface,
     alignItems: 'center',
     justifyContent: 'center',

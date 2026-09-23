@@ -1,162 +1,165 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { catalogueApi, type Family } from '@/api/catalogue';
-import { Screen } from '@/components/ui/screen';
+import { BrandStrip } from '@/components/ui/brand-strip';
+import { PartImage } from '@/components/ui/part-image';
 import { SearchLauncher } from '@/components/ui/search-launcher';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Empty, Failed } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
-import { Border, C, IconSize, Radius, Spacing } from '@/constants/theme';
+import { Border, Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
-import { PartBadge } from '@/components/ui/part-badge';
 import { useI18n } from '@/i18n/provider';
 
 /**
- * The catalogue's top level — every family the shop actually stocks.
+ * The catalogue's top level — the reference's "Toutes les familles de
+ * pièces": a grid of illustrated families, four to a row on a phone, that a
+ * customer scans by picture before they read a word. A small box filters
+ * the grid by name as they type (the families are already on the phone; no
+ * request). Then the parts makers the shop carries.
  *
- * A directory, read the way a service list is read: the drawing identifies
- * the family faster than its name does, especially for a customer who knows
- * what a brake disc looks like but has never used the word "freinage".
+ * The part search sits above both, because a customer who scrolls into
+ * "Freinage" looking for one pad can type it instead.
  *
- * Every family here holds at least one part. The API filters the empty
- * branches out and the reasoning is on the route handler: the taxonomy
- * describes the whole trade and the catalogue is younger than that, so
- * showing every branch sent most taps to an empty page. Families reappear on
- * their own as stock arrives.
+ * Every family here holds at least one part — the API drops the empty
+ * branches (reasoning on its route handler) and they reappear on their own
+ * as stock arrives.
  */
+function normal(s: string) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
 export default function CatalogueScreen() {
   const router = useRouter();
   const { t, rtl } = useI18n();
   const tabBarSpace = useTabBarSpace();
+  const { width } = useWindowDimensions();
+  const [filter, setFilter] = useState('');
 
   const load = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(load);
 
-  if (families.status === 'loading') {
-    return (
-      <Screen edges={['left', 'right']}>
-        <View style={styles.list}>
-          {Array.from({ length: 7 }, (_, i) => (
-            <Skeleton key={i} style={styles.rowSkeleton} />
-          ))}
-        </View>
-      </Screen>
-    );
-  }
-
-  if (families.status === 'failed') {
-    return (
-      <Screen edges={['left', 'right']}>
-        <Failed failure={families.failure} onRetry={families.retry} />
-      </Screen>
-    );
-  }
-
-  if (families.data.length === 0) {
-    return (
-      <Screen edges={['left', 'right']}>
-        <Empty title={t('catalog.noFamilies')} body={t('catalog.emptyWhy')} />
-      </Screen>
-    );
-  }
+  // Four across on a phone, six on a tablet — the reference's density.
+  const columns = Math.min(width, MaxContentWidth) >= 600 ? 6 : 4;
+  const shown = useMemo<Family[]>(() => {
+    if (families.status !== 'loaded') return [];
+    const q = normal(filter.trim());
+    if (!q) return families.data;
+    return families.data.filter((f) => normal(f.name).includes(q) || f.subcategories.some((s) => normal(s.name).includes(q)));
+  }, [families, filter]);
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   return (
-    <Screen edges={['left', 'right']}>
-      <FlatList
-        data={families.data}
-        keyExtractor={(family) => family.id}
-        contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
-        showsVerticalScrollIndicator={false}
-        // Searching is the other half of browsing: a customer who scrolls
-        // into "Freinage" looking for one pad can type it instead.
-        ListHeaderComponent={
-          <View style={styles.searchBox}>
-            <SearchLauncher />
+    <ScrollView style={styles.root} contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]} keyboardShouldPersistTaps="handled">
+      <View style={styles.column}>
+        <SearchLauncher />
+
+        <View style={styles.card}>
+          <Text style={[styles.title, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.families')}</Text>
+          <View style={[styles.filter, row]}>
+            <Feather name="filter" size={16} color={C.textMuted} />
+            <TextInput
+              value={filter}
+              onChangeText={setFilter}
+              placeholder={t('look.familySearch')}
+              placeholderTextColor={C.textFaint}
+              accessibilityLabel={t('look.familySearch')}
+              style={[styles.filterInput, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}
+            />
           </View>
-        }
-        renderItem={({ item }) => (
-          <FamilyRow
-            family={item}
-            rtl={rtl}
-            partCount={t('catalog.partCount', { n: item.productCount })}
-            onPress={() =>
-              router.push({
-                pathname: '/famille/[family]',
-                params: { family: item.slug, familyName: item.name },
-              })
-            }
-          />
-        )}
-      />
-    </Screen>
-  );
-}
 
-function FamilyRow({
-  family,
-  partCount,
-  rtl,
-  onPress,
-}: {
-  family: Family;
-  partCount: string;
-  rtl: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${family.name}, ${partCount}`}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.row,
-        { flexDirection: rtl ? 'row-reverse' : 'row' },
-        pressed && styles.pressed,
-      ]}
-    >
-      <PartBadge slug={family.slug} imageUrl={family.imageUrl} size={48} />
+          {families.status === 'loading' ? (
+            <View style={[styles.grid, row]}>
+              {Array.from({ length: 8 }, (_, i) => (
+                <View key={i} style={[styles.cell, { width: `${100 / columns}%` }]}>
+                  <Skeleton style={styles.discSkeleton} />
+                </View>
+              ))}
+            </View>
+          ) : families.status === 'failed' ? (
+            <Failed failure={families.failure} onRetry={families.retry} />
+          ) : families.data.length === 0 ? (
+            <Empty title={t('catalog.noFamilies')} body={t('catalog.emptyWhy')} />
+          ) : shown.length === 0 ? (
+            <Text variant="hint" style={styles.none}>
+              {t('search.none', { q: filter.trim() })}
+            </Text>
+          ) : (
+            <View style={[styles.grid, row]}>
+              {shown.map((f) => (
+                <Pressable
+                  key={f.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
+                  onPress={() => router.push({ pathname: '/famille/[family]', params: { family: f.slug, familyName: f.name } })}
+                  style={({ pressed }) => [styles.cell, { width: `${100 / columns}%` }, pressed && styles.pressed]}
+                >
+                  <View style={styles.disc}>
+                    <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 64 : 44} label={f.name} fit="cover" />
+                  </View>
+                  <Text variant="hint" tone={C.text} numberOfLines={2} style={styles.name}>
+                    {f.name}
+                  </Text>
+                  <Text variant="hint" tone={C.textFaint} style={styles.count}>
+                    {f.productCount}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
 
-      <View style={styles.text}>
-        <Text variant="rowTitle" numberOfLines={2}>
-          {family.name}
-        </Text>
-        <Text variant="hint" numberOfLines={1}>
-          {partCount}
-        </Text>
+        <View style={styles.card}>
+          <BrandStrip />
+        </View>
       </View>
-
-      <Feather
-        name={rtl ? 'chevron-left' : 'chevron-right'}
-        size={IconSize.large}
-        color={C.textFaint}
-      />
-    </Pressable>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  searchBox: {
-    paddingBottom: Spacing.three,
-  },
-  list: {
-    paddingTop: Spacing.three,
-    gap: Spacing.two,
-  },
-  row: {
-    minHeight: 68,
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
+  root: { flex: 1, backgroundColor: C.surface },
+  scroll: { paddingTop: Spacing.two },
+  column: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', paddingHorizontal: Spacing.three, gap: Spacing.three },
+  card: {
+    backgroundColor: Brand.white,
     borderRadius: Radius.card,
     borderWidth: Border.thin,
     borderColor: C.border,
-    backgroundColor: C.background,
+    padding: Spacing.three,
+    gap: Spacing.three,
   },
+  title: { fontSize: 19, lineHeight: 25, color: C.text },
+  filter: {
+    alignItems: 'center',
+    gap: Spacing.two,
+    minHeight: Tap.min,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    backgroundColor: C.surface,
+  },
+  filterInput: { flex: 1, minWidth: 0, fontSize: 15, color: C.text, paddingVertical: Spacing.two, outlineStyle: 'none' } as never,
+  grid: { flexWrap: 'wrap', rowGap: Spacing.three },
+  cell: { alignItems: 'center', gap: 4, paddingHorizontal: 2, paddingVertical: Spacing.one, borderRadius: Radius.tile },
   pressed: { backgroundColor: C.surface },
-  text: { flex: 1, gap: 1 },
-  rowSkeleton: { height: 68, borderRadius: Radius.card },
+  disc: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Brand.white,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    ...Elevation.resting,
+  },
+  discSkeleton: { width: 64, height: 64, borderRadius: 32 },
+  name: { textAlign: 'center', fontSize: 12, lineHeight: 15, minHeight: 30 },
+  count: { fontSize: 11, lineHeight: 13 },
+  none: { textAlign: 'center', paddingVertical: Spacing.three },
 });

@@ -13,6 +13,7 @@ import { useI18n } from '@/i18n/provider';
 import { useCheckout } from '@/store/checkout';
 import { useGarage } from '@/store/garage';
 import { useOrders } from '@/store/orders';
+import { useFavourites } from '@/store/favourites';
 import { useStaff } from '@/store/staff';
 import { useToast } from '@/store/toast';
 
@@ -41,6 +42,7 @@ export default function AccountScreen() {
   const settings = useShopSettings();
   const [confirming, setConfirming] = useState(false);
   const staffSignedIn = useStaff((s) => s.status === 'signedIn');
+  const favCount = useFavourites((s) => s.items.length);
   const restoreStaff = useStaff((s) => s.restore);
   // Only asks the shop when a staff token is saved on this phone.
   useEffect(() => {
@@ -83,6 +85,7 @@ export default function AccountScreen() {
             onPress={() => router.navigate('/garage')}
           />
           <Row icon="layers" label={t('account.vehicles')} value={vehicles.length ? String(vehicles.length) : null} onPress={() => router.navigate('/garage')} />
+          <Row icon="heart" label={t('look.favourites')} value={favCount ? String(favCount) : null} onPress={() => router.push('/compte/favoris')} />
           <Row icon="map-pin" label={t('account.addresses')} onPress={() => router.push('/compte/adresses')} />
           <Row icon="help-circle" label={t('account.helpContact')} onPress={() => router.push('/aide')} />
           <Row icon="settings" label={t('account.settings')} onPress={() => router.push('/compte/parametres')} last />

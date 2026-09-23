@@ -165,6 +165,8 @@ try {
   await scrollTo(page, 'bottom');
   await tap(page, 'Enregistrer');
   await page.waitForTimeout(2000);
+  const back = (await (await fetch(`${SHOP}/api/v1/settings/public`)).json()).data;
+  check(!JSON.stringify(back).includes('(test)'), 'settings: and put back');
 
   // ---- layout at three widths and in Arabic
   for (const width of [320, 390, 768]) {
@@ -216,6 +218,13 @@ try {
   const neg = await api(`/products/${part.id}`, { token, method: 'PATCH', body: { priceSell: -1 } });
   check(neg.status === 422, 'api: a negative price is refused');
   const set = await api('/settings', { token, method: 'PATCH', body: { not_a_setting: 'x' } });
+  // Safety net: a run that died between the edit and its undo must not leave
+  // "(test)" printed on the shop's contact page.
+  const current = (await api('/settings', { token })).json?.data ?? [];
+  const hoursRow = current.find((r) => r.key === 'shop_hours');
+  if (hoursRow?.value.includes(' (test)')) {
+    await api('/settings', { token, method: 'PATCH', body: { shop_hours: hoursRow.value.replaceAll(' (test)', '') } });
+  }
   check(set.status === 422, 'api: an unknown setting is refused');
   await api('/session', { token, method: 'DELETE' });
 }

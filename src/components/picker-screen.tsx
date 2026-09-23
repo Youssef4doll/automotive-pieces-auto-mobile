@@ -59,6 +59,9 @@ export function PickerScreen<T>({
   footer,
   header,
   notice,
+  subtitle,
+  filterPlaceholder,
+  alwaysFilter = false,
 }: {
   /** Marque → Modèle → Motorisation, with what has been chosen so far. */
   trail: TrailStep[];
@@ -87,6 +90,11 @@ export function PickerScreen<T>({
   header?: React.ReactNode;
   /** One line of context from where the customer came, e.g. "VIN reconnu : BMW". */
   notice?: string | null;
+  /** One line under the heading, as the reference's "Trouvez les pièces compatibles…". */
+  subtitle?: string | null;
+  filterPlaceholder?: string;
+  /** Show the search box however short the list — the makes screen leads with it. */
+  alwaysFilter?: boolean;
 }) {
   const { t, rtl } = useI18n();
   const [filter, setFilter] = useState('');
@@ -111,6 +119,11 @@ export function PickerScreen<T>({
         <Text variant="screenTitle" style={styles.heading}>
           {heading}
         </Text>
+        {subtitle ? (
+          <Text variant="hint" tone={C.textMuted} style={{ textAlign: rtl ? 'right' : 'left' }}>
+            {subtitle}
+          </Text>
+        ) : null}
         {notice ? (
           <View style={styles.notice}>
             <Text variant="hint" tone={C.success}>
@@ -135,8 +148,8 @@ export function PickerScreen<T>({
           <Empty title={emptyTitle} body={emptyBody} />
         ) : (
           <>
-            {items.length >= FILTER_THRESHOLD ? (
-              <FilterField value={filter} onChange={setFilter} placeholder={t('picker.filter')} />
+            {alwaysFilter || items.length >= FILTER_THRESHOLD ? (
+              <FilterField value={filter} onChange={setFilter} placeholder={filterPlaceholder ?? t('picker.filter')} />
             ) : null}
 
             {shown.length === 0 ? (

@@ -1,38 +1,48 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { catalogueApi, productsApi, type Family } from '@/api/catalogue';
-import { ProductCard } from '@/components/ui/product-card';
-import { Screen } from '@/components/ui/screen';
+import { PartImage } from '@/components/ui/part-image';
+import { ProductGrid } from '@/components/ui/product-grid';
 import { ProductListSkeleton } from '@/components/ui/skeleton';
 import { Empty, Failed } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
-import { Border, C, Radius, Spacing, Tap } from '@/constants/theme';
+import { Border, Brand, C, familyFor, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
+import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 
 /**
- * One family of parts, with its subcategories as a filter.
+ * One family of parts — the reference's "Freinage" screen.
  *
- * Two reads rather than one: the subcategory chips come from the families
- * endpoint, which is cached from the moment the customer opened the
- * catalogue, so switching between "Tout" and "Disque de frein" only re-fetches
- * the products.
+ * A dark head with the family's picture (the one uploaded in /admin, else
+ * the website's illustration), its name and a line of the shop's voice;
+ * then a white sheet with the subcategories as chips and the parts two to a
+ * row. Every tile is judged against the car in the garage.
  *
- * Every card is judged against the car in the garage. If there is no car the
- * verdict is null and the badge says so — "sélectionnez votre véhicule" is a
- * different and more useful sentence than "compatibilité à vérifier", and
- * collapsing the two would tell a customer who never told us their car that
- * the whole catalogue is uncertain.
+ * The title comes from the catalogue itself, so a link that arrives with
+ * only the slug still says "Freinage" rather than "Catalogue".
  */
+const TAGLINES: Record<string, DictKey> = {
+  freinage: 'look.tag.freinage',
+  filtres: 'look.tag.filtres',
+  suspension: 'look.tag.suspension',
+  moteur: 'look.tag.moteur',
+  eclairage: 'look.tag.eclairage',
+};
+
 export default function FamilyScreen() {
   const { t, rtl } = useI18n();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { family, familyName, subcategory: initialSubcategory } = useLocalSearchParams<{
     family: string;
     familyName?: string;
-    /** Opened from a search suggestion for a subcategory: start on its chip. */
     subcategory?: string;
   }>();
 
@@ -41,129 +51,143 @@ export default function FamilyScreen() {
 
   const loadFamilies = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(loadFamilies);
-
   const loadProducts = useCallback(
-    (signal: AbortSignal) =>
-      productsApi.inFamily(
-        family,
-        { engineId, subcategorySlug: subcategory ?? undefined },
-        signal,
-      ),
+    (signal: AbortSignal) => productsApi.inFamily(family, { engineId, subcategorySlug: subcategory ?? undefined }, signal),
     [family, engineId, subcategory],
   );
   const products = useResource(loadProducts);
 
-  const subcategories = useMemo(() => {
-    if (families.status !== 'loaded') return [];
-    return families.data.find((f: Family) => f.slug === family)?.subcategories ?? [];
-  }, [families, family]);
+  const current = useMemo<Family | undefined>(
+    () => (families.status === 'loaded' ? families.data.find((f) => f.slug === family) : undefined),
+    [families, family],
+  );
+  const subcategories = current?.subcategories ?? [];
+  const name = current?.name ?? familyName ?? '';
+  const tagline = TAGLINES[family] ? t(TAGLINES[family]) : current ? t('look.tag.default', { n: current.productCount }) : '';
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
-  return (
-    <>
-      <Stack.Screen options={{ title: familyName || t('catalog.title') }} />
-      <Screen edges={['left', 'right', 'bottom']}>
-        {/* Refine, not navigate. The chips narrow what is already on screen,
-            so the selected one is filled and "Tout" is always reachable —
-            a filter the customer cannot undo is a trap. */}
+  const back = () => (router.canGoBack() ? router.back() : router.navigate('/catalogue'));
+
+  const head = (
+    <View>
+      <View style={[styles.hero, { paddingTop: insets.top + Spacing.two }]}>
+        <View style={styles.glow} pointerEvents="none" />
+        <View style={[row, styles.bar]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('a11y.back')} onPress={back} style={styles.iconBtn}>
+            <Feather name={rtl ? 'arrow-right' : 'arrow-left'} size={22} color={Brand.white} />
+          </Pressable>
+          <Text numberOfLines={1} style={[styles.title, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+            {name}
+          </Text>
+        </View>
+        <View style={[styles.art, rtl ? { left: Spacing.three } : { right: Spacing.three }]} pointerEvents="none">
+          <PartImage slug={family} imageUrl={current?.imageUrl} size={150} label={name} fit={current?.imageUrl ? 'cover' : 'contain'} />
+        </View>
+        <Text style={[styles.tagline, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{tagline}</Text>
+      </View>
+
+      <View style={styles.sheet}>
         {subcategories.length > 0 ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            // A horizontal ScrollView is still a flex child of a column, and
-            // next to a FlatList claiming flex:1 it gets squeezed until the
-            // chips are sheared off along the bottom — which is what shipped
-            // in the first pass. It must be told not to flex at all.
             style={styles.chipBar}
-            contentContainerStyle={[
-              styles.chips,
-              { flexDirection: rtl ? 'row-reverse' : 'row' },
-            ]}
+            contentContainerStyle={[styles.chips, row]}
           >
-            <Chip
-              label={t('catalog.allOf')}
-              selected={subcategory === null}
-              onPress={() => setSubcategory(null)}
-            />
+            <Chip label={t('catalog.allOf')} selected={subcategory === null} onPress={() => setSubcategory(null)} />
             {subcategories.map((sub) => (
-              <Chip
-                key={sub.id}
-                label={sub.name}
-                selected={subcategory === sub.slug}
-                onPress={() => setSubcategory(sub.slug)}
-              />
+              <Chip key={sub.id} label={sub.name} selected={subcategory === sub.slug} onPress={() => setSubcategory(sub.slug)} />
             ))}
           </ScrollView>
         ) : null}
+        <View style={[row, styles.sectionHead]}>
+          <Text style={[styles.section, { fontFamily: familyFor('heading', rtl) }]}>{t('look.ourProducts')}</Text>
+          {products.status === 'loaded' ? (
+            <Text variant="hint" tone={C.textMuted}>
+              {t('catalog.resultCount', { n: products.data.total })}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
 
-        {products.status === 'loading' ? (
-          <View style={styles.body}>
-            <ProductListSkeleton />
+  return (
+    <View style={styles.root}>
+      <Stack.Screen options={{ headerShown: false, title: name }} />
+      <StatusBar style="light" />
+      {products.status === 'loaded' && products.data.products.length > 0 ? (
+        <ProductGrid products={products.data.products} header={<View style={styles.bleed}>{head}</View>} />
+      ) : (
+        <ScrollView contentContainerStyle={styles.fill}>
+          {head}
+          <View style={styles.pad}>
+            {products.status === 'loading' ? (
+              <ProductListSkeleton />
+            ) : products.status === 'failed' ? (
+              <Failed failure={products.failure} onRetry={products.retry} />
+            ) : (
+              <Empty title={t('catalog.empty')} body={t('catalog.emptyWhy')} />
+            )}
           </View>
-        ) : products.status === 'failed' ? (
-          <Failed failure={products.failure} onRetry={products.retry} />
-        ) : products.data.products.length === 0 ? (
-          <Empty title={t('catalog.empty')} body={t('catalog.emptyWhy')} />
-        ) : (
-          <FlatList
-            data={products.data.products}
-            keyExtractor={(product) => product.id}
-            contentContainerStyle={styles.list}
-            showsVerticalScrollIndicator={false}
-            ItemSeparatorComponent={Gap}
-            ListHeaderComponent={
-              <Text variant="hint" tone={C.textMuted} style={styles.count}>
-                {t('catalog.resultCount', { n: products.data.total })}
-              </Text>
-            }
-            renderItem={({ item }) => <ProductCard product={item} />}
-          />
-        )}
-      </Screen>
-    </>
+        </ScrollView>
+      )}
+    </View>
   );
 }
 
-function Chip({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
+function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        selected && styles.chipSelected,
-        pressed && !selected && styles.chipPressed,
-      ]}
+      style={({ pressed }) => [styles.chip, selected && styles.chipSelected, pressed && !selected && styles.chipPressed]}
     >
-      <Text variant="hint" tone={selected ? C.onAccent : C.text} numberOfLines={1}>
+      <Text variant="hint" tone={selected ? Brand.white : C.text} numberOfLines={1}>
         {label}
       </Text>
     </Pressable>
   );
 }
 
-function Gap() {
-  return <View style={styles.gap} />;
-}
-
 const styles = StyleSheet.create({
-  chipBar: {
-    flexGrow: 0,
-    flexShrink: 0,
+  root: { flex: 1, backgroundColor: C.background },
+  fill: { flexGrow: 1 },
+  // The grid pads its content by 16; the head runs edge to edge.
+  bleed: { marginHorizontal: -Spacing.three },
+  hero: {
+    backgroundColor: Brand.navy950,
+    minHeight: 250,
+    paddingHorizontal: Spacing.three,
+    paddingBottom: Spacing.five + Spacing.two,
+    overflow: 'hidden',
   },
-  chips: {
-    gap: Spacing.two,
-    paddingVertical: Spacing.three,
-    paddingRight: Spacing.three,
+  glow: {
+    position: 'absolute',
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    right: -90,
+    top: 10,
+    backgroundColor: Brand.navy700,
+    opacity: 0.55,
   },
+  bar: { alignItems: 'center', gap: Spacing.one, minHeight: Tap.min },
+  iconBtn: { width: Tap.min, height: Tap.min, alignItems: 'center', justifyContent: 'center', marginHorizontal: -Spacing.two },
+  title: { flex: 1, fontSize: 26, lineHeight: 32, color: Brand.white, paddingHorizontal: Spacing.two },
+  art: { position: 'absolute', top: 64, width: 150, height: 150, alignItems: 'center', justifyContent: 'center' },
+  tagline: { marginTop: 128, fontSize: 15, lineHeight: 20, color: '#d4dcea', maxWidth: '58%' },
+  sheet: {
+    marginTop: -Spacing.four,
+    backgroundColor: C.background,
+    borderTopLeftRadius: Radius.sheet,
+    borderTopRightRadius: Radius.sheet,
+    paddingTop: Spacing.three,
+    paddingHorizontal: Spacing.three,
+  },
+  chipBar: { flexGrow: 0, flexShrink: 0 },
+  chips: { gap: Spacing.two, paddingBottom: Spacing.three },
   chip: {
     minHeight: Tap.min,
     justifyContent: 'center',
@@ -173,13 +197,9 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     backgroundColor: C.background,
   },
-  chipSelected: {
-    backgroundColor: C.accent,
-    borderColor: C.accent,
-  },
+  chipSelected: { backgroundColor: Brand.navy900, borderColor: Brand.navy900 },
   chipPressed: { backgroundColor: C.surface },
-  body: { flex: 1, paddingTop: Spacing.two },
-  list: { paddingBottom: Spacing.six },
-  count: { paddingBottom: Spacing.two },
-  gap: { height: Spacing.two },
+  sectionHead: { alignItems: 'baseline', justifyContent: 'space-between', paddingBottom: Spacing.two },
+  section: { fontSize: 19, lineHeight: 25, color: C.text },
+  pad: { padding: Spacing.three },
 });

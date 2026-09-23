@@ -26,7 +26,7 @@ import { useCartCount } from '@/store/cart';
  *
  * ## The active state is three signals, not one
  *
- * A gold bar above the icon, the icon and label going to full navy from
+ * A gold pill behind the icon, the icon and label going to full navy from
  * muted, and `accessibilityState.selected` for the screen reader. Colour
  * alone is not a signal everybody receives, and the shop's gold on white is
  * 2.09:1 — it cannot be the thing carrying the meaning even for people who
@@ -107,7 +107,7 @@ export default function TabsLayout() {
           tabBarLabel: t('tab.home'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <Feather name="home" size={IconSize.large} color={color} />
+              <Feather name="home" size={IconSize.large} color={focused ? C.onAccent : color} />
             </NavIcon>
           ),
         }}
@@ -119,7 +119,7 @@ export default function TabsLayout() {
           tabBarLabel: t('tab.catalog'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <Feather name="grid" size={IconSize.large} color={color} />
+              <Feather name="grid" size={IconSize.large} color={focused ? C.onAccent : color} />
             </NavIcon>
           ),
         }}
@@ -131,7 +131,7 @@ export default function TabsLayout() {
           tabBarLabel: t('tab.garage'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <NavCar size={IconSize.large} color={color} />
+              <NavCar size={IconSize.large} color={focused ? C.onAccent : color} />
             </NavIcon>
           ),
         }}
@@ -145,7 +145,7 @@ export default function TabsLayout() {
           tabBarAccessibilityLabel: cartCount > 0 ? `${t('tab.cart')}, ${t('a11y.cartCount', { n: cartCount })}` : t('tab.cart'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <Feather name="shopping-cart" size={IconSize.large} color={color} />
+              <Feather name="shopping-cart" size={IconSize.large} color={focused ? C.onAccent : color} />
             </NavIcon>
           ),
         }}
@@ -157,7 +157,7 @@ export default function TabsLayout() {
           tabBarLabel: t('tab.account'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <Feather name="user" size={IconSize.large} color={color} />
+              <Feather name="user" size={IconSize.large} color={focused ? C.onAccent : color} />
             </NavIcon>
           ),
         }}
@@ -167,33 +167,25 @@ export default function TabsLayout() {
 }
 
 /**
- * The glyph, with the active bar above it.
- *
- * The bar occupies its row whether or not it is visible, so the icons do not
- * shift down by 3pt when a tab loses focus — a tab bar whose contents move as
- * you change tabs reads as a rendering bug even when it is deliberate.
+ * The glyph, on a gold pill when its tab is the one open — the reference's
+ * active state, in the button colour. The pill is always laid out (clear when
+ * inactive) so nothing shifts as tabs change. The label going to full navy
+ * and `accessibilityState.selected` carry the state too: gold on white is
+ * 2.09:1 and cannot be the only signal.
  */
 function NavIcon({ focused, children }: { focused: boolean; children: React.ReactNode }) {
-  return (
-    <View style={styles.icon}>
-      <View style={[styles.bar, focused && styles.barActive]} />
-      {children}
-    </View>
-  );
+  return <View style={[styles.pill, focused && styles.pillActive]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
-  icon: {
-    alignItems: 'center',
-    gap: Spacing.one,
-  },
-  bar: {
-    width: 20,
-    height: 3,
+  pill: {
+    width: 48,
+    height: 30,
     borderRadius: Radius.pill,
-    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  barActive: {
+  pillActive: {
     backgroundColor: C.accent,
   },
 });
