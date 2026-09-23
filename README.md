@@ -80,6 +80,7 @@ e2e/              checks that drive the real app in a browser
 npx tsc --noEmit              # types
 npx expo start --web          # leave running in one terminal, with the website on :3000
 npm run e2e                   # layout + journeys; or e2e:layout / e2e:journeys alone
+npm run e2e:staff             # the shop's own screens (/gestion), signed in as the seed admin
 ```
 
 `npm run e2e` opens the app in Chromium and measures it: layout at nine
@@ -90,6 +91,18 @@ the order API from outside. `e2e/README.md` says why each check is there.
 
 **`e2e:journeys` places real orders.** It refuses to run unless the shop is on
 localhost; `E2E_ALLOW_ORDERS=1` overrides that, deliberately.
+
+**`e2e:staff` signs in as staff and changes things** — moves a test order it
+placed itself, counts stock, adds and removes a photo, swaps a family picture,
+edits a setting — and puts each back. It only ever runs against localhost.
+`STAFF_EMAIL` / `STAFF_PASSWORD` default to the website seed's admin.
+
+## The staff area
+
+"Espace boutique", the last row of Mon compte, opens `/gestion`: the shop's
+orders, stock, photos, family pictures and details, for the website's admin
+accounts only. How it signs in and why it does not use the website's cookie:
+ARCHITECTURE.md §13.
 
 ## The other repo
 

@@ -47,7 +47,8 @@ A placeholder that looks like data is worse than a blank.
 |---|---|
 | Stack | **Expo / React Native, TypeScript** — one codebase, iOS + Android, builds via EAS |
 | Data | **A JSON API added to the existing website**, same Postgres, same catalogue, same stock, same admin |
-| v1 scope | **Shopper app.** Garage, browse/search, compatibility, cart, cash-on-delivery order, order tracking, account. No owner/admin mode. |
+| v1 scope | **Shopper app.** Garage, browse/search, compatibility, cart, cash-on-delivery order, order tracking, account. ~~No owner/admin mode.~~ |
+| Staff mode | **Changed by the owner (2026-09-23): "create admin in mobile app".** A staff area at `/gestion`, behind the website's admin accounts: orders and their status, stock counts, price and online switch, product photos, family pictures, the shop's details. Everything else (references, fitments, imports, promotions, analytics) stays on the website. ARCHITECTURE.md §13. |
 | Repo | This one, private |
 
 Everything else is open.

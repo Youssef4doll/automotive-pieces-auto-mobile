@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -13,6 +13,7 @@ import { useI18n } from '@/i18n/provider';
 import { useCheckout } from '@/store/checkout';
 import { useGarage } from '@/store/garage';
 import { useOrders } from '@/store/orders';
+import { useStaff } from '@/store/staff';
 import { useToast } from '@/store/toast';
 
 /**
@@ -39,6 +40,12 @@ export default function AccountScreen() {
   const toast = useToast((s) => s.show);
   const settings = useShopSettings();
   const [confirming, setConfirming] = useState(false);
+  const staffSignedIn = useStaff((s) => s.status === 'signedIn');
+  const restoreStaff = useStaff((s) => s.restore);
+  // Only asks the shop when a staff token is saved on this phone.
+  useEffect(() => {
+    restoreStaff();
+  }, [restoreStaff]);
 
   const name = details.customerName.trim();
   const contactLine = details.email.trim() || details.phone.trim();
@@ -79,6 +86,20 @@ export default function AccountScreen() {
           <Row icon="map-pin" label={t('account.addresses')} onPress={() => router.push('/compte/adresses')} />
           <Row icon="help-circle" label={t('account.helpContact')} onPress={() => router.push('/aide')} />
           <Row icon="settings" label={t('account.settings')} onPress={() => router.push('/compte/parametres')} last />
+        </View>
+
+        {/* The shop's own door, kept apart from the customer's rows and
+            quiet: most people holding this app will never use it, and the
+            ones who do know it is here. Behind it is a real sign-in, checked
+            by the shop on every request — the row itself grants nothing. */}
+        <View style={styles.staff}>
+          <Row
+            icon="briefcase"
+            label={t('staff.entry')}
+            value={staffSignedIn ? t('staff.connected') : t('staff.entryHint')}
+            onPress={() => router.push('/gestion')}
+            last
+          />
         </View>
 
         {hasDetails ? (
@@ -176,6 +197,7 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: 19, lineHeight: 25, color: C.text },
   list: { marginTop: Spacing.two },
+  staff: { marginTop: Spacing.four, borderTopWidth: Border.hairline, borderTopColor: C.border },
   row: { alignItems: 'center', gap: Spacing.three, minHeight: Tap.primary + Spacing.two },
   rowRule: { borderBottomWidth: Border.hairline, borderBottomColor: C.border },
   pressed: { backgroundColor: C.surface },

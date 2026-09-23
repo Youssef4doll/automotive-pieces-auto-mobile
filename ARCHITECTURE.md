@@ -763,3 +763,56 @@ with the brief show a native tab bar and an iOS status bar, so that line was
 read as carried over from the website's own brief and the work was done in
 the app. If the intent was the website's mobile web instead, the design
 decisions here port but none of the code does.
+
+---
+
+## 13. The staff area (`/gestion`)
+
+The owner asked for the admin in the app. It is a second door onto the same
+admin, not a second admin: the same accounts, the same rules, the same
+database rows.
+
+**Sign-in.** `POST /api/v1/admin/session` checks the password with the
+website's own function (`lib/credentials.ts` there), so both doors share one
+lockout budget and one timing — an unknown e-mail costs a bcrypt compare like
+a wrong password does. Only `role = ADMIN` gets a session; a customer with the
+right password is told `forbidden`, not "wrong password".
+
+**The token.** 32 bytes from the CSPRNG, stored as SHA-256 in `AdminSession`,
+sent as `Authorization: Bearer`, kept in the Keychain/Keystore (`secrets` in
+`store/storage.ts`, key `apa-staff.session`). It is a row rather than a signed
+JWT so it can be taken back: signing out deletes it, and the role is re-read
+from `User` on every request, so a demoted account stops working on its next
+call. Thirty days, then sign in again.
+
+**Why not the website's cookie.** The rule from §10 holds: a route with the
+write CORS profile never reads a cookie. `/api/v1/admin/*` answers any origin
+(the web build of this app is cross-origin in development) and would be a
+cross-site request forgery if it honoured the website's session. It does not;
+`e2e/staff.mjs` sends one and gets a 401.
+
+**One copy of each rule.** The website's server actions and the app's API both
+call `lib/admin/{orders,products,categories}.ts`. Moving an order, counting
+stock, adding a photo (8 at most, bytes sniffed, never trusted by name),
+replacing a family picture: one implementation. Setting an order to the status
+it already has is a no-op in both — it used to re-email the customer.
+
+**What the phone does, and what it leaves to the website.** The phone does
+what is done standing at a counter or a shelf: move an order, ring the
+customer, count, reprice, take offline, photograph. References, fitments,
+descriptions, imports, promotions and analytics need a keyboard and a long
+look, and the product screen says so rather than half-offering them.
+
+**Honesty, the same as the shop window.** The dashboard prints counted
+figures only — no trends, no forecasts. A contact setting still holding its
+setup placeholder is shown empty with "à compléter : non affiché aux clients",
+never echoed back as if it were the owner's number. Photos are resized to
+1600 px / JPEG 0.8 on the phone (`lib/photo.ts`) so they fit the shop's 4 MB
+limit on a workshop connection.
+
+**Screens.** `gestion/_layout.tsx` is the gate (no session → `connexion`);
+`index` (dashboard), `commandes/` (list, detail, status), `stock/` (list;
+photos, count, price, online, supply), `familles`, `boutique` (settings). The
+way in is the last row of Mon compte, "Espace boutique". Staff screens re-read
+their data whenever they come back into view (`hooks/use-live.ts`), because
+what they show changes underneath them.

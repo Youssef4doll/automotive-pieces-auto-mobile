@@ -61,6 +61,8 @@ function App() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="recherche" options={{ headerShown: false, animation: 'fade' }} />
+        {/* The staff screens bring their own stack and headers. */}
+        <Stack.Screen name="gestion" options={{ headerShown: false }} />
       </Stack>
       {/* Above every screen, so "Ajouté au panier" survives the navigation
           that follows it. */}

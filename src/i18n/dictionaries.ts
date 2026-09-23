@@ -1,4 +1,5 @@
 import { commerce } from './commerce';
+import { staff } from './staff';
 import type { Locale } from './locales';
 
 /**
@@ -411,11 +412,11 @@ const base = {
   },
 } as const;
 
-/** The first dictionary and the buying one (commerce.ts), as one. */
+/** The first dictionary, the buying one (commerce.ts) and the shop's own (staff.ts), as one. */
 const dict = {
-  fr: { ...base.fr, ...commerce.fr },
-  en: { ...base.en, ...commerce.en },
-  ar: { ...base.ar, ...commerce.ar },
+  fr: { ...base.fr, ...commerce.fr, ...staff.fr },
+  en: { ...base.en, ...commerce.en, ...staff.en },
+  ar: { ...base.ar, ...commerce.ar, ...staff.ar },
 } as const;
 
 export type DictKey = keyof (typeof dict)['fr'];

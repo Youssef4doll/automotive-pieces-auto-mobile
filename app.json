@@ -30,7 +30,15 @@
           "imageWidth": 140
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pour ajouter les photos des pièces au catalogue de la boutique.",
+          "cameraPermission": "Pour photographier les pièces et les ajouter au catalogue de la boutique.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

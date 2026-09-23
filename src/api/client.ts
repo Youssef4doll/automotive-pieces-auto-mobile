@@ -36,8 +36,13 @@ export type ApiFailure =
   | { kind: 'rateLimited' }
   /** No token, or a token the shop refused. */
   | { kind: 'unauthorized' }
-  /** The shop's validation refused one field — the order form points at it. */
-  | { kind: 'invalid'; field: string }
+  /** Signed in correctly as somebody who may not do this — a customer at the staff door. */
+  | { kind: 'forbidden' }
+  /**
+   * The shop's validation refused one field — the order form points at it.
+   * `reason` and `room` come with a refused photo (`bad_file`, `too_many`…).
+   */
+  | { kind: 'invalid'; field: string; reason?: string; room?: number }
   /** A part the shop can no longer sell; the basket points at the line. */
   | { kind: 'unavailable'; productId: string }
   | { kind: 'server'; status: number }
@@ -61,7 +66,8 @@ function isEnvelope<T>(body: unknown): body is Envelope<T> {
 }
 
 type RequestInit = {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  /** JSON, or a FormData for a photo upload (sent as multipart, untouched). */
   body?: unknown;
   /** An order's access token, sent as `Authorization: Bearer`. */
   token?: string;
@@ -88,14 +94,16 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   try {
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (init.body !== undefined) headers['Content-Type'] = 'application/json';
+    const multipart = typeof FormData !== 'undefined' && init.body instanceof FormData;
+    // FormData sets its own multipart boundary; naming the type here would drop it.
+    if (init.body !== undefined && !multipart) headers['Content-Type'] = 'application/json';
     if (init.token) headers.Authorization = `Bearer ${init.token}`;
 
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method: init.method ?? 'GET',
       signal: controller.signal,
       headers,
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      body: init.body === undefined ? undefined : multipart ? (init.body as FormData) : JSON.stringify(init.body),
     });
 
     let body: unknown;
@@ -112,8 +120,17 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       if (response.status === 404) throw new ApiError({ kind: 'notFound' }, `${path}: 404`);
       if (response.status === 429) throw new ApiError({ kind: 'rateLimited' }, `${path}: 429`);
       if (response.status === 401) throw new ApiError({ kind: 'unauthorized' }, `${path}: 401`);
+      if (response.status === 403) throw new ApiError({ kind: 'forbidden' }, `${path}: 403`);
       if (detail.error === 'invalid_field' && typeof detail.field === 'string') {
-        throw new ApiError({ kind: 'invalid', field: detail.field }, `${path}: invalid ${detail.field}`);
+        throw new ApiError(
+          {
+            kind: 'invalid',
+            field: detail.field,
+            ...(typeof detail.reason === 'string' ? { reason: detail.reason } : {}),
+            ...(typeof detail.room === 'string' ? { room: Number(detail.room) } : {}),
+          },
+          `${path}: invalid ${detail.field}`,
+        );
       }
       if (detail.error === 'unavailable' && typeof detail.productId === 'string') {
         throw new ApiError({ kind: 'unavailable', productId: detail.productId }, `${path}: unavailable`);

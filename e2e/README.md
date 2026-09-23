@@ -71,3 +71,21 @@ asserts the half it can see.
 A missing precondition is a failure, not a skip. A check that cannot find the
 arc says so and the run goes red; one that passed quietly because it measured
 nothing would be worse than having no check at all.
+
+## The staff screens (`e2e/staff.mjs`)
+
+Signs in through "Espace boutique" with a wrong password first (the refusal
+must not say which half was wrong), then the right one; moves an order it
+placed itself to Confirmée and cancels it through the confirmation sheet;
+counts a part up one and back; adds a photo through the file chooser and
+deletes it; replaces a family's drawing with a picture and restores it;
+edits the opening hours, checks the public settings changed, and puts them
+back. Layout at 320 / 390 / 768 on each staff screen. Then it signs out and
+proves the token is dead on the shop, and attacks the staff API from outside:
+no token, a forged token, the website's cookie, a stock write smuggled through
+the product edit, a negative price, an unknown setting.
+
+What it verifies against is durable state — the "N en stock" tag, the number
+of photos, the "Revenir au dessin" buttons — never the confirmation toast,
+which is gone before a two-second wait ends.
+
