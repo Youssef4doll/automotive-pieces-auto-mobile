@@ -43,6 +43,9 @@ export type Engine = {
   powerHp: number | null;
   engineCode: string | null;
   displacementCc: number | null;
+  /** Production years the shop recorded for this engine, when it did. */
+  yearFrom?: number | null;
+  yearTo?: number | null;
   partCount: number;
 };
 
@@ -55,6 +58,19 @@ export const vehiclesApi = {
   engines: (makeSlug: string, modelSlug: string, signal?: AbortSignal) =>
     get<Engine[]>(
       `/api/v1/vehicles/engines?make=${encodeURIComponent(makeSlug)}&model=${encodeURIComponent(modelSlug)}`,
+      { signal },
+    ),
+
+  /**
+   * The make a VIN belongs to, from its first three characters — or null.
+   *
+   * Only the make. The shop recognises the manufacturer code for the makes
+   * it stocks and nothing else; a full VIN decode needs a paid data service
+   * it does not have, so the model and engine are still chosen by hand.
+   */
+  vinMake: (vin: string, signal?: AbortSignal) =>
+    get<{ make: { id: string; name: string; slug: string } | null }>(
+      `/api/v1/vehicles/vin?vin=${encodeURIComponent(vin)}`,
       { signal },
     ),
 };

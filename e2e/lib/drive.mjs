@@ -52,13 +52,20 @@ export async function open({ width = 390, height = 844, locale = 'fr-FR' } = {})
  * centre and accept it only when the answer is that node or something inside
  * it. Then click the point rather than the element, which is also what a
  * thumb does.
+ *
+ * Candidates are tried innermost first. With `exact: false` every ancestor of
+ * the label also "contains" the text — the app's root <div> contains all of
+ * it — and walking in document order picked the root, passed the hit test
+ * (whatever is at the screen's centre is inside the root) and clicked the
+ * middle of the screen. "Passer la commande" then silently did nothing, and
+ * it looked like the app's bug until a role-based click proved otherwise.
  */
 export async function tap(page, text, { exact = true, timeout = 15_000, settle = 1100 } = {}) {
   const deadline = Date.now() + timeout;
   for (;;) {
     const point = await page.evaluate(
       ({ txt, exact }) => {
-        for (const el of document.querySelectorAll('div,span,button')) {
+        for (const el of [...document.querySelectorAll('div,span,button')].reverse()) {
           const own = (el.textContent || '').trim();
           if (exact ? own !== txt : !own.includes(txt)) continue;
           if (el.children.length > 1) continue;
@@ -111,14 +118,21 @@ export async function tapLabel(page, label, { timeout = 15_000, settle = 1100 } 
  * Move the app's own scroll view.
  *
  * `window.scrollTo` does nothing here: the page does not scroll, a React
- * Native ScrollView inside it does. This finds the tallest one and moves it,
- * then fires the scroll event the animation worklets listen to.
+ * Native ScrollView inside it does. And there are several — the tab
+ * navigator keeps every tab mounted — so "the tallest one" was the hidden
+ * home screen while the customer was looking at Compte. This moves the
+ * scroller that is actually on top: the one the document says is at its own
+ * centre. Then it fires the scroll event the animation worklets listen to.
  */
 export async function scrollTo(page, top) {
   await page.evaluate((y) => {
     const scrollers = [...document.querySelectorAll('div')].filter((d) => {
       const s = getComputedStyle(d);
-      return (s.overflowY === 'auto' || s.overflowY === 'scroll') && d.scrollHeight > d.clientHeight + 20;
+      if (!((s.overflowY === 'auto' || s.overflowY === 'scroll') && d.scrollHeight > d.clientHeight + 20)) return false;
+      const r = d.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2) return false;
+      const hit = document.elementFromPoint(r.x + r.width / 2, r.y + Math.min(r.height / 2, window.innerHeight / 2));
+      return !!hit && d.contains(hit);
     });
     scrollers.sort((a, b) => b.scrollHeight - a.scrollHeight);
     const el = scrollers[0];

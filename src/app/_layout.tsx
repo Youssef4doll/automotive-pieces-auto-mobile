@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { ToastHost } from '@/components/ui/toast';
 import { C, familyFor } from '@/constants/theme';
 import { useAppFonts } from '@/hooks/use-app-fonts';
 import { I18nProvider, useI18n } from '@/i18n/provider';
@@ -54,7 +55,11 @@ function App() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="recherche" options={{ headerShown: false, animation: 'fade' }} />
       </Stack>
+      {/* Above every screen, so "Ajouté au panier" survives the navigation
+          that follows it. */}
+      <ToastHost />
     </>
   );
 }

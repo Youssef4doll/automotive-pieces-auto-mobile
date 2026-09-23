@@ -8,14 +8,17 @@ import { API_BASE_URL, REQUEST_TIMEOUT_MS } from '@/constants/config';
  * and a screen cannot accidentally ship a `fetch` with no timeout that spins
  * forever on a dead connection.
  *
- * Why not TanStack Query, which is the usual answer. v1 reads three endpoints,
- * all of them small, all of them the same for every customer, none of them
- * mutated from the app. What that needs is a timeout, one retry, and a cache
- * that survives going back a screen — about a hundred lines, visible here,
- * with no version to keep in step with Expo's. The moment the app gains
- * anything that writes — the cart, an order, the account — this stops being
- * enough and the library earns its place. Written down so the next person
- * does not have to guess whether it was considered.
+ * Why not TanStack Query, which is the usual answer. The first version of
+ * this comment said the library would earn its place "the moment the app
+ * gains anything that writes". It now writes — a basket quote and an order —
+ * and it still has not, and the reason is worth keeping: the only mutation
+ * with consequences is placing an order, which happens once, is never
+ * retried automatically (a retried POST is a second parcel), and invalidates
+ * nothing — the next screen reads the order it was handed. The basket is
+ * local state priced on demand. What a query library adds — background
+ * refetch, optimistic updates, invalidation graphs — is machinery for
+ * problems this app does not have yet. Reads get `get`, writes get `send`,
+ * and neither caches what depends on who is asking.
  */
 
 /**
@@ -31,6 +34,12 @@ export type ApiFailure =
   | { kind: 'timeout' }
   | { kind: 'notFound' }
   | { kind: 'rateLimited' }
+  /** No token, or a token the shop refused. */
+  | { kind: 'unauthorized' }
+  /** The shop's validation refused one field — the order form points at it. */
+  | { kind: 'invalid'; field: string }
+  /** A part the shop can no longer sell; the basket points at the line. */
+  | { kind: 'unavailable'; productId: string }
   | { kind: 'server'; status: number }
   /** The shop answered with something that is not the shape we asked for. */
   | { kind: 'malformed' };
@@ -51,8 +60,16 @@ function isEnvelope<T>(body: unknown): body is Envelope<T> {
   return typeof body === 'object' && body !== null && ('data' in body || 'error' in body);
 }
 
+type RequestInit = {
+  method?: 'GET' | 'POST';
+  body?: unknown;
+  /** An order's access token, sent as `Authorization: Bearer`. */
+  token?: string;
+  signal?: AbortSignal;
+};
+
 /**
- * One GET, with a deadline.
+ * One request, with a deadline.
  *
  * `AbortController` rather than a `Promise.race` with a timer: racing leaves
  * the request running in the background, still holding a socket and still
@@ -60,7 +77,8 @@ function isEnvelope<T>(body: unknown): body is Envelope<T> {
  * that is opened and closed three times ends up with three live requests.
  * Aborting actually cancels it.
  */
-async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const { signal } = init;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(new DOMException('timeout', 'TimeoutError')), REQUEST_TIMEOUT_MS);
 
@@ -69,9 +87,15 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
   signal?.addEventListener('abort', onCallerAbort);
 
   try {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (init.body !== undefined) headers['Content-Type'] = 'application/json';
+    if (init.token) headers.Authorization = `Bearer ${init.token}`;
+
     const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: init.method ?? 'GET',
       signal: controller.signal,
-      headers: { Accept: 'application/json' },
+      headers,
+      body: init.body === undefined ? undefined : JSON.stringify(init.body),
     });
 
     let body: unknown;
@@ -84,8 +108,16 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
     }
 
     if (!response.ok) {
+      const detail = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
       if (response.status === 404) throw new ApiError({ kind: 'notFound' }, `${path}: 404`);
       if (response.status === 429) throw new ApiError({ kind: 'rateLimited' }, `${path}: 429`);
+      if (response.status === 401) throw new ApiError({ kind: 'unauthorized' }, `${path}: 401`);
+      if (detail.error === 'invalid_field' && typeof detail.field === 'string') {
+        throw new ApiError({ kind: 'invalid', field: detail.field }, `${path}: invalid ${detail.field}`);
+      }
+      if (detail.error === 'unavailable' && typeof detail.productId === 'string') {
+        throw new ApiError({ kind: 'unavailable', productId: detail.productId }, `${path}: unavailable`);
+      }
       throw new ApiError({ kind: 'server', status: response.status }, `${path}: ${response.status}`);
     }
 
@@ -134,7 +166,7 @@ export async function get<T>(path: string, options?: { signal?: AbortSignal; fre
   const existing = inFlight.get(path);
   if (existing && !options?.fresh) return existing as Promise<T>;
 
-  const pending = request<T>(path, options?.signal)
+  const pending = request<T>(path, { signal: options?.signal })
     .then((data) => {
       cache.set(path, data);
       return data;
@@ -145,6 +177,19 @@ export async function get<T>(path: string, options?: { signal?: AbortSignal; fre
 
   inFlight.set(path, pending);
   return pending;
+}
+
+/**
+ * A request that is never cached and never shared: a POST, or a read that
+ * depends on who is asking (an order, behind its token).
+ *
+ * No automatic retry, deliberately. A retried order is a second parcel on a
+ * delivery van; if the first attempt timed out, the customer is shown what
+ * happened and decides, and the order screen offers "Retrouver ma commande"
+ * for the case where it had in fact gone through.
+ */
+export function send<T>(path: string, init: RequestInit = {}): Promise<T> {
+  return request<T>(path, init);
 }
 
 /** Drop everything cached. For "Réessayer", and for signing out later. */

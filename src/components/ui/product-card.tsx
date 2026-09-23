@@ -1,10 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Product } from '@/api/catalogue';
 import { API_BASE_URL } from '@/constants/config';
-import { Border, C, IconSize, Radius, Spacing } from '@/constants/theme';
+import { Border, Brand, C, IconSize, Radius, Spacing, Tap } from '@/constants/theme';
+import { useAddToCart } from '@/hooks/use-add-to-cart';
+import { formatDT } from '@/lib/format';
 import { PartArtwork } from '@/illustrations/parts';
 import { useI18n } from '@/i18n/provider';
 import type { DictKey } from '@/i18n/dictionaries';
@@ -21,11 +24,19 @@ import { Text } from './text';
  * not here — they belong on the part's own page, behind the decision this
  * card exists to support.
  *
- * It is NOT tappable, and that is deliberate rather than unfinished. There is
- * no product page and no basket in the app yet, so a card that lit up under a
- * thumb and then did nothing would be the one thing a shop's app must never
- * do. When those screens land this becomes a Pressable and gains its CTA; the
- * information design does not change.
+ * The card opens the part's page. The "+" in its corner adds one to the
+ * basket without leaving the list — the difference between adding three
+ * filters in three taps and in nine.
+ *
+ * No "+" on two kinds of part. One the shop cannot source has nothing to add.
+ * One listed as NOT fitting the customer's car must not go in the basket on
+ * a single tap from a list: the product page asks first, and a shortcut
+ * around that question would be the app quietly helping somebody buy the
+ * wrong brake disc.
+ *
+ * The "+" is a sibling of the card's pressable area, not a child of it. On
+ * the web build both render as <button>, and a button inside a button is
+ * invalid HTML that browsers repair unpredictably.
  */
 const STOCK: Record<Product['availability'], { icon: React.ComponentProps<typeof Feather>['name']; tone: string; label: DictKey }> = {
   IN_STOCK: { icon: 'check', tone: C.success, label: 'stock.inStock' },
@@ -35,77 +46,135 @@ const STOCK: Record<Product['availability'], { icon: React.ComponentProps<typeof
 
 export function ProductCard({ product }: { product: Product }) {
   const { t, rtl } = useI18n();
+  const router = useRouter();
+  const addToCart = useAddToCart();
   const stock = STOCK[product.availability];
+  const quickAdd = product.availability !== 'UNAVAILABLE' && product.fitment !== 'DOES_NOT_FIT';
+  const stockLine =
+    product.lowStockQty !== null ? t('stock.low', { n: product.lowStockQty }) : t(stock.label);
 
   return (
-    <View style={[styles.card, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-      <View style={styles.art}>
-        {product.imageUrl ? (
-          <Image
-            source={{ uri: `${API_BASE_URL}${product.imageUrl}` }}
-            style={styles.photo}
-            contentFit="contain"
-            // The part on a plain tile, never cropped to fill: a brake pad
-            // cropped square loses the shape that identifies it.
-            transition={120}
-            accessibilityLabel={product.name}
-          />
-        ) : (
-          // Most of the catalogue. The family's own drawing rather than a
-          // photograph of a different part — the shop's rule, and the same
-          // answer the website gives.
-          <PartArtwork slug={product.familySlug} size={44} />
-        )}
-      </View>
-
-      <View style={styles.body}>
-        {product.brand ? (
-          <Text variant="label" tone={C.textMuted} numberOfLines={1}>
-            {product.brand}
-          </Text>
-        ) : null}
-
-        {/* Three lines, not two. A part name's distinguishing word is
-            usually at the end — "frein arrière SACHS" against "frein avant
-            SACHS" — so clamping to two lines on a 320pt phone truncated
-            exactly the word the customer needed. */}
-        <Text variant="rowTitle" numberOfLines={3}>
-          {product.name}
-        </Text>
-
-        <View style={styles.badgeRow}>
-          <CompatibilityBadge verdict={product.fitment} />
+    <View style={styles.card}>
+      <Pressable
+        accessibilityRole="button"
+        // One sentence for the whole card, in the order the eye reads it.
+        accessibilityLabel={[product.brand, product.name, formatDT(product.price), stockLine]
+          .filter(Boolean)
+          .join(', ')}
+        onPress={() => router.push({ pathname: '/produit/[slug]', params: { slug: product.slug } })}
+        style={({ pressed }) => [
+          styles.pressable,
+          { flexDirection: rtl ? 'row-reverse' : 'row' },
+          pressed && styles.pressed,
+        ]}
+      >
+        <View style={styles.art}>
+          {product.imageUrl ? (
+            <Image
+              source={{ uri: `${API_BASE_URL}${product.imageUrl}` }}
+              style={styles.photo}
+              contentFit="contain"
+              // The part on a plain tile, never cropped to fill: a brake pad
+              // cropped square loses the shape that identifies it.
+              transition={120}
+            />
+          ) : (
+            // Most of the catalogue. The family's own drawing rather than a
+            // photograph of a different part — the shop's rule, and the same
+            // answer the website gives.
+            <PartArtwork slug={product.familySlug} size={44} />
+          )}
         </View>
 
-        <View style={[styles.foot, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-          <Price value={product.price} compareAt={product.compareAtPrice} />
-
-          <View style={[styles.stock, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-            <Feather name={stock.icon} size={IconSize.small} color={stock.tone} />
-            <Text variant="hint" tone={stock.tone} numberOfLines={1}>
-              {/* A count, never urgency. "il ne reste que 2, dépêchez-vous"
-                  is the thing this project does not do; the shop's own
-                  low-stock threshold decides when the number is worth
-                  printing at all. */}
-              {product.lowStockQty !== null
-                ? t('stock.low', { n: product.lowStockQty })
-                : t(stock.label)}
+        <View style={styles.body}>
+          {product.brand ? (
+            <Text variant="label" tone={C.textMuted} numberOfLines={1}>
+              {product.brand}
             </Text>
+          ) : null}
+
+          {/* Three lines, not two. A part name's distinguishing word is
+              usually at the end — "frein arrière SACHS" against "frein avant
+              SACHS" — so clamping to two lines on a 320pt phone truncated
+              exactly the word the customer needed. */}
+          <Text variant="rowTitle" numberOfLines={3}>
+            {product.name}
+          </Text>
+
+          <View style={styles.badgeRow}>
+            <CompatibilityBadge verdict={product.fitment} />
+          </View>
+
+          <View
+            style={[
+              styles.foot,
+              { flexDirection: rtl ? 'row-reverse' : 'row' },
+              // Room for the "+" that sits over this corner.
+              quickAdd && (rtl ? { paddingLeft: Tap.min + Spacing.two } : { paddingRight: Tap.min + Spacing.two }),
+            ]}
+          >
+            <Price value={product.price} compareAt={product.compareAtPrice} />
+
+            <View style={[styles.stock, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+              <Feather name={stock.icon} size={IconSize.small} color={stock.tone} />
+              <Text variant="hint" tone={stock.tone} numberOfLines={1}>
+                {/* A count, never urgency. "il ne reste que 2, dépêchez-vous"
+                    is the thing this project does not do; the shop's own
+                    low-stock threshold decides when the number is worth
+                    printing at all. */}
+                {stockLine}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
+      </Pressable>
+
+      {quickAdd ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('product.quickAdd', { name: product.name })}
+          onPress={() => addToCart(product)}
+          hitSlop={4}
+          style={({ pressed }) => [
+            styles.add,
+            rtl ? { left: Spacing.three } : { right: Spacing.three },
+            pressed && styles.addPressed,
+          ]}
+        >
+          <Feather name="plus" size={IconSize.large} color={C.onAccent} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    gap: Spacing.three,
-    padding: Spacing.three,
     borderRadius: Radius.card,
     borderWidth: Border.thin,
     borderColor: C.border,
     backgroundColor: C.background,
+    overflow: 'hidden',
+  },
+  pressable: {
+    gap: Spacing.three,
+    padding: Spacing.three,
+  },
+  pressed: {
+    backgroundColor: C.surface,
+  },
+  add: {
+    position: 'absolute',
+    bottom: Spacing.three,
+    width: Tap.min,
+    height: Tap.min,
+    borderRadius: Radius.pill,
+    backgroundColor: C.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addPressed: {
+    backgroundColor: Brand.gold600,
   },
   art: {
     width: 72,

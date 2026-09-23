@@ -1,4 +1,4 @@
-import { addBmw, open, scrollTo, tap } from './lib/drive.mjs';
+import { APP_URL, addBmw, open, scrollTo, tap } from './lib/drive.mjs';
 
 /**
  * The checks that catch what a typecheck cannot.
@@ -19,7 +19,9 @@ import { addBmw, open, scrollTo, tap } from './lib/drive.mjs';
  * Run: npx expo start --web, then `npm run e2e`.
  */
 
-const VIEWPORTS = [320, 360, 375, 390, 414, 430, 768];
+const VIEWPORTS = [320, 360, 375, 390, 393, 414, 430, 768, 1024];
+/** The buying screens are swept at the narrowest phone, the common one and a tablet. */
+const SCREEN_VIEWPORTS = [320, 390, 768];
 const TAP_FLOOR = 43.5; // 44, less a rounding point
 
 let failures = 0;
@@ -130,6 +132,58 @@ for (const width of VIEWPORTS) {
   }
 }
 
+// --------------------------------------------------------------- screens ---
+//
+// The buying screens, each measured the same way as the home screen. A part
+// goes in the basket first, so the basket and checkout are measured full.
+
+for (const width of SCREEN_VIEWPORTS) {
+  const { browser, page, errors } = await open({ width });
+  try {
+    await addBmw(page);
+    const screens = [
+      ['search', `${APP_URL}/recherche?q=filtre`],
+      ['compatible', `${APP_URL}/pieces-compatibles`],
+    ];
+    for (const [name, url] of screens) {
+      await page.goto(url, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(2500);
+      const r = await inspect(page, width);
+      if (r.hScroll || r.offscreen.length || r.clipped.length || r.small.length) fail(`${name} ${width}`, r);
+      else pass(`${name} ${width}`);
+    }
+
+    // Open a part from the list, put it in the basket, then walk the basket
+    // and the first checkout step.
+    await page.locator('[aria-label*=" DT"]').first().click();
+    await page.waitForTimeout(2500);
+    let r = await inspect(page, width);
+    if (r.hScroll || r.offscreen.length || r.clipped.length || r.small.length) fail(`product ${width}`, r);
+    else pass(`product ${width}`);
+    await page.getByRole('button', { name: /Ajouter au panier/ }).click();
+    await page.waitForTimeout(1200);
+
+    for (const [name, url] of [
+      ['cart', `${APP_URL}/panier`],
+      ['delivery', `${APP_URL}/commande/livraison`],
+      ['account', `${APP_URL}/compte`],
+      ['vin', `${APP_URL}/garage/vin`],
+      ['makes', `${APP_URL}/garage/ajouter`],
+    ]) {
+      await page.goto(url, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(2800);
+      r = await inspect(page, width);
+      if (r.hScroll || r.offscreen.length || r.clipped.length || r.small.length) fail(`${name} ${width}`, r);
+      else pass(`${name} ${width}`);
+    }
+    if (errors.length) fail(`screens ${width}: page errors`, errors.slice(0, 3));
+  } catch (e) {
+    fail(`screens ${width}`, { threw: String(e).split('\n')[0] });
+  } finally {
+    await browser.close();
+  }
+}
+
 // ------------------------------------------------------------------- arc ---
 
 {
@@ -193,11 +247,14 @@ for (const width of VIEWPORTS) {
   const { browser, page, errors } = await open({ width: 390 });
   try {
     await addBmw(page);
-    await tap(page, 'Accueil');
+    // The language switcher lives in Compte, with the other settings.
+    await tap(page, 'Compte');
     await page.waitForTimeout(1400);
     await scrollTo(page, 'bottom');
     await tap(page, 'العربية');
     await page.waitForTimeout(2000);
+    await tap(page, 'الرئيسية');
+    await page.waitForTimeout(1600);
     await scrollTo(page, 0);
 
     // The arc runs the other way: card 01 sits at the right-hand end, which

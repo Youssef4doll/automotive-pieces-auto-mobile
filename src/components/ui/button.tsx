@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { ActivityIndicator, Pressable, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Border, Brand, C, familyFor, Radius, Spacing, Tap, Type } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
@@ -24,18 +25,29 @@ import { Text } from './text';
  *
  * None of them has a disabled-looking-but-tappable state: a disabled button
  * in this app is genuinely not pressable and says why somewhere near itself.
+ *
+ * `loading` keeps the label and adds a spinner beside it rather than swapping
+ * the label out. "Confirmer la commande" turning into a bare spinner leaves
+ * the customer unsure what is being waited on; the words staying put, dimmed
+ * a little, says "this is happening". It is also not pressable while loading,
+ * which is what stops a second tap from placing a second order.
  */
 export function Button({
   label,
   onPress,
   variant = 'primary',
   disabled = false,
+  loading = false,
+  icon,
   style,
 }: {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'danger';
   disabled?: boolean;
+  loading?: boolean;
+  /** A leading Feather glyph, for the few buttons whose verb is clearer with one. */
+  icon?: React.ComponentProps<typeof Feather>['name'];
   style?: ViewStyle;
 }) {
   const { rtl } = useI18n();
@@ -43,8 +55,8 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
+      disabled={disabled || loading}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
@@ -57,13 +69,20 @@ export function Button({
         style,
       ]}
     >
-      <View style={styles.inner}>
+      <View style={[styles.inner, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+        {loading ? (
+          <ActivityIndicator size="small" color={LABEL[variant]} />
+        ) : icon ? (
+          <Feather name={icon} size={18} color={LABEL[variant]} />
+        ) : null}
         <Text
           style={{
             ...Type.rowTitle,
             fontFamily: familyFor('display', rtl),
             color: LABEL[variant],
             textAlign: 'center',
+            opacity: loading ? 0.75 : 1,
+            flexShrink: 1,
           }}
         >
           {label}
@@ -100,6 +119,9 @@ const styles = StyleSheet.create({
   },
   inner: {
     paddingVertical: Spacing.two,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
   },
   disabled: {
     opacity: 0.4,

@@ -6,17 +6,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Border, C, familyFor, IconSize, Radius, Spacing, TabBarHeight } from '@/constants/theme';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
+import { useCartCount } from '@/store/cart';
 
 /**
- * Three tabs, because three screens are finished.
+ * Five tabs: Accueil, Catalogue, Garage, Panier, Compte.
  *
- * The brief lists seven screens for v1 — accueil, garage, recherche, fiche
- * produit, panier, commande, suivi, compte. They arrive as tabs as they are
- * built. Panier and Compte arrive with the basket and the account. Shipping
- * five tabs now, two of which open onto "bientôt disponible", would be the
- * app telling the customer about features it does not have, which is the same
- * habit as inventing stock: it just happens to be about the app rather than
- * about a part.
+ * There were three until the basket and the account existed, on the rule
+ * that a tab opening onto "bientôt disponible" is the app advertising what it
+ * does not have. Panier and Compte arrived with the checkout; each opens onto
+ * something that works.
+ *
+ * Search is not a tab. It is the box at the top of Accueil and Catalogue,
+ * one tap from anywhere a customer starts, and a sixth tab would push every
+ * label under the width a 320pt phone can set them at.
+ *
+ * The basket's badge is the number of parts, counting quantities — what the
+ * customer will find inside — gold with navy figures, the button colours,
+ * and hidden at zero rather than showing a "0" that reads as an error.
  *
  * ## The active state is three signals, not one
  *
@@ -38,6 +44,7 @@ import { useI18n } from '@/i18n/provider';
 export default function TabsLayout() {
   const { t, rtl } = useI18n();
   const insets = useSafeAreaInsets();
+  const cartCount = useCartCount();
 
   /**
    * The bar is sized here rather than left to the default.
@@ -79,6 +86,12 @@ export default function TabsLayout() {
         },
         tabBarLabelStyle: { fontFamily: familyFor('display', rtl), fontSize: 12 },
         tabBarItemStyle: { paddingTop: Spacing.half },
+        tabBarBadgeStyle: {
+          backgroundColor: C.accent,
+          color: C.onAccent,
+          fontFamily: familyFor('display', rtl),
+          fontSize: 11,
+        },
       }}
     >
       <Tabs.Screen
@@ -116,6 +129,32 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
               <NavCar size={IconSize.large} color={color} />
+            </NavIcon>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="panier"
+        options={{
+          title: t('cart.title'),
+          tabBarLabel: t('tab.cart'),
+          tabBarBadge: cartCount > 0 ? (cartCount > 99 ? '99+' : cartCount) : undefined,
+          tabBarAccessibilityLabel: cartCount > 0 ? `${t('tab.cart')}, ${t('a11y.cartCount', { n: cartCount })}` : t('tab.cart'),
+          tabBarIcon: ({ color, focused }) => (
+            <NavIcon focused={focused}>
+              <Feather name="shopping-bag" size={IconSize.large} color={color} />
+            </NavIcon>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="compte"
+        options={{
+          title: t('account.title'),
+          tabBarLabel: t('tab.account'),
+          tabBarIcon: ({ color, focused }) => (
+            <NavIcon focused={focused}>
+              <Feather name="user" size={IconSize.large} color={color} />
             </NavIcon>
           ),
         }}

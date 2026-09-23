@@ -1,3 +1,4 @@
+import { commerce } from './commerce';
 import type { Locale } from './locales';
 
 /**
@@ -14,7 +15,7 @@ import type { Locale } from './locales';
  * than re-translated. "Mon garage" is called "Mon garage" in both front doors
  * or it is two different features to the same customer.
  */
-const dict = {
+const base = {
   fr: {
     'app.name': 'Automotive Pièces Auto',
 
@@ -408,6 +409,13 @@ const dict = {
     'lang.title': 'اللغة',
     'lang.rtlRestart': 'العربية تُقرأ من اليمين إلى اليسار. أعد تشغيل التطبيق ليتبع التصميم.',
   },
+} as const;
+
+/** The first dictionary and the buying one (commerce.ts), as one. */
+const dict = {
+  fr: { ...base.fr, ...commerce.fr },
+  en: { ...base.en, ...commerce.en },
+  ar: { ...base.ar, ...commerce.ar },
 } as const;
 
 export type DictKey = keyof (typeof dict)['fr'];

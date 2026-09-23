@@ -29,13 +29,15 @@ import { useGarage } from '@/store/garage';
  */
 export default function FamilyScreen() {
   const { t, rtl } = useI18n();
-  const { family, familyName } = useLocalSearchParams<{
+  const { family, familyName, subcategory: initialSubcategory } = useLocalSearchParams<{
     family: string;
     familyName?: string;
+    /** Opened from a search suggestion for a subcategory: start on its chip. */
+    subcategory?: string;
   }>();
 
   const engineId = useGarage((s) => s.active?.engineId);
-  const [subcategory, setSubcategory] = useState<string | null>(null);
+  const [subcategory, setSubcategory] = useState<string | null>(initialSubcategory ?? null);
 
   const loadFamilies = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(loadFamilies);

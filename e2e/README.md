@@ -18,7 +18,9 @@ Every check below exists because the opposite shipped at least once. None of
 them would have been caught by `tsc`, and all of them were obvious the moment
 somebody looked at a screenshot.
 
-**Layout, at 320 / 360 / 375 / 390 / 414 / 430 / 768.**
+**Layout, at 320 / 360 / 375 / 390 / 393 / 414 / 430 / 768 / 1024 on the home
+screen, and at 320 / 390 / 768 on search, compatible parts, the product page,
+the basket, the delivery step, Compte, the VIN screen and the make picker.**
 Sideways page scroll, text clipped inside its own box, anything past the right
 edge that is not inside a horizontal scroller, and every button smaller than
 the 44pt floor. The tab bar's height was wrong three times — labels sheared,
@@ -36,6 +38,26 @@ starts, and that the logo is not still pinned to the left of a right-aligned
 screen. `flexDirection: row-reverse` mirrors a row; it does nothing for a
 child of a column that is narrower than its parent, and three of those shipped
 wrong in one afternoon.
+
+**The eight journeys** (`journeys.mjs`). The redesign brief's shoppers —
+knows the car not the part; knows it is brake pads; has a reference; does not
+know the name; has a saved car; has two cars; wants to buy again; wants to
+check an order — each walked end to end. The last two place a real order and
+track it, which is why the file refuses to run against anything but a local
+shop.
+
+**The order API, from outside.** A name that is an e-mail is refused by
+field; a price in the body is ignored; the token opens its order; no token is
+401; a forged token, a real token for the order next door and a wrong phone
+on recovery are all the same 404.
+
+**Two things this suite got wrong before the app did,** both from the tab
+navigator keeping every tab mounted: a text match picked the app's root
+<div> and clicked the middle of the screen, and "scroll to the bottom" moved
+the hidden home screen instead of the visible one. `lib/drive.mjs` now tries
+the innermost match first and scrolls only the scroller that is on top. A
+check that passes by acting on the wrong element is the failure mode this
+whole folder exists to avoid.
 
 ## What it does not check
 

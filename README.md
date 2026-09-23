@@ -78,15 +78,18 @@ e2e/              checks that drive the real app in a browser
 
 ```bash
 npx tsc --noEmit              # types
-npx expo start --web          # leave running in one terminal
-npm run e2e                   # in another
+npx expo start --web          # leave running in one terminal, with the website on :3000
+npm run e2e                   # layout + journeys; or e2e:layout / e2e:journeys alone
 ```
 
-`npm run e2e` opens the app in Chromium, puts a car in the garage through the
-real picker, and measures the result: layout at seven viewport widths, the
-home screen's discovery arc, and Arabic mirroring. `e2e/README.md` says why
-each check is there — every one of them is something that shipped broken
-once and was invisible to a clean typecheck.
+`npm run e2e` opens the app in Chromium and measures it: layout at nine
+widths on the home screen and at three on every buying screen, the discovery
+arc's geometry, Arabic mirroring — then walks the eight shopper journeys from
+the redesign brief, including placing and tracking a real order, and attacks
+the order API from outside. `e2e/README.md` says why each check is there.
+
+**`e2e:journeys` places real orders.** It refuses to run unless the shop is on
+localhost; `E2E_ALLOW_ORDERS=1` overrides that, deliberately.
 
 ## The other repo
 
@@ -95,10 +98,7 @@ The website, the database and the admin live in
 the same stock through a JSON API that repo exposes; it never gets its own
 copy of the data.
 
-Built so far: `/api/v1/vehicles/{makes,models,engines}` behind the garage,
-`/api/v1/catalogue/{families,products}` behind the catalogue and behind
-`Pièces compatibles` (which uses its `fits=1` filter), and
-`/api/v1/promotions` behind the banner space. The rest of the
-endpoints in `BRIEF.md` §6 — search, a single product, orders, the account —
-are not written yet, and `ARCHITECTURE.md` §12 says in which order they have
-to land.
+The app's endpoints are listed in `ARCHITECTURE.md` §4: vehicles (and the
+make from a VIN), the catalogue, search, a product, the public settings, a
+basket quote, orders with a device token, and order recovery. What is left —
+sign-in and the account endpoints — is in §12, in the order it should land.

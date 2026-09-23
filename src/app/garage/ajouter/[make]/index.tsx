@@ -21,10 +21,12 @@ import { useI18n } from '@/i18n/provider';
 export default function ModelsScreen() {
   const router = useRouter();
   const { t } = useI18n();
-  const { make, makeName, makeId } = useLocalSearchParams<{
+  const { make, makeName, makeId, notice } = useLocalSearchParams<{
     make: string;
     makeName?: string;
     makeId?: string;
+    /** Set by the VIN screen: "VIN reconnu : BMW. Choisissez le modèle." */
+    notice?: string;
   }>();
 
   const load = useCallback((signal: AbortSignal) => vehiclesApi.models(make, signal), [make]);
@@ -75,6 +77,7 @@ export default function ModelsScreen() {
         emptyTitle={t('picker.noModels')}
         emptyBody={t('picker.missingData')}
         footer={t('picker.missingData')}
+        notice={notice}
       />
     </>
   );

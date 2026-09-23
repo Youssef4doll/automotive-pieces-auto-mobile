@@ -5,6 +5,7 @@ import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { Screen } from '@/components/ui/screen';
+import { SearchLauncher } from '@/components/ui/search-launcher';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Empty, Failed } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
@@ -70,6 +71,13 @@ export default function CatalogueScreen() {
         keyExtractor={(family) => family.id}
         contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
         showsVerticalScrollIndicator={false}
+        // Searching is the other half of browsing: a customer who scrolls
+        // into "Freinage" looking for one pad can type it instead.
+        ListHeaderComponent={
+          <View style={styles.searchBox}>
+            <SearchLauncher />
+          </View>
+        }
         renderItem={({ item }) => (
           <FamilyRow
             family={item}
@@ -131,6 +139,9 @@ function FamilyRow({
 }
 
 const styles = StyleSheet.create({
+  searchBox: {
+    paddingBottom: Spacing.three,
+  },
   list: {
     paddingTop: Spacing.three,
     gap: Spacing.two,

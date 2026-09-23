@@ -71,11 +71,22 @@ they just completed.
 
 expo-router, file-based, same idea as the website's App Router.
 
-**The tab bar has two tabs because two screens are finished.** The brief lists
-seven screens for v1. They become tabs as they are built. Five tabs now, three
-of which open onto "bientôt disponible", would be the app advertising features
-it does not have — the same habit as inventing stock, pointed at the app
-instead of at a part.
+**Five tabs: Accueil, Catalogue, Garage, Panier, Compte.** There were three
+until the basket and the account existed, on the rule that a tab opening onto
+"bientôt disponible" is the app advertising features it does not have — the
+same habit as inventing stock, pointed at the app instead of at a part. Each
+tab keeps its own state when the customer leaves and comes back.
+
+**Search is not a tab.** It is the box on Accueil's hero and at the top of
+Catalogue, and it opens `/recherche` — a root-stack screen, full height, with
+the keyboard already up. A sixth tab would push the labels under the width a
+320pt phone can set them at.
+
+**Everything a customer can be sent a link to is a route**, so a deep link
+lands on it directly: `/produit/[slug]`, `/recherche?q=`, `/famille/[family]`,
+`/suivi/[ref]`, `/commande/confirmation/[ref]`, `/garage/vin`. The order
+screens read with the token in the keychain, so a link to someone else's
+order opens nothing.
 
 **Route params carry what the previous screen already knew.** Step 2 receives
 the make's name and id in the params rather than re-fetching the makes list to
@@ -90,6 +101,10 @@ Three kinds, deliberately kept apart.
 | What | Where | Why there |
 |---|---|---|
 | The customer's cars | `store/garage.ts` — Zustand + AsyncStorage | Survives closing the app; needed by every screen; works with no signal |
+| The basket | `store/cart.ts` — ids, quantities and a display snapshot; **never a price** | Every total is re-priced by the shop (`POST /cart/quote`) |
+| Orders placed here | `store/orders.ts` — the list in AsyncStorage, each token in the Keychain/Keystore | The token opens a stranger's address if leaked; see §10 |
+| Delivery details | `store/checkout.ts` — the customer's own, for the next order | "Effacer mes coordonnées" in Compte removes them |
+| Recent searches | `store/recent-searches.ts` — eight, removable one by one | Only searches the customer ran, never keystrokes |
 | The active language | `i18n/provider.tsx` — context + AsyncStorage | Read by every component; changes rarely |
 | Anything from the shop | `useResource` + the client's cache | Belongs to a screen, not to the app |
 
@@ -137,17 +152,29 @@ offering a car it can no longer supply. Not in v1.
 
 ### The API, in the other repo
 
-Three endpoints were written in `Youssef4doll/automotive-pieces-auto` for this
-flow, under `src/app/api/v1/`:
+The app's API lives in `Youssef4doll/automotive-pieces-auto`, under
+`src/app/api/v1/`:
 
 ```
-GET /api/v1/vehicles/makes
-GET /api/v1/vehicles/models?make=<slug>
-GET /api/v1/vehicles/engines?make=<slug>&model=<slug>
-GET /api/v1/catalogue/families
-GET /api/v1/catalogue/products?family=&subcategory=&engine=&fits=1&page=
-GET /api/v1/promotions
+GET  /api/v1/vehicles/makes | models?make= | engines?make=&model=
+GET  /api/v1/vehicles/vin?vin=              the make from a VIN, or null
+GET  /api/v1/catalogue/families
+GET  /api/v1/catalogue/products?family=&subcategory=&engine=&fits=1&page=
+GET  /api/v1/search?q=&engine=&take=&submitted=1
+GET  /api/v1/products/:slug?engine=
+GET  /api/v1/settings/public                delivery, tax, contact — no secrets
+GET  /api/v1/promotions
+POST /api/v1/cart/quote                     ids + quantities -> the shop's prices
+POST /api/v1/orders                         -> { ref, token, order }
+GET  /api/v1/orders/:ref                    Authorization: Bearer <token>
+POST /api/v1/orders/lookup                  ref + phone -> a fresh token
 ```
+
+**One copy of each rule.** Search is the website's `rankProducts`; the order
+is the website's own checkout transaction (`lib/orders/place.ts`, which the
+server action now calls too); the guest lookup is the website's matching rule
+(`lib/orders/lookup.ts`); every product row is shaped by one mapper
+(`lib/data/app-catalog.ts`). The app never computes a price, a fee or a tax.
 
 `fits=1` is the narrow one and it earns its place: it returns only the parts
 that have a `ProductFitment` row for that engine — the shop's confirmed list
@@ -266,9 +293,14 @@ IDENTIFY   Mon garage         make → model → engine, kept on the phone
 BROWSE     Catalogue          the families the shop actually stocks
            Famille            its parts, filtered by subcategory
            Pièces compatibles what the shop has confirmed fits this engine
-EVALUATE   (product page)     not built — see §12
-BUY        (cart, checkout)   not built
-TRACK      (orders)           not built
+           Recherche          one ranking for the box and the results
+EVALUATE   Fiche produit      verdict, price, stock, then the details
+BUY        Panier             priced by the shop on every change
+           Livraison          who and where, remembered for next time
+           Paiement           cash on delivery, and a last look
+           Confirmation       the reference, and why to keep it
+TRACK      Suivi              the status in words, then the dated history
+           Compte             the orders on this phone, recovery, contact
 ```
 
 The home screen, top to bottom, is the order of the job rather than the order
@@ -276,11 +308,11 @@ of the marketing:
 
 ```
 logo + promise      whose shop this is, and what it is for
+search              for anyone who can name the part or read its number
 your vehicle        the context every answer below depends on
 Que cherchez-vous ? the ways in, along an arc
 Familles de pièces  browsing, for anyone who knows none of the above
 the shop's banner   only when a campaign is actually running
-language
 ```
 
 Every screen answers one question and offers one primary action. The home
@@ -556,7 +588,7 @@ cookie jar to lean on.
 app keeps the token in the device keychain (`expo-secure-store`).**
 `GET /api/v1/orders/:ref` accepts that token or a session, and nothing else.
 
-Specifically, and to be built with the checkout:
+Built as decided, with the checkout:
 
 - The token is generated server-side, at least 32 bytes of CSPRNG output,
   stored **hashed** on the order row. A database dump should not be a set of
@@ -571,6 +603,26 @@ Specifically, and to be built with the checkout:
 - The lookup endpoint gets the website's tightest rate limit, the one
   `LIMITS.orderLookup` already uses, for the same reason: sequential
   references mean a wrong answer still tells a guesser something.
+
+What landed, and one change from the plan:
+
+- Tokens live in their own table, `OrderAccessToken`, not a column on the
+  order: an order can be opened from the phone that placed it and from one
+  it was recovered on with its reference and phone number, and each phone
+  holds its own key.
+- The token is minted **inside the order's transaction**, so an order and
+  the only key to it exist together or not at all. That was tested by
+  accident: a dev server with a stale Prisma client failed to write the
+  token, and the stock it had claimed came back.
+- `GET /orders/:ref` accepts the token **only** — no session yet, because
+  the app has no sign-in. That is also what lets the route take CORS `*`:
+  the danger of `*` is ambient credentials, and a bearer header is not
+  ambient. The rule is written on the route helper: a route with the write
+  profile never reads a cookie.
+- Tested from outside: a forged token, a valid token for the reference next
+  door, and a wrong phone on lookup all get the same 404; no header is 401;
+  a price sent in the order body is ignored. `e2e/journeys.mjs` repeats
+  those on every run.
 
 ---
 
@@ -644,63 +696,59 @@ session:
 
 ### What is not done
 
-Sequenced rather than dropped. The order below is the order the endpoints
-have to land in, because most of these screens are blocked on data rather
-than on design.
+**Built and working on real data:** Accueil with search and the discovery arc,
+Catalogue, a family with its subcategory chips, Pièces compatibles, Recherche,
+the product page, the basket, the two-step checkout, the confirmation, order
+tracking, order recovery, Compte, Mon garage with its picker and the VIN
+shortcut, and the help screen (which appears only when the shop has a
+channel). The eight shopper journeys in the redesign brief are walked by
+`e2e/journeys.mjs` on every run and pass.
 
-**Built and working on real data:** Accueil, Mon garage and its three-step
-picker, Catalogue, a part family with its subcategory filter and its parts —
-each part carrying brand, name, price, availability and a compatibility
-verdict against the car in the garage.
+**Deliberately absent, because there is nothing true to show:**
 
-**Next, and they are one unit:** product page → basket → checkout → order
-confirmation → tracking. A product page with no "Ajouter au panier" has no
-primary action, and a basket with nothing to put in it is not a feature, so
-these ship together or not at all. Needs `/api/v1/products/:slug`,
-`POST /api/v1/orders` and `GET /api/v1/orders/:ref` — and the order-ownership
-token decided in §10, which is the reason that decision was made early.
+- **Ratings and reviews.** The reference design shows "4.6 (124 avis)". There
+  is no review table. The line is not there.
+- **Delivery dates.** The shop publishes delays ("24h", "48–72h") and the app
+  quotes them. It never turns one into a date nobody committed to.
+- **"Garantie 2 ans".** The shop's warranty is twelve months, stated across
+  the website; the app says twelve.
+- **Manufacturer logos.** BMW's roundel is BMW's. The make tiles show the
+  logo the shop uploads to `VehicleMake.logoUrl`, and a monogram until it
+  does — today, every one is a monogram.
+- **The photo route, in production.** "Je ne sais pas son nom" opens a
+  WhatsApp conversation with the shop, and the shop's WhatsApp, phone and
+  e-mail are still placeholders. The card is absent until the owner fills
+  one in at /admin/parametres; it then appears with no release.
+- **Notifications, and "Bonjour Youssef".** No push service and no sign-in.
 
-**Then search**, which is the single most valuable thing this app will have
-and is deliberately absent rather than stubbed. The home screen has no search
-box, because a box that focuses and then cannot answer teaches the customer
-that search is broken — which is the one thing a parts search cannot afford.
-Needs `/api/v1/search` and `/api/v1/reference/:ref`; the website already has
-the index, the ranking and the synonym handling in its `lib/search`, so this
-is an endpoint over existing machinery rather than new machinery.
+**Next, in order:**
 
-**Then the remaining ways in.** The arc offers three routes with a car in the
-garage and two without, because that is how many lead somewhere. The design
-it was drawn from lists six. "J'ai la référence" needs a search index the API
-does not expose yet. "Je ne sais pas comment ça s'appelle" needs the shop's
-WhatsApp number, which is a placeholder in production and is the owner's to
-fill in (`BRIEF.md` §8). "Par symptôme" needs a symptom→family mapping that
-does not exist in the database at all, and must never read as a diagnosis
-when it does. A front door with six handles of which three are painted on is
-how an app teaches its customer to stop trusting it; the component takes any
-number and they arrive as their endpoints do.
+1. **Sign-in and "Mes commandes" across devices.** `POST /api/v1/auth/*` with
+   a bearer session (not the website's cookie — see §10), then orders and the
+   garage synced to the account. Until then Compte says plainly that
+   everything lives on this phone.
+2. **Camera OCR of the carte grise.** Needs on-device text recognition (a
+   native module outside Expo Go) or a service. The VIN screen is the typed
+   version and says it only identifies the make.
+3. **A photo sent in-app.** Needs image storage on the shop side
+   (`MediaAsset` exists) and a message type the admin inbox can show.
+4. **Symptom-based discovery.** Needs a symptom→family mapping nobody has
+   written, and must never read as a diagnosis.
+5. **Pagination on a family and on search.** Both endpoints page; the screens
+   show the first page. Fine at 55 parts, not at 5 000.
+6. **Analytics.** The website has an `AnalyticsEvent` table and a `track()`;
+   the app should send the brief's event list to it. Not wired: a stub that
+   records nothing would look like instrumentation and measure nothing.
+7. **Shared transitions** (card → product image). Reanimated 4 supports them;
+   worth doing once there are real photographs to carry across.
 
-**Also outstanding:**
-
-- The account and the basket tabs. Three tabs today, because three screens
-  are finished.
-- VIN / carte grise entry, the brief's second way into the garage. The
-  website has `src/lib/vin.ts` to port rather than rewrite, and the carte
-  grise illustration belongs in `src/illustrations/`.
-- Symptom-based discovery ("ma voiture freine mal"). Needs a mapping from
-  symptom to families that nobody has written yet, and it must never read as
-  a diagnosis — "pièces pouvant être liées à ce problème", and no further.
-- Pagination on a family. The endpoint pages and returns `hasMore`; the
-  screen shows the first page only. Fine at 16 products a family, not fine
-  at 500.
-- The garage does not sync to an account, because there is no account.
-- **The committed suite is `e2e/` and it is not complete.** `npm run e2e`
-  drives the real app in Chromium and checks layout at seven viewports, the
-  arc's transforms and snapping, and Arabic mirroring — see `e2e/README.md`
-  for why each check exists. What is still only in a scratchpad: the
-  offline/recovery pass and the behaviour walk-through of the picker. And it
-  runs against the web build, so it proves layout, text fitting, target size
-  and direction, not platform behaviour — the phones are still verified by
-  hand.
+**Testing.** `npm run e2e` is layout at nine widths (320–1024) on the home
+screen and at three on every buying screen, the arc's geometry, Arabic
+mirroring, the eight journeys and the order API's security. It runs against
+the web build, so it proves layout, text fitting, target size, direction and
+behaviour, not platform specifics — the phones are still checked by hand.
+`journeys.mjs` places real orders and refuses to run against anything but a
+local shop unless told otherwise.
 
 ### One assumption worth checking
 

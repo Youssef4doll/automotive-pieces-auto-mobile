@@ -1,35 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
 import { create } from 'zustand';
-import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
-/**
- * Storage that survives not having any.
- *
- * `@react-native-async-storage/async-storage` on web is `window.localStorage`
- * with a promise around it, and there are two places with no `window`: the
- * Node pass that pre-renders the web build, and a browser where site data is
- * blocked. The first one is not hypothetical — it crashed `expo start --web`
- * outright the first time this store existed, because zustand's persist
- * middleware reads storage the moment the store is created, at import time,
- * before any component has rendered and where there is no error boundary to
- * catch it. The app did not fail to show the garage; it failed to start.
- *
- * So storage is probed once and replaced with a no-op when it is not there.
- * A no-op means the garage works for the length of the session and is not
- * remembered — which is the correct behaviour for a pre-render (nothing is
- * being remembered for anybody) and an honest degradation in a browser with
- * storage switched off.
- */
-const hasStorage = Platform.OS !== 'web' || typeof window !== 'undefined';
-
-const storage: StateStorage = hasStorage
-  ? AsyncStorage
-  : {
-      getItem: async () => null,
-      setItem: async () => undefined,
-      removeItem: async () => undefined,
-    };
+import { deviceStorage as storage } from './storage';
 
 /**
  * The customer's cars, on this phone.

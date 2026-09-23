@@ -88,6 +88,10 @@ export function CompatibilityBadge({
         size === 'full' && styles.full,
         {
           flexDirection: rtl ? 'row-reverse' : 'row',
+          // A compact badge hugs its text, so it has to be told which edge it
+          // belongs to: pinned to flex-start it sat on the LEFT of an Arabic
+          // card, under the quick-add button that correctly moved there.
+          ...(size === 'compact' ? { alignSelf: rtl ? ('flex-end' as const) : ('flex-start' as const) } : {}),
           backgroundColor: tone.bg,
           borderColor: tone.border,
         },
@@ -113,7 +117,6 @@ export function CompatibilityBadge({
 const styles = StyleSheet.create({
   badge: {
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: Spacing.two,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,

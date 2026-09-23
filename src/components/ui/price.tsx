@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { C, familyFor, Spacing } from '@/constants/theme';
+import { formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { Text } from './text';
 
@@ -20,6 +21,13 @@ import { Text } from './text';
  *
  * The currency is not translated. "DT" is what is on the shelf label and on
  * the invoice in all three languages.
+ *
+ * The figure itself is never mirrored. The first version reversed the
+ * whole-and-centimes row under Arabic along with everything else, and a
+ * 32,70 DT filter read "DT 70,32" — the centimes on the wrong side of the
+ * dinars. A number is left-to-right in every language this app speaks, so
+ * only the struck-through reference price and the amount swap sides; the
+ * amount's own parts stay put.
  */
 export function Price({
   value,
@@ -39,17 +47,18 @@ export function Price({
     <View style={[styles.row, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
       {compareAt !== null && compareAt > value ? (
         <Text variant="hint" tone={C.textFaint} style={styles.struck}>
-          {`${compareAt.toFixed(2).replace('.', ',')} DT`}
+          {formatDT(compareAt)}
         </Text>
       ) : null}
 
-      <View style={[styles.amount, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+      <View style={[styles.amount, { flexDirection: 'row' }]} accessibilityLabel={formatDT(value)} accessible>
         <Text
           style={{
             fontFamily: familyFor('headingStrong', rtl),
             fontSize: large ? 28 : 19,
             lineHeight: large ? 32 : 23,
             color: C.text,
+            writingDirection: 'ltr',
           }}
         >
           {whole}
@@ -63,6 +72,7 @@ export function Price({
             // Optical, not mechanical: the decimals ride high against the
             // whole number instead of centring in the line box.
             marginTop: large ? 2 : 1,
+            writingDirection: 'ltr',
           }}
         >
           {`,${cents} DT`}

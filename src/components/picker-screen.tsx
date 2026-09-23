@@ -57,6 +57,8 @@ export function PickerScreen<T>({
   emptyTitle,
   emptyBody,
   footer,
+  header,
+  notice,
 }: {
   /** Marque → Modèle → Motorisation, with what has been chosen so far. */
   trail: TrailStep[];
@@ -76,6 +78,15 @@ export function PickerScreen<T>({
    * list item, so it sits where a standing caveat belongs.
    */
   footer?: string | null;
+  /**
+   * Shortcuts above the list — on the first step, the registration card,
+   * the cars already in the garage and the makes with the most parts. Hidden
+   * while the customer is filtering: they have said what they are looking
+   * for, and the shortcuts would push it down.
+   */
+  header?: React.ReactNode;
+  /** One line of context from where the customer came, e.g. "VIN reconnu : BMW". */
+  notice?: string | null;
 }) {
   const { t, rtl } = useI18n();
   const [filter, setFilter] = useState('');
@@ -100,6 +111,13 @@ export function PickerScreen<T>({
         <Text variant="screenTitle" style={styles.heading}>
           {heading}
         </Text>
+        {notice ? (
+          <View style={styles.notice}>
+            <Text variant="hint" tone={C.success}>
+              {notice}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       {resource.status === 'loading' ? <Loading /> : null}
@@ -153,6 +171,7 @@ export function PickerScreen<T>({
                   )
                 }
                 ItemSeparatorComponent={Gap}
+                ListHeaderComponent={header && !needle ? <View style={styles.header}>{header}</View> : null}
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.list}
                 showsVerticalScrollIndicator={false}
@@ -186,6 +205,17 @@ const styles = StyleSheet.create({
   },
   heading: {
     paddingTop: Spacing.two,
+  },
+  notice: {
+    marginTop: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: 12,
+    backgroundColor: C.successSurface,
+  },
+  header: {
+    gap: Spacing.four,
+    paddingBottom: Spacing.four,
   },
   list: {
     paddingBottom: Spacing.six,
