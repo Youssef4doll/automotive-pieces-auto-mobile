@@ -31,7 +31,7 @@ const base = {
 
     'home.heroTitle': 'Trouvez la bonne pièce',
     'home.heroTitle2': 'pour votre voiture.',
-    'home.whatLooking': 'Que cherchez-vous ?',
+    'home.whatLooking': 'Que recherchez-vous ?',
     'home.whatLookingWhy': "Choisissez la façon qui vous arrange. On s'occupe du reste.",
 
     'entry.knowCar': 'Je connais ma voiture',

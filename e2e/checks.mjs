@@ -29,6 +29,7 @@ const fail = (what, detail) => {
   failures++;
   console.log(`FAIL  ${what}${detail ? ' — ' + JSON.stringify(detail) : ''}`);
 };
+const check = (cond, what, detail) => (cond ? pass(what, detail) : fail(what, detail));
 const pass = (what, detail) => console.log(`ok    ${what}${detail ? ' ' + JSON.stringify(detail) : ''}`);
 
 /** Everything measurable about one rendered screen. */
@@ -185,54 +186,46 @@ for (const width of SCREEN_VIEWPORTS) {
 }
 
 // ------------------------------------------------------------------- arc ---
+//
+// The home screen's three bubbles: the centred one upright at full size with
+// its gold ring, its neighbours smaller and lower, and the row snapping.
+
+/** Each bubble's rendered scale, drop and x, keyed by its label. */
+async function readBubbles(page, labels) {
+  return page.evaluate((names) => {
+    const out = {};
+    for (const name of names) {
+      const btn = [...document.querySelectorAll('[aria-label]')].find((e) => e.getAttribute('aria-label') === name);
+      if (!btn) continue;
+      const body = btn.parentElement;
+      const m = getComputedStyle(body).transform.match(/matrix\(([^)]+)\)/);
+      const n = m ? m[1].split(',').map(Number) : [1, 0, 0, 1, 0, 0];
+      const r = btn.getBoundingClientRect();
+      out[name] = { scale: Number(n[0].toFixed(2)), y: Math.round(n[5]), x: Math.round(r.x + r.width / 2) };
+    }
+    let el = document.querySelector('[aria-label="Référence"]');
+    while (el && !(el.scrollWidth > el.clientWidth + 8)) el = el.parentElement;
+    out.snap = el ? getComputedStyle(el).scrollSnapType : null;
+    return out;
+  }, labels);
+}
 
 {
   const { browser, page } = await open({ width: 390 });
   try {
     await addBmw(page);
     await tap(page, 'Accueil');
-    await page.waitForTimeout(1600);
-
-    const rest = await readArc(page, 'Pour mon véhicule');
-    if (!rest) fail('arc: not found on the home screen');
+    await page.waitForTimeout(1800);
+    const b = await readBubbles(page, ['Référence', 'BMW Série 1 (E87)', 'Quelle pièce']);
+    const car = b['BMW Série 1 (E87)'];
+    const left = b['Référence'];
+    const right = b['Quelle pièce'];
+    if (!car || !left || !right) fail('arc: bubbles not found', b);
     else {
-      // The dome: the active card is upright and its neighbours fall away.
-      const [a, b, c] = rest.cards;
-      if (rest.cards.length < 3) fail('arc: fewer than three cards with a vehicle set', rest.cards.length);
-      else if (!(a.y === 0 && a.scale === 1 && b.y > a.y && c.y > b.y && b.scale < a.scale && c.scale < b.scale))
-        fail('arc: cards are not on an arc at rest', rest.cards);
-      else pass('arc: dome at rest', rest.cards);
-
-      if (!(b.opacity < a.opacity && c.opacity < b.opacity)) fail('arc: neighbours are not dimmed', rest.cards);
-      else pass('arc: neighbours dimmed');
-
-      // Snapping. `snapToInterval` is real on iOS and Android and a no-op on
-      // react-native-web, so the component also sets CSS scroll-snap; this
-      // asserts the web half, which is the half this check can see.
-      if (!rest.snapType.startsWith('x ')) fail('arc: no horizontal snapping', rest.snapType);
-      else pass('arc: snapping', rest.snapType);
-
-      // Peeking: a slide must be narrower than the viewport or nothing shows
-      // at the edge and the row looks like it ends.
-      if (!(rest.slide < rest.clientWidth - 40)) fail('arc: no peek', { slide: rest.slide, width: rest.clientWidth });
-      else pass('arc: peek', { slide: rest.slide, width: rest.clientWidth });
-
-      // Drive it one page and check the dome travelled with the scroll.
-      await page.evaluate((slide) => {
-        const label = [...document.querySelectorAll('div')].find(
-          (d) => d.children.length === 0 && d.textContent.trim() === 'Pour mon véhicule',
-        );
-        let n = label;
-        while (n && !(n.scrollWidth > n.clientWidth + 8)) n = n.parentElement;
-        n.scrollLeft = slide;
-        n.dispatchEvent(new Event('scroll', { bubbles: true }));
-      }, rest.slide);
-      await page.waitForTimeout(700);
-      const moved = await readArc(page, 'Pour mon véhicule');
-      const [x, y] = moved.cards;
-      if (!(y.scale > 0.99 && Math.abs(y.y) < 2 && x.y > y.y))
-        fail('arc: the dome did not follow the scroll', moved.cards);
-      else pass('arc: follows the scroll', moved.cards);
+      check(car.scale === 1 && car.y === 0, 'arc: the car is the big centred bubble', car);
+      check(left.scale < 0.8 && right.scale < 0.8 && left.y > 0 && right.y > 0, 'arc: neighbours smaller and lower', { left, right });
+      check(Math.abs(car.x - 195) < 6, 'arc: opens centred on the car', car.x);
+      check(String(b.snap).startsWith('x '), 'arc: snapping', b.snap);
     }
   } catch (e) {
     fail('arc', { threw: String(e).split('\n')[0] });
@@ -247,44 +240,29 @@ for (const width of SCREEN_VIEWPORTS) {
   const { browser, page, errors } = await open({ width: 390 });
   try {
     await addBmw(page);
-    // The language switcher lives in Compte, with the other settings.
-    await tap(page, 'Compte');
-    await page.waitForTimeout(1400);
-    await scrollTo(page, 'bottom');
-    await tap(page, 'العربية');
+    // The language switcher lives in Compte › Paramètres.
+    await page.goto(`${APP_URL}/compte/parametres`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(2000);
-    await tap(page, 'الرئيسية');
-    await page.waitForTimeout(1600);
+    await tap(page, 'العربية');
+    await page.waitForTimeout(1500);
+    await page.goto(APP_URL, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(2500);
     await scrollTo(page, 0);
 
-    // The arc runs the other way: card 01 sits at the right-hand end, which
-    // is where an Arabic reader starts, and the view opens on it.
-    const order = await page.evaluate(() =>
-      [...document.querySelectorAll('div')]
-        .filter((d) => d.children.length === 0 && ['01', '02', '03'].includes(d.textContent.trim()))
-        .map((d) => ({ n: d.textContent.trim(), x: Math.round(d.getBoundingClientRect().x) }))
-        .sort((a, b) => a.x - b.x)
-        .map((d) => d.n),
-    );
-    if (order.join('') !== '030201') fail('rtl: the arc did not reverse', order);
-    else pass('rtl: arc reversed', order);
+    // The bubbles run the other way: "Référence", first in French reading
+    // order, sits on the RIGHT in Arabic; the car stays in the middle.
+    const b = await readBubbles(page, ['المرجع', 'BMW Série 1 (E87)', 'أي قطعة']);
+    const ok = b['المرجع'] && b['أي قطعة'] && b['المرجع'].x > b['BMW Série 1 (E87)'].x && b['أي قطعة'].x < b['BMW Série 1 (E87)'].x;
+    check(ok, 'rtl: bubbles reversed', b);
 
-    // Anything in a COLUMN has to be aligned per-language by hand; the three
-    // that were wrong are the hero logo, the garage's active-vehicle badge
-    // and the quick-action tiles' icons. All three should now sit right.
-    const logo = await page.evaluate(() => {
-      // An `accessibilityLabel` on an expo-image lands on the web as `alt`,
-      // not `aria-label` — the first version of this check looked for the
-      // wrong attribute and reported the logo missing on a screen where it
-      // was plainly there.
-      const el = document.querySelector('img[alt="Automotive Pièces Auto"]');
+    // The greeting sits on the right of an Arabic hero.
+    const hello = await page.evaluate(() => {
+      const el = [...document.querySelectorAll('div')].find((d) => d.children.length === 0 && d.textContent.trim() === 'مرحباً 👋');
       if (!el) return null;
       const r = el.getBoundingClientRect();
       return { left: Math.round(r.x), fromRight: Math.round(window.innerWidth - r.right) };
     });
-    if (!logo) fail('rtl: the logo was not found');
-    else if (logo.fromRight > logo.left) fail('rtl: the logo is still pinned left on an Arabic screen', logo);
-    else pass('rtl: logo mirrored', logo);
+    check(hello && hello.fromRight < hello.left, 'rtl: greeting mirrored', hello);
 
     const r = await inspect(page, 390);
     if (r.hScroll || r.clipped.length || r.small.length || errors.length) fail('rtl: layout', { ...r, errors });

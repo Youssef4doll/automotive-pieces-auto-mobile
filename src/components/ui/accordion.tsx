@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, ReduceMotion, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
-import { Border, C, IconSize, Motion, Spacing, Tap } from '@/constants/theme';
+import { Border, C, familyFor, IconSize, Motion, Spacing, Tap } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
 import { Text } from './text';
 
@@ -38,8 +38,10 @@ export function Accordion({
   const [open, setOpen] = useState(initiallyOpen);
   const { rtl } = useI18n();
 
+  // A row with a chevron that turns down as it opens — the reference's
+  // "Description ›" list, rather than a drop-down arrow.
   const chevron = useAnimatedStyle(() => ({
-    transform: [{ rotate: withTiming(open ? '180deg' : '0deg', { duration: Motion.fast }) }],
+    transform: [{ rotate: withTiming(open ? (rtl ? '-90deg' : '90deg') : '0deg', { duration: Motion.fast }) }],
   }));
 
   return (
@@ -52,7 +54,9 @@ export function Accordion({
         style={({ pressed }) => [styles.header, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.pressed]}
       >
         <View style={styles.titles}>
-          <Text variant="rowTitle">{title}</Text>
+          <Text variant="body" tone={C.text} style={{ fontFamily: familyFor('bodySemi', rtl) }}>
+            {title}
+          </Text>
           {summary && !open ? (
             <Text variant="hint" numberOfLines={1}>
               {summary}
@@ -60,7 +64,7 @@ export function Accordion({
           ) : null}
         </View>
         <Animated.View style={chevron}>
-          <Feather name="chevron-down" size={IconSize.large} color={C.textMuted} />
+          <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={C.textMuted} />
         </Animated.View>
       </Pressable>
       {open ? (
@@ -78,10 +82,10 @@ const styles = StyleSheet.create({
     borderTopColor: C.border,
   },
   header: {
-    minHeight: Tap.primary + Spacing.three,
+    minHeight: Tap.primary + Spacing.one,
     alignItems: 'center',
     gap: Spacing.three,
-    paddingVertical: Spacing.three,
+    paddingVertical: Spacing.two,
   },
   pressed: {
     opacity: 0.7,

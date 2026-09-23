@@ -303,17 +303,22 @@ TRACK      Suivi              the status in words, then the dated history
            Compte             the orders on this phone, recovery, contact
 ```
 
-The home screen, top to bottom, is the order of the job rather than the order
-of the marketing:
+The home screen follows the owner's reference mockup, placement for placement:
 
 ```
-logo + promise      whose shop this is, and what it is for
-search              for anyone who can name the part or read its number
-your vehicle        the context every answer below depends on
-Que cherchez-vous ? the ways in, along an arc
-Familles de pièces  browsing, for anyone who knows none of the above
-the shop's banner   only when a campaign is actually running
+Bonjour 👋, search        greeting (no name: there is no sign-in) and the magnifier
+Que recherchez-vous ?     over a drawn night road (no stock photography)
+three bubbles on an arc   Référence · the car (big, gold ring) · Photo / Expert
+                          — the photo bubble only when the shop has a channel;
+                          until then that slot is "Quelle pièce"
+white sheet               Catégories populaires (the four biggest families)
+                          Entretien auto card → Filtres (navigation, not a promo)
+                          the shop's real campaigns, when it runs one
 ```
+
+Where the reference showed data the shop does not have — a star rating,
+"Garantie 2 ans", a delivery date, a named greeting — the placement is kept
+and the value is the shop's real one, or the element is absent.
 
 Every screen answers one question and offers one primary action. The home
 screen's is "which way do you want to start"; the garage's is "which car";

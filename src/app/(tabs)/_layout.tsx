@@ -71,9 +71,12 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: C.surfaceBrand },
-        headerTintColor: C.textInverse,
-        headerTitleStyle: { fontFamily: familyFor('heading', rtl), fontSize: 17 },
+        headerStyle: { backgroundColor: C.background },
+        headerTintColor: C.text,
+        headerShadowVisible: false,
+        headerTitleAlign: 'left',
+        // Large and left, like "Mon garage" in the reference.
+        headerTitleStyle: { fontFamily: familyFor('headingStrong', rtl), fontSize: 24 },
         tabBarActiveTintColor: C.text,
         tabBarInactiveTintColor: C.textMuted,
         tabBarStyle: {
@@ -142,7 +145,7 @@ export default function TabsLayout() {
           tabBarAccessibilityLabel: cartCount > 0 ? `${t('tab.cart')}, ${t('a11y.cartCount', { n: cartCount })}` : t('tab.cart'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <Feather name="shopping-bag" size={IconSize.large} color={color} />
+              <Feather name="shopping-cart" size={IconSize.large} color={color} />
             </NavIcon>
           ),
         }}
@@ -150,7 +153,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="compte"
         options={{
-          title: t('account.title'),
+          title: t('account.me'),
           tabBarLabel: t('tab.account'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>

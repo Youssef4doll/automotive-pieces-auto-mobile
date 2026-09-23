@@ -85,7 +85,7 @@ await journey('1 car, no part', async ({ page }) => {
   check(cards > 0, '1 car, no part: confirmed parts listed', { cards });
   await page.locator('[aria-label*=" DT"]').first().click();
   await page.waitForTimeout(2500);
-  check((await bodyText(page)).includes('Compatible avec votre véhicule'), '1 car, no part: the part page says it fits');
+  check((await bodyText(page)).includes('Compatible avec votre BMW'), '1 car, no part: the part page says it fits, naming the car');
 });
 
 // 2 — knows it is brake pads: search finds them, with the family on offer.
@@ -117,8 +117,8 @@ await journey('4 no name', async ({ page }) => {
   const settings = await (await fetch(`${SHOP}/api/v1/settings/public`)).json();
   const c = settings.data.contact;
   const reachable = Boolean(c.whatsapp || c.phone || c.email);
-  const labels = await page.evaluate(() => [...document.querySelectorAll('[aria-label*="Option"]')].map((e) => e.getAttribute('aria-label')));
-  const offered = labels.some((l) => l.startsWith('Je ne sais pas son nom'));
+  const labels = await page.evaluate(() => [...document.querySelectorAll('[aria-label]')].map((e) => e.getAttribute('aria-label')));
+  const offered = labels.includes('Photo / Expert');
   check(offered === reachable, '4 no name: offered exactly when the shop has a channel', { reachable, offered });
 });
 

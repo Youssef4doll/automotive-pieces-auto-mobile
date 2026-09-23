@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { productApi, type ProductDetail } from '@/api/product';
@@ -9,15 +9,12 @@ import type { ShopSettings } from '@/api/shop';
 import { Accordion } from '@/components/ui/accordion';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
-import { CompatibilityBadge } from '@/components/ui/compatibility';
-import { Price } from '@/components/ui/price';
 import { QuantityStepper } from '@/components/ui/quantity-stepper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Empty, Failed } from '@/components/ui/states';
-import { StickyBar } from '@/components/ui/sticky-bar';
 import { Text } from '@/components/ui/text';
 import { API_BASE_URL } from '@/constants/config';
-import { Border, C, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
+import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useAddToCart } from '@/hooks/use-add-to-cart';
 import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
@@ -60,7 +57,7 @@ export default function ProductScreen() {
     <>
       <Stack.Screen
         options={{
-          title: product.status === 'loaded' ? product.data.family.name : '',
+          title: '',
           headerRight: () =>
             product.status === 'loaded' ? <ShareButton product={product.data} /> : null,
         }}
@@ -87,6 +84,9 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   const active = useGarage((s) => s.active);
   const [qty, setQty] = useState(1);
   const [confirming, setConfirming] = useState(false);
+  const [compatKey, setCompatKey] = useState(0);
+  const scroll = useRef<ScrollView>(null);
+  const compatY = useRef(0);
 
   const buyable = product.availability !== 'UNAVAILABLE';
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
@@ -108,6 +108,16 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
     ...(position.length ? [{ label: t('product.position'), value: position.join(' · ') }] : []),
     ...product.specs,
   ];
+
+  const carName = active ? `${active.makeName} ${active.modelName}` : '';
+  const fit =
+    product.fitment === 'FITS'
+      ? { icon: 'check-circle' as const, fg: C.success, bg: C.successSurface, border: C.successBorder, text: t('product.fitsYour', { car: carName }) }
+      : product.fitment === 'DOES_NOT_FIT'
+        ? { icon: 'x-circle' as const, fg: C.danger, bg: C.dangerSurface, border: '#f6d5d9', text: t('product.notYour', { car: carName }) }
+        : product.fitment === 'UNKNOWN'
+          ? { icon: 'help-circle' as const, fg: C.caution, bg: C.cautionSurface, border: C.cautionBorder, text: t('fit.unknown') }
+          : { icon: 'truck' as const, fg: C.text, bg: C.surface, border: C.border, text: t('product.chooseCar') };
 
   const refCount = product.oeGroups.reduce((n, g) => n + g.refs.length, 0) + product.aftermarketRefs.length;
 
@@ -132,15 +142,16 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
 
   return (
     <View style={styles.root}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scroll} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={styles.column}>
           <Gallery product={product} />
 
+          {/* Brand in the shop's red, then the name — the reference's order. */}
           <View style={styles.identity}>
-            {product.brand ? <Text variant="label">{product.brand}</Text> : null}
-            <Text variant="screenTitle" style={styles.name}>
-              {product.name}
-            </Text>
+            {product.brand ? (
+              <Text style={[styles.brand, { fontFamily: familyFor('headingStrong', rtl) }]}>{product.brand.toUpperCase()}</Text>
+            ) : null}
+            <Text style={[styles.name, { fontFamily: familyFor('heading', rtl) }]}>{product.name}</Text>
             <View style={[styles.refRow, row]}>
               <Text variant="hint" selectable>
                 {t('product.ref', { sku: product.sku })}
@@ -155,37 +166,78 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
             </View>
           </View>
 
-          {/* The one signal that matters most in a parts shop, full width. */}
-          <View style={styles.block}>
-            <CompatibilityBadge verdict={product.fitment} size="full" />
-            {product.fitment === null ? (
-              <Button
-                label={t('product.chooseCar')}
-                variant="secondary"
-                icon="plus"
-                onPress={() => router.push('/garage/ajouter')}
-              />
-            ) : product.fitment === 'UNKNOWN' ? (
-              <Text variant="hint">{t('product.unknownNote')}</Text>
+          {/* The compatibility pill: the verdict against THEIR car, and a way
+              to its details — or to choosing a car when there is none. */}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              if (product.fitment === null) {
+                router.push('/garage/ajouter');
+                return;
+              }
+              setCompatKey((k) => k + 1);
+              requestAnimationFrame(() => scroll.current?.scrollTo({ y: compatY.current, animated: true }));
+            }}
+            style={({ pressed }) => [styles.pill, row, { backgroundColor: fit.bg, borderColor: fit.border }, pressed && styles.pressedDim]}
+          >
+            <Feather name={fit.icon} size={IconSize.medium} color={fit.fg} />
+            <Text variant="hint" tone={fit.fg} numberOfLines={2} style={styles.flex}>
+              {fit.text}
+            </Text>
+            <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.medium} color={fit.fg} />
+          </Pressable>
+          {product.fitment === 'UNKNOWN' ? (
+            <Text variant="hint" style={styles.note}>
+              {t('product.unknownNote')}
+            </Text>
+          ) : null}
+
+          <View style={[styles.priceRow, row]}>
+            <Text style={[styles.price, { fontFamily: familyFor('headingStrong', rtl) }]}>{formatDT(product.price)}</Text>
+            {product.compareAtPrice !== null && product.compareAtPrice > product.price ? (
+              <Text variant="hint" tone={C.textFaint} style={styles.struck}>
+                {formatDT(product.compareAtPrice)}
+              </Text>
             ) : null}
           </View>
-
-          <View style={[styles.block, styles.priceBlock]}>
-            <Price value={product.price} compareAt={product.compareAtPrice} size="large" />
-            <View style={[styles.stock, row]}>
-              <Feather name={stock.icon} size={IconSize.medium} color={stock.tone} />
-              <View style={styles.flex}>
-                <Text variant="body" tone={stock.tone}>
-                  {stock.label}
-                </Text>
-                {stock.detail ? <Text variant="hint">{stock.detail}</Text> : null}
-              </View>
-            </View>
+          <View style={[styles.stock, row]}>
+            <View style={[styles.dot, { backgroundColor: stock.tone }]} />
+            <Text variant="hint" tone={stock.tone}>
+              {stock.label}
+            </Text>
+            {buyable && settings?.delivery.grandTunis ? (
+              <Text variant="hint">{`·  ${t('product.shipIn', { t: settings.delivery.grandTunis })}`}</Text>
+            ) : null}
           </View>
+          {stock.detail ? <Text variant="hint">{stock.detail}</Text> : null}
+
+          {/* Quantity and the button, side by side, as in the reference. */}
+          <View style={[styles.buyRow, row]}>
+            {buyable ? (
+              <>
+                <QuantityStepper value={qty} onChange={setQty} size="compact" />
+                <Button label={t('product.add')} onPress={add} style={styles.flex} />
+              </>
+            ) : (
+              <Button label={t('stock.unavailable')} onPress={() => undefined} disabled style={styles.flex} />
+            )}
+          </View>
+
+          {/* Three facts, each the shop's own: its delay, its warranty, its
+              return window. */}
+          {settings ? (
+            <View style={[styles.facts, row]}>
+              <Fact icon="truck" title={t('product.deliveryShort')} value={settings.delivery.grandTunis ?? settings.delivery.regions ?? t('product.cod')} />
+              <View style={styles.factRule} />
+              <Fact icon="shield" title={t('product.warrantyShort')} value={t('product.months', { n: settings.warrantyMonths })} />
+              <View style={styles.factRule} />
+              <Fact icon="rotate-ccw" title={t('product.returnShort')} value={t('product.days', { n: settings.returnDays })} />
+            </View>
+          ) : null}
 
           <View style={styles.sections}>
             {product.description ? (
-              <Accordion title={t('product.description')} initiallyOpen={product.description.length < 240}>
+              <Accordion title={t('product.description')}>
                 <Text variant="body" selectable>
                   {product.description}
                 </Text>
@@ -193,26 +245,30 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
             ) : null}
 
             {specRows.length ? (
-              <Accordion title={t('product.specs')} summary={specRows.slice(0, 2).map((r) => r.value).join(' · ')}>
+              <Accordion title={t('product.specsLong')}>
                 {specRows.map((r) => (
                   <KeyValue key={r.label} label={r.label} value={r.value} />
                 ))}
               </Accordion>
             ) : null}
 
-            <Accordion
-              title={t('product.compat')}
-              summary={
-                product.compatibility.total
-                  ? t('product.compatCount', { n: product.compatibility.total })
-                  : t('fit.unknownShort')
-              }
-            >
-              <Compatibility product={product} activeEngineId={active?.engineId} />
-            </Accordion>
+            <View onLayout={(e) => (compatY.current = e.nativeEvent.layout.y)}>
+              <Accordion
+                key={compatKey}
+                initiallyOpen={compatKey > 0}
+                title={t('product.compat')}
+                summary={
+                  product.compatibility.total
+                    ? t('product.compatCount', { n: product.compatibility.total })
+                    : t('fit.unknownShort')
+                }
+              >
+                <Compatibility product={product} activeEngineId={active?.engineId} />
+              </Accordion>
+            </View>
 
             {refCount ? (
-              <Accordion title={t('product.references')} summary={product.oeGroups[0]?.refs[0]?.raw ?? product.aftermarketRefs[0]?.raw}>
+              <Accordion title={t('product.oemLong')}>
                 {product.oeGroups.length ? (
                   <View style={styles.refGroup}>
                     <Text variant="label">{t('product.oem')}</Text>
@@ -233,7 +289,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
             ) : null}
 
             {product.packContents.length ? (
-              <Accordion title={t('product.pack')} summary={t('cart.itemCount', { n: product.packContents.length })} initiallyOpen>
+              <Accordion title={t('product.pack')} initiallyOpen>
                 {product.packContents.map((p) => (
                   <Pressable
                     key={p.slug}
@@ -253,7 +309,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
             ) : null}
 
             {product.manufacturer ? (
-              <Accordion title={t('product.manufacturer')} summary={product.manufacturer.name}>
+              <Accordion title={t('product.manufacturer')}>
                 {[product.manufacturer.legalName, product.manufacturer.address, product.manufacturer.phone, product.manufacturer.email, product.manufacturer.website]
                   .filter(Boolean)
                   .map((line) => (
@@ -263,44 +319,9 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                   ))}
               </Accordion>
             ) : null}
-
-            {settings ? (
-              <Accordion
-                title={t('product.delivery')}
-                summary={[t('product.cod'), t('product.warranty', { n: settings.warrantyMonths })].join(' · ')}
-              >
-                {settings.delivery.grandTunis ? (
-                  <Line icon="truck" text={t('product.deliveryGrandTunis', { t: settings.delivery.grandTunis })} />
-                ) : null}
-                {settings.delivery.regions ? (
-                  <Line icon="map" text={t('product.deliveryRegions', { t: settings.delivery.regions })} />
-                ) : null}
-                <Line
-                  icon="gift"
-                  text={t('product.deliveryFree', {
-                    amount: formatDT(settings.delivery.freeShippingThreshold),
-                    fee: formatDT(settings.delivery.fee),
-                  })}
-                />
-                <Line icon="dollar-sign" text={t('product.cod')} />
-                <Line icon="shield" text={t('product.warranty', { n: settings.warrantyMonths })} />
-                <Line icon="rotate-ccw" text={t('product.returns', { n: settings.returnDays })} />
-              </Accordion>
-            ) : null}
           </View>
         </View>
       </ScrollView>
-
-      <StickyBar>
-        {buyable ? (
-          <View style={[styles.buyRow, row]}>
-            <QuantityStepper value={qty} onChange={setQty} />
-            <Button label={t('product.add')} onPress={add} icon="shopping-bag" style={styles.flex} />
-          </View>
-        ) : (
-          <Button label={t('stock.unavailable')} onPress={() => undefined} disabled />
-        )}
-      </StickyBar>
 
       <BottomSheet visible={confirming} onClose={() => setConfirming(false)} title={t('product.mismatchTitle')}>
         <View style={styles.sheetBody}>
@@ -343,7 +364,7 @@ function Gallery({ product }: { product: ProductDetail }) {
         accessibilityRole="image"
         accessibilityLabel={t('product.illustration', { family: product.family.name })}
       >
-        <PartArtwork slug={product.familySlug} size={96} />
+        <PartArtwork slug={product.familySlug} size={140} />
       </View>
     );
   }
@@ -414,6 +435,20 @@ function Compatibility({ product, activeEngineId }: { product: ProductDetail; ac
   );
 }
 
+function Fact({ icon, title, value }: { icon: React.ComponentProps<typeof Feather>['name']; title: string; value: string }) {
+  return (
+    <View style={styles.fact}>
+      <Feather name={icon} size={IconSize.large} color={C.text} />
+      <Text variant="hint" tone={C.text} style={styles.factText}>
+        {title}
+      </Text>
+      <Text variant="hint" style={styles.factText}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 function KeyValue({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   const { rtl } = useI18n();
   return (
@@ -455,7 +490,7 @@ function ShareButton({ product }: { product: ProductDetail }) {
       onPress={() => Share.share({ message: `${product.name} — ${API_BASE_URL}/produit/${product.slug}` }).catch(() => undefined)}
       style={styles.share}
     >
-      <Feather name="share" size={IconSize.large} color={C.textInverse} />
+      <Feather name="share" size={IconSize.large} color={C.text} />
     </Pressable>
   );
 }
@@ -484,30 +519,54 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
   },
   flex: { flex: 1 },
+  // White, as in the reference: the part on the page, not in a grey box.
   gallery: {
     height: GALLERY_HEIGHT,
-    marginTop: Spacing.three,
+    marginTop: Spacing.two,
     borderRadius: Radius.card,
-    backgroundColor: C.surface,
+    backgroundColor: C.background,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   galleryDrawing: {
-    height: 168,
+    height: 220,
   },
   counter: {
     textAlign: 'center',
     paddingTop: Spacing.one,
   },
   identity: {
-    paddingTop: Spacing.four,
+    paddingTop: Spacing.three,
     gap: Spacing.one,
   },
-  name: {
-    fontSize: 24,
-    lineHeight: 29,
+  brand: { fontSize: 15, lineHeight: 20, letterSpacing: 0.6, color: Brand.red600 },
+  name: { fontSize: 21, lineHeight: 27, color: C.text },
+  pill: {
+    alignItems: 'center',
+    gap: Spacing.two,
+    marginTop: Spacing.three,
+    minHeight: Tap.min,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    borderWidth: Border.thin,
   },
+  pressedDim: { opacity: 0.75 },
+  note: { paddingTop: Spacing.two },
+  priceRow: { alignItems: 'baseline', gap: Spacing.two, paddingTop: Spacing.three },
+  price: { fontSize: 28, lineHeight: 34, color: C.text },
+  struck: { textDecorationLine: 'line-through' },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  facts: {
+    marginTop: Spacing.four,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.card,
+    borderWidth: Border.thin,
+    borderColor: C.border,
+  },
+  fact: { flex: 1, alignItems: 'center', gap: 4, paddingHorizontal: Spacing.one },
+  factText: { textAlign: 'center' },
+  factRule: { width: Border.thin, backgroundColor: C.border },
   refRow: {
     alignItems: 'center',
     flexWrap: 'wrap',
@@ -528,11 +587,12 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   stock: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: Spacing.two,
+    paddingTop: Spacing.one,
   },
   sections: {
-    marginTop: Spacing.four,
+    marginTop: Spacing.three,
     borderBottomWidth: Border.hairline,
     borderBottomColor: C.border,
   },
@@ -579,6 +639,7 @@ const styles = StyleSheet.create({
   buyRow: {
     alignItems: 'center',
     gap: Spacing.two,
+    paddingTop: Spacing.three,
   },
   sheetBody: {
     gap: Spacing.three,

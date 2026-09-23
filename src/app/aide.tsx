@@ -42,7 +42,10 @@ export default function HelpScreen() {
       ) : hasContactChannel(settings.data) ? (
         <Help settings={settings.data} />
       ) : (
-        <Empty title={t('account.noContact')} />
+        <Empty
+          title={t('account.noContact')}
+          body={settings.data.contact.hours ? t('help.hours', { h: settings.data.contact.hours }) : null}
+        />
       )}
     </>
   );

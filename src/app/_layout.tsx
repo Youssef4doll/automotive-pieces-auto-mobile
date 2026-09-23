@@ -43,13 +43,18 @@ function App() {
 
   return (
     <>
-      {/* The header is navy, so the clock and the battery have to be white. */}
-      <StatusBar style="light" />
+      {/* Headers are white, as in the reference, so the clock is dark. The
+          home screen's night road asks for light while it is focused. */}
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: C.surfaceBrand },
-          headerTintColor: C.textInverse,
-          headerTitleStyle: { fontFamily: familyFor('heading', rtl), fontSize: 17 },
+          // White headers with navy type, the reference's chrome: the screen
+          // under them is white, and a navy bar on every page read as a
+          // second hero the design never had.
+          headerStyle: { backgroundColor: C.background },
+          headerTintColor: C.text,
+          headerShadowVisible: false,
+          headerTitleStyle: { fontFamily: familyFor('heading', rtl), fontSize: 18 },
           headerBackButtonDisplayMode: 'minimal',
           contentStyle: { backgroundColor: C.background },
         }}
