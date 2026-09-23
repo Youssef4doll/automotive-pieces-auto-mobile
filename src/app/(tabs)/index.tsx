@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { hasContactChannel } from '@/api/shop';
 import { BubbleArc, type BubbleItem } from '@/components/ui/bubble-arc';
+import { PartImage } from '@/components/ui/part-image';
 import { PromoBanner } from '@/components/ui/promo-banner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -16,7 +17,6 @@ import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { BubbleCar, BubblePart, BubblePhoto, BubbleReference } from '@/illustrations/bubbles';
-import { PartArtwork } from '@/illustrations/parts';
 import { RoadScene } from '@/illustrations/road-scene';
 import { CarProfile } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
@@ -117,7 +117,7 @@ export default function HomeScreen() {
         <RoadScene width={width} height={HERO_HEIGHT + insets.top} />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: tabBarSpace }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <View style={[styles.column, { paddingTop: insets.top + Spacing.three }]}>
           <View style={[styles.topRow, row]}>
             <Text style={[styles.hello, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('home.hello')}</Text>
@@ -142,7 +142,7 @@ export default function HomeScreen() {
         </View>
 
         {/* The white sheet, pulled up over the road. */}
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: tabBarSpace }]}>
           <View style={styles.column}>
             <View style={[styles.sectionHead, row]}>
               <Text style={[styles.sectionTitle, { fontFamily: familyFor('heading', rtl) }]}>{t('home.popular')}</Text>
@@ -175,7 +175,7 @@ export default function HomeScreen() {
                       style={({ pressed }) => [styles.cat, pressed && styles.catPressed]}
                     >
                       <View style={styles.catDisc}>
-                        <PartArtwork slug={f.slug} size={38} />
+                        <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 68 : 40} label={f.name} fit="cover" />
                       </View>
                       <Text variant="hint" tone={C.text} numberOfLines={1} style={styles.catName}>
                         {f.name}
@@ -242,7 +242,11 @@ const styles = StyleSheet.create({
   title: { fontSize: 30, lineHeight: 36, letterSpacing: -0.4, color: Brand.white },
   subtitle: { fontSize: 15, lineHeight: 21, color: '#c7d1e3', maxWidth: 300 },
   arc: { marginTop: Spacing.four, height: 250 },
+  // The white sheet runs to the bottom of the content, so a short page never
+  // shows the navy root beneath it.
+  scroll: { flexGrow: 1 },
   sheet: {
+    flexGrow: 1,
     marginTop: -Spacing.two,
     backgroundColor: C.background,
     borderTopLeftRadius: Radius.sheet,
@@ -260,6 +264,8 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
+    // An uploaded picture fills the circle and is clipped to it.
+    overflow: 'hidden',
     backgroundColor: C.surface,
     alignItems: 'center',
     justifyContent: 'center',

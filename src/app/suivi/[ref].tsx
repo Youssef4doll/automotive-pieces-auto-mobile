@@ -11,7 +11,7 @@ import { Failed, Loading } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
 import { Border, C, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
-import { PartArtwork } from '@/illustrations/parts';
+import { PartImage } from '@/components/ui/part-image';
 import { formatDate, formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { useCart } from '@/store/cart';
@@ -153,7 +153,7 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
               style={({ pressed }) => [styles.item, row, pressed && styles.pressed]}
             >
               <View style={styles.art}>
-                {item.familySlug ? <PartArtwork slug={item.familySlug} size={32} /> : <Feather name="package" size={IconSize.large} color={C.textMuted} />}
+                {item.familySlug ? <PartImage slug={item.familySlug} size={34} /> : <Feather name="package" size={IconSize.large} color={C.textMuted} />}
               </View>
               <View style={styles.stepText}>
                 <Text variant="body" tone={C.text} numberOfLines={2}>

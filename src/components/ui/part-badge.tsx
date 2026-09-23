@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Brand, C } from '@/constants/theme';
-import { PartArtwork } from '@/illustrations/parts';
+import { C } from '@/constants/theme';
+import { PartImage } from './part-image';
 
 /**
  * A part family's drawing, in its disc.
@@ -20,11 +20,13 @@ import { PartArtwork } from '@/illustrations/parts';
  */
 export function PartBadge({
   slug,
+  imageUrl,
   size = 48,
   /** A family already chosen, or the one being viewed. */
   emphasis = false,
 }: {
   slug: string;
+  imageUrl?: string | null;
   size?: number;
   emphasis?: boolean;
 }) {
@@ -45,17 +47,14 @@ export function PartBadge({
         edge to edge, so anything above about two thirds leaves no ring of
         colour around them and the disc stops reading as a disc.
       */}
-      <PartArtwork
-        slug={slug}
-        size={Math.round(size * 0.62)}
-        accent={emphasis ? Brand.white : Brand.navy50}
-      />
+      <PartImage slug={slug} imageUrl={imageUrl} size={imageUrl ? size : Math.round(size * 0.62)} fit="cover" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   disc: {
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,

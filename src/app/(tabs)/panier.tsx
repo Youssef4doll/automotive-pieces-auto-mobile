@@ -14,7 +14,7 @@ import { Text } from '@/components/ui/text';
 import { API_BASE_URL } from '@/constants/config';
 import { Border, C, IconSize, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { quoteOf, useCartQuote } from '@/hooks/use-cart-quote';
-import { PartArtwork } from '@/illustrations/parts';
+import { PartImage } from '@/components/ui/part-image';
 import { formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { MAX_QTY, useCart, type CartItem } from '@/store/cart';
@@ -184,7 +184,7 @@ function Line({
           {image ? (
             <Image source={{ uri: `${API_BASE_URL}${image}` }} style={styles.photo} contentFit="contain" />
           ) : family ? (
-            <PartArtwork slug={family} size={36} />
+            <PartImage slug={family} size={40} />
           ) : (
             <Feather name="package" size={IconSize.large} color={C.textMuted} />
           )}

@@ -18,7 +18,7 @@ import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing
 import { useAddToCart } from '@/hooks/use-add-to-cart';
 import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
-import { PartArtwork } from '@/illustrations/parts';
+import { PartImage } from '@/components/ui/part-image';
 import { formatDT, yearSpan } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel } from '@/store/garage';
@@ -364,7 +364,7 @@ function Gallery({ product }: { product: ProductDetail }) {
         accessibilityRole="image"
         accessibilityLabel={t('product.illustration', { family: product.family.name })}
       >
-        <PartArtwork slug={product.familySlug} size={140} />
+        <PartImage slug={product.familySlug} size={170} />
       </View>
     );
   }

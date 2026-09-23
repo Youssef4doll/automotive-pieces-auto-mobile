@@ -15,6 +15,8 @@ export type Subcategory = {
   name: string;
   slug: string;
   productCount: number;
+  /** Uploaded in /admin/catalogue, or null. */
+  imageUrl?: string | null;
 };
 
 export type Family = {
@@ -22,6 +24,8 @@ export type Family = {
   name: string;
   slug: string;
   productCount: number;
+  /** The family's picture from /admin/catalogue, or null — then the website's drawing. */
+  imageUrl?: string | null;
   subcategories: Subcategory[];
 };
 

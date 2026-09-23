@@ -8,7 +8,7 @@ import { API_BASE_URL } from '@/constants/config';
 import { Border, Brand, C, IconSize, Radius, Spacing, Tap } from '@/constants/theme';
 import { useAddToCart } from '@/hooks/use-add-to-cart';
 import { formatDT } from '@/lib/format';
-import { PartArtwork } from '@/illustrations/parts';
+import { PartImage } from './part-image';
 import { useI18n } from '@/i18n/provider';
 import type { DictKey } from '@/i18n/dictionaries';
 import { CompatibilityBadge } from './compatibility';
@@ -82,7 +82,7 @@ export function ProductCard({ product }: { product: Product }) {
             // Most of the catalogue. The family's own drawing rather than a
             // photograph of a different part — the shop's rule, and the same
             // answer the website gives.
-            <PartArtwork slug={product.familySlug} size={44} />
+            <PartImage slug={product.familySlug} size={48} />
           )}
         </View>
 

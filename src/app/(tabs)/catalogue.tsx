@@ -118,7 +118,7 @@ function FamilyRow({
         pressed && styles.pressed,
       ]}
     >
-      <PartBadge slug={family.slug} size={48} />
+      <PartBadge slug={family.slug} imageUrl={family.imageUrl} size={48} />
 
       <View style={styles.text}>
         <Text variant="rowTitle" numberOfLines={2}>
