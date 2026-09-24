@@ -53,7 +53,9 @@
     "e2e": "node e2e/checks.mjs && node e2e/journeys.mjs",
     "e2e:layout": "node e2e/checks.mjs",
     "e2e:journeys": "node e2e/journeys.mjs",
-    "e2e:staff": "node e2e/staff.mjs"
+    "e2e:staff": "node e2e/staff.mjs",
+    "e2e:interactions": "node e2e/interactions.mjs",
+    "e2e:sweep": "node e2e/sweep.mjs"
   },
   "private": true
 }

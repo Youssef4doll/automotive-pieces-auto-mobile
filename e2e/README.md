@@ -89,3 +89,22 @@ What it verifies against is durable state — the "N en stock" tag, the number
 of photos, the "Revenir au dessin" buttons — never the confirmation toast,
 which is gone before a two-second wait ends.
 
+
+## The interactions (`e2e/interactions.mjs`) and the sweep (`e2e/sweep.mjs`)
+
+`npm run e2e:interactions` drives what the redesign added: the product
+page's pinned bar confirming an add without a toast over the part, the
+basket re-priced by the shop when a quantity changes, an incompatible part
+explaining itself and asking before it is added, favourites as live tiles
+and their empty state, search ranking what fits first and the "only what
+fits" switch, compatible-first family pages and quick add, the catalogue
+filter, the four ways in, the guided picker ("Étape n sur 3", the saved-car
+confirmation), the garage carousel and "Rendre principal", removing a car
+through its sheet, the VIN counter / disabled button / success state, and
+emptying the basket. It never places an order.
+
+`npm run e2e:sweep` loads all 26 shopper screens at 320, 360, 375, 390, 393,
+414 and 430, in French and in Arabic, with a car in the garage and a part
+in the basket, and fails on sideways scroll, clipped text, anything past the
+edge, a control under 44pt, or a console error. `WIDTHS=` and `LOCALES=`
+narrow it.
