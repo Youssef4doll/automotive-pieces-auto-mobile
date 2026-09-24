@@ -104,6 +104,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       signal: controller.signal,
       headers,
       body: init.body === undefined ? undefined : multipart ? (init.body as FormData) : JSON.stringify(init.body),
+      // How long an answer is good for is decided once, by `get` below. Left
+      // to the HTTP cache, the shop's stale-while-revalidate header let a
+      // browser (and some native stacks) answer a re-read with the old copy.
+      cache: 'no-store',
     });
 
     let body: unknown;
@@ -159,23 +163,28 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 /**
- * The catalogue, cached for as long as the app is open.
+ * The catalogue, remembered for a short while.
  *
- * The vehicle tables change when the shop learns about a new car, which is
- * weeks apart. Walking back from the engine list to the model list to the
- * make list should not re-fetch all three, and on a workshop's connection
- * that difference is the whole feel of the screen.
+ * Walking back from the engine list to the model list to the make list
+ * should not re-fetch all three, and on a workshop's connection that
+ * difference is the whole feel of the screen. But the shop changes under
+ * the app — a price, a promotion, a family's picture — so an answer is
+ * trusted for MAX_AGE_MS and then asked again. The first version kept
+ * answers until the app was closed, and a customer saw last week's
+ * promotion until they force-quit.
  *
  * In memory only, and deliberately. A garage picker that works offline would
  * need the vehicle tables on disk, kept in step with a shop that can add a
  * make at any time — and the failure mode of getting that wrong is an app
  * confidently offering a car it can no longer sell parts for. Not in v1.
  */
-const cache = new Map<string, unknown>();
+const MAX_AGE_MS = 30_000;
+const cache = new Map<string, { data: unknown; at: number }>();
 const inFlight = new Map<string, Promise<unknown>>();
 
 export async function get<T>(path: string, options?: { signal?: AbortSignal; fresh?: boolean }): Promise<T> {
-  if (!options?.fresh && cache.has(path)) return cache.get(path) as T;
+  const hit = cache.get(path);
+  if (!options?.fresh && hit && Date.now() - hit.at < MAX_AGE_MS) return hit.data as T;
 
   // Two screens asking for the same thing at once make one request. This
   // happens for real: a fast tap through the picker mounts the next screen
@@ -185,7 +194,7 @@ export async function get<T>(path: string, options?: { signal?: AbortSignal; fre
 
   const pending = request<T>(path, { signal: options?.signal })
     .then((data) => {
-      cache.set(path, data);
+      cache.set(path, { data, at: Date.now() });
       return data;
     })
     .finally(() => {
@@ -209,7 +218,7 @@ export function send<T>(path: string, init: RequestInit = {}): Promise<T> {
   return request<T>(path, init);
 }
 
-/** Drop everything cached. For "Réessayer", and for signing out later. */
+/** Drop everything cached. For pull-to-refresh, "Réessayer", and signing out. */
 export function clearCache() {
   cache.clear();
 }

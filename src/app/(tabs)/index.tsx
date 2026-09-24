@@ -29,6 +29,7 @@ import { useCheckout } from '@/store/checkout';
 import { useAccount } from '@/store/account';
 import { useGarage } from '@/store/garage';
 import { useOnboarding } from '@/store/onboarding';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 
 const LOGO = require('../../../assets/images/logo-lockup.png');
 
@@ -81,6 +82,7 @@ export default function HomeScreen() {
   const load = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(load);
   const settings = useShopSettings();
+  const refreshControl = usePullRefresh();
   const canAskShop = settings.status === 'loaded' && hasContactChannel(settings.data);
 
   // The radial menu: the car in the middle — the one the app answers for,
@@ -136,7 +138,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.root}>
       {focused ? <StatusBar style="light" /> : null}
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
         <View>
           <View style={[styles.heroBg, { top: -heroLift }]} pointerEvents="none">
             <Image

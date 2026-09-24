@@ -15,6 +15,7 @@ import { useResource } from '@/hooks/use-resource';
 import { EmptyBay } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel } from '@/store/garage';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 
 /**
  * What the shop has confirmed fits this car.
@@ -61,6 +62,7 @@ export default function CompatiblePartsScreen() {
     [engineId],
   );
   const parts = useResource(load);
+  const refreshControl = usePullRefresh();
 
   // Opened with no car at all — from a deep link, or after the last vehicle
   // was removed while this screen sat in the stack. Send them to the picker
@@ -124,6 +126,7 @@ export default function CompatiblePartsScreen() {
             keyExtractor={(product) => product.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
+            refreshControl={refreshControl}
             ItemSeparatorComponent={Gap}
             ListHeaderComponent={
               <Text variant="hint" tone={C.textMuted} style={styles.count}>

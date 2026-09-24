@@ -27,6 +27,7 @@ import { HeartIcon } from '@/illustrations/heart';
 import { useFavourites } from '@/store/favourites';
 import { useGarage, vehicleLabel } from '@/store/garage';
 import { track } from '@/services/analytics';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 
 /**
  * Fiche produit.
@@ -94,6 +95,7 @@ export default function ProductScreen() {
 }
 
 function ProductBody({ product, settings }: { product: ProductDetail; settings: ShopSettings | null }) {
+  const refreshControl = usePullRefresh();
   const { t, rtl } = useI18n();
   const router = useRouter();
   const addToCart = useAddToCart();
@@ -192,6 +194,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
         ref={scroll}
         contentContainerStyle={[styles.scroll, { paddingBottom: BAR_HEIGHT + insets.bottom + Spacing.four }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}
       >
         <View style={styles.column}>
           <Gallery product={product} />

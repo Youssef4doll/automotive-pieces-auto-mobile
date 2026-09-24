@@ -17,6 +17,7 @@ import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 import { track } from '@/services/analytics';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 
 /**
  * One family of parts — the reference's "Freinage" screen.
@@ -57,6 +58,7 @@ export default function FamilyScreen() {
     [family, engineId, subcategory],
   );
   const products = useResource(loadProducts);
+  const refreshControl = usePullRefresh();
   useEffect(() => {
     track('category_viewed', { family, subcategory, vehicle: Boolean(engineId) });
   }, [family, subcategory, engineId]);
@@ -123,7 +125,7 @@ export default function FamilyScreen() {
       {products.status === 'loaded' && products.data.products.length > 0 ? (
         <ProductGrid products={products.data.products} header={<View style={styles.bleed}>{head}</View>} />
       ) : (
-        <ScrollView contentContainerStyle={styles.fill}>
+        <ScrollView contentContainerStyle={styles.fill} refreshControl={refreshControl}>
           {head}
           <View style={styles.pad}>
             {products.status === 'loading' ? (

@@ -15,6 +15,7 @@ import { C, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants
 import { useResource } from '@/hooks/use-resource';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { useI18n } from '@/i18n/provider';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 
 /**
  * The catalogue's top level, as discovery rather than a directory: the
@@ -45,7 +46,8 @@ export default function CatalogueScreen() {
   const load = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(load);
 
-  const byStock = useMemo<Family[]>(
+
+  const refreshControl = usePullRefresh();  const byStock = useMemo<Family[]>(
     () => (families.status === 'loaded' ? [...families.data].sort((a, b) => b.productCount - a.productCount) : []),
     [families],
   );
@@ -59,7 +61,12 @@ export default function CatalogueScreen() {
   const filtering = filter.trim().length > 0;
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={refreshControl}
+    >
       <View style={styles.column}>
         <SearchLauncher />
         <View style={[styles.filter, row]}>

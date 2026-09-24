@@ -3,6 +3,7 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import type { Product } from '@/api/catalogue';
 import { Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { ProductTile } from './product-tile';
 
 /**
@@ -26,6 +27,7 @@ export function ProductGrid({
   onEndReached?: () => void;
 }) {
   const { rtl } = useI18n();
+  const refreshControl = usePullRefresh();
   const rows: (Product | null)[][] = [];
   for (let i = 0; i < products.length; i += 2) rows.push([products[i], products[i + 1] ?? null]);
 
@@ -37,6 +39,7 @@ export function ProductGrid({
       ListFooterComponent={footer}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.6}
+      refreshControl={refreshControl}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.list}
       renderItem={({ item: pair }) => (

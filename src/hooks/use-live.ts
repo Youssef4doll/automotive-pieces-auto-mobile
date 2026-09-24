@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { ApiError, type ApiFailure } from '@/api/client';
+import { onRefresh } from '@/api/refresh';
 
 /**
  * `useResource` for the staff screens, which differ in one way: what they
@@ -50,6 +51,9 @@ export function useLive<T>(load: (signal: AbortSignal) => Promise<T>): Live<T> {
     void fetchNow(false);
     return () => controller.current?.abort();
   }, [fetchNow]);
+
+  // Back from the background, or a pull on another screen: re-read quietly.
+  useEffect(() => onRefresh(() => fetchNow(true)), [fetchNow]);
 
   const first = useRef(true);
   useFocusEffect(
