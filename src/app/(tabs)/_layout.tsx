@@ -26,7 +26,7 @@ import { useCartCount } from '@/store/cart';
  *
  * ## The active state is three signals, not one
  *
- * A gold pill behind the icon, the icon and label going to full navy from
+ * A small gold bar under the icon, the icon and label going to full navy from
  * muted, and `accessibilityState.selected` for the screen reader. Colour
  * alone is not a signal everybody receives, and the shop's gold on white is
  * 2.09:1 — it cannot be the thing carrying the meaning even for people who
@@ -82,18 +82,27 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: C.background,
           borderTopColor: C.border,
-          borderTopWidth: Border.thin,
+          borderTopWidth: StyleSheet.hairlineWidth,
           height: barHeight,
           paddingTop: Spacing.one,
           paddingBottom: insets.bottom + Spacing.two,
         },
-        tabBarLabelStyle: { fontFamily: familyFor('display', rtl), fontSize: 12 },
+        tabBarLabelStyle: { fontFamily: familyFor('display', rtl), fontSize: 11, letterSpacing: 0.2 },
         tabBarItemStyle: { paddingTop: Spacing.half },
+        // Small and quiet: a navy dot-sized count, ringed in white so it
+        // reads against the cart's own lines.
         tabBarBadgeStyle: {
-          backgroundColor: C.accent,
-          color: C.onAccent,
+          backgroundColor: C.text,
+          color: C.textInverse,
           fontFamily: familyFor('display', rtl),
-          fontSize: 11,
+          fontSize: 10,
+          lineHeight: 14,
+          minWidth: 16,
+          height: 16,
+          borderRadius: 8,
+          borderWidth: 1.5,
+          borderColor: C.background,
+          top: -2,
         },
       }}
     >
@@ -107,7 +116,7 @@ export default function TabsLayout() {
           tabBarLabel: t('tab.home'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <Feather name="home" size={IconSize.large} color={focused ? C.onAccent : color} />
+              <Feather name="home" size={22} color={color} />
             </NavIcon>
           ),
         }}
@@ -119,7 +128,7 @@ export default function TabsLayout() {
           tabBarLabel: t('tab.catalog'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <Feather name="grid" size={IconSize.large} color={focused ? C.onAccent : color} />
+              <Feather name="grid" size={22} color={color} />
             </NavIcon>
           ),
         }}
@@ -131,7 +140,7 @@ export default function TabsLayout() {
           tabBarLabel: t('tab.garage'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <NavCar size={IconSize.large} color={focused ? C.onAccent : color} />
+              <NavCar size={22} color={color} />
             </NavIcon>
           ),
         }}
@@ -145,7 +154,7 @@ export default function TabsLayout() {
           tabBarAccessibilityLabel: cartCount > 0 ? `${t('tab.cart')}, ${t('a11y.cartCount', { n: cartCount })}` : t('tab.cart'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <Feather name="shopping-cart" size={IconSize.large} color={focused ? C.onAccent : color} />
+              <Feather name="shopping-cart" size={22} color={color} />
             </NavIcon>
           ),
         }}
@@ -157,7 +166,7 @@ export default function TabsLayout() {
           tabBarLabel: t('tab.account'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <Feather name="user" size={IconSize.large} color={focused ? C.onAccent : color} />
+              <Feather name="user" size={22} color={color} />
             </NavIcon>
           ),
         }}
@@ -167,25 +176,25 @@ export default function TabsLayout() {
 }
 
 /**
- * The glyph, on a gold pill when its tab is the one open — the reference's
- * active state, in the button colour. The pill is always laid out (clear when
- * inactive) so nothing shifts as tabs change. The label going to full navy
- * and `accessibilityState.selected` carry the state too: gold on white is
- * 2.09:1 and cannot be the only signal.
+ * The glyph, with a small gold bar under it when its tab is open.
+ *
+ * Quiet on purpose: the bar is 14 wide and 3 tall, the icon and label go
+ * from muted grey to full navy, and `accessibilityState.selected` tells the
+ * screen reader. Colour is never the only signal — gold on white is 2.09:1.
+ * The bar is always laid out (clear when inactive), so nothing moves as the
+ * tabs change.
  */
 function NavIcon({ focused, children }: { focused: boolean; children: React.ReactNode }) {
-  return <View style={[styles.pill, focused && styles.pillActive]}>{children}</View>;
+  return (
+    <View style={styles.icon}>
+      {children}
+      <View style={[styles.bar, focused && styles.barActive]} />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  pill: {
-    width: 48,
-    height: 30,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pillActive: {
-    backgroundColor: C.accent,
-  },
+  icon: { alignItems: 'center', gap: 4, paddingTop: 2 },
+  bar: { width: 14, height: 3, borderRadius: 2, backgroundColor: 'transparent' },
+  barActive: { backgroundColor: C.accent },
 });

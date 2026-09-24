@@ -8,6 +8,7 @@ import type { TrailStep } from '@/components/ui/chip';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
+import { useToast } from '@/store/toast';
 
 /**
  * Step 3 — the motorisation, and the end of the flow.
@@ -47,6 +48,7 @@ export default function EnginesScreen() {
   );
   const resource = useResource(load);
 
+  const toast = useToast((st) => st.show);
   const choose = useCallback(
     (engine: Engine) => {
       const already = isSaved(engine.id);
@@ -78,8 +80,15 @@ export default function EnginesScreen() {
       // they land on. `dismissTo` collapses the three picker screens so the
       // back gesture does not walk them through the flow again.
       router.dismissTo('/garage');
+      // Said once, with the obvious next step: the car is remembered, and
+      // every part is now judged against it.
+      toast({
+        message: t('look.saved', { car: `${makeName ?? ''} ${modelName ?? ''}`.trim() }),
+        tone: 'success',
+        action: { label: t('home.seeCompatible'), onPress: () => router.push({ pathname: '/pieces-compatibles', params: { engine: engine.id } }) },
+      });
     },
-    [add, isFull, isSaved, make, makeId, makeName, model, modelId, modelName, router, t],
+    [add, isFull, isSaved, make, makeId, makeName, model, modelId, modelName, router, t, toast],
   );
 
   const toItems = useCallback(

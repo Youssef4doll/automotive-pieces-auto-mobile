@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { PressScale } from '@/components/ui/press-scale';
@@ -11,7 +12,7 @@ import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { CarArt } from '@/illustrations/car-art';
 import { useI18n } from '@/i18n/provider';
 import { yearSpan } from '@/lib/format';
-import { useGarage } from '@/store/garage';
+import { useGarage, type SavedVehicle } from '@/store/garage';
 
 /**
  * Mon garage — the reference's personal space, not a list editor.
@@ -31,6 +32,8 @@ export default function GarageScreen() {
   const hydrated = useGarage((s) => s.hydrated);
   const setActive = useGarage((s) => s.setActive);
   const isFull = useGarage((s) => s.isFull);
+  const [cardWidth, setCardWidth] = useState(0);
+  const [page, setPage] = useState(0);
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   if (!hydrated) return <View style={styles.root} />;
@@ -50,13 +53,13 @@ export default function GarageScreen() {
     );
   }
 
-  const others = vehicles.filter((v) => v.engineId !== active.engineId);
+  // The principal first, then the others as they were added.
+  const ordered = [active, ...vehicles.filter((v) => v.engineId !== active.engineId)];
   const small: { icon: React.ComponentProps<typeof Feather>['name']; label: string; onPress: () => void; disabled?: boolean }[] = [
     { icon: 'clock', label: t('look.bento.history'), onPress: () => router.push('/compte/commandes') },
     { icon: 'info', label: t('look.bento.info'), onPress: () => router.push('/garage/vehicules') },
     { icon: 'plus', label: t('look.bento.add'), onPress: () => router.push('/garage/ajouter'), disabled: isFull() },
   ];
-  const line = [active.engineName, yearSpan(active.yearFrom ?? null, active.yearTo ?? null, t)].filter(Boolean).join(' · ');
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
@@ -66,49 +69,35 @@ export default function GarageScreen() {
           {t('look.garageCount', { n: vehicles.length })}
         </Text>
 
-        {/* The car, as the space's centrepiece: navy, the drawing large, the
-            one action it exists for in gold. */}
-        <View style={styles.hero}>
-          <View style={styles.heroGlow} pointerEvents="none" />
-          <PressScale
-            accessibilityRole="button"
-            accessibilityLabel={`${t('look.principalVehicle')}, ${active.makeName} ${active.modelName}, ${line}`}
-            onPress={() => router.push('/garage/vehicules')}
-            scaleTo={0.985}
-            style={styles.heroMain}
-          >
-            <View style={[row, styles.heroTop]}>
-              <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start', gap: 4 }]}>
-                <Text variant="hint" tone={Brand.navy300}>
-                  {t('look.principalVehicle')}
-                </Text>
-                <Text style={[styles.heroName, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}>
-                  {active.makeName} {active.modelName}
-                </Text>
-                <Text variant="hint" tone="#c7d1e3">
-                  {line}
-                </Text>
-                <View style={[styles.pill, row]}>
-                  <Feather name="check-circle" size={12} color={Brand.green600} />
-                  <Text style={[styles.pillText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.principal')}</Text>
+        {/* The car, as the space's centrepiece — and with several, a
+            carousel of them, the principal first. */}
+        {ordered.length > 1 ? (
+          <View>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onLayout={(e) => setCardWidth(Math.round(e.nativeEvent.layout.width))}
+              onMomentumScrollEnd={(e) => cardWidth && setPage(Math.round(e.nativeEvent.contentOffset.x / cardWidth))}
+              onScroll={Platform.OS === 'web' ? (e) => cardWidth && setPage(Math.round(e.nativeEvent.contentOffset.x / cardWidth)) : undefined}
+              scrollEventThrottle={64}
+              style={styles.carousel}
+            >
+              {ordered.map((v) => (
+                <View key={v.engineId} style={{ width: cardWidth || undefined, paddingHorizontal: 2 }}>
+                  <HeroCard vehicle={v} principal={v.engineId === active.engineId} onMakePrincipal={() => setActive(v.engineId)} />
                 </View>
-              </View>
-              <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={20} color={Brand.navy300} />
+              ))}
+            </ScrollView>
+            <View style={[row, styles.dots]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              {ordered.map((v, i) => (
+                <View key={v.engineId} style={[styles.dot, i === page && styles.dotOn]} />
+              ))}
             </View>
-            <View style={[styles.heroArt, rtl && { transform: [{ scaleX: -1 }] }]} pointerEvents="none">
-              <CarArt width={250} body={Brand.navy600} />
-            </View>
-          </PressScale>
-          <PressScale
-            accessibilityRole="button"
-            onPress={() => router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } })}
-            style={[styles.heroCta, row]}
-            pressedStyle={{ backgroundColor: Brand.gold600 }}
-          >
-            <Feather name="check-circle" size={18} color={C.onAccent} />
-            <Text style={[styles.heroCtaText, { fontFamily: familyFor('display', rtl) }]}>{t('home.seeCompatible')}</Text>
-          </PressScale>
-        </View>
+          </View>
+        ) : (
+          <HeroCard vehicle={active} principal onMakePrincipal={() => undefined} />
+        )}
 
         {/* Three quieter doors: icon and word, no card each. */}
         <View style={[styles.quick, row]}>
@@ -132,24 +121,12 @@ export default function GarageScreen() {
           ))}
         </View>
 
-        {others.length ? (
-          <>
-            <View style={[styles.head, row]}>
-              <Text style={[styles.section, { fontFamily: familyFor('heading', rtl) }]}>{t('look.myVehicles', { n: vehicles.length })}</Text>
-              <PressScale accessibilityRole="button" onPress={() => router.push('/garage/vehicules')} hitSlop={8} style={[styles.seeAll, row]}>
-                <Text variant="hint" tone={C.text}>
-                  {t('catalog.seeAll')}
-                </Text>
-                <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={C.text} />
-              </PressScale>
-            </View>
-            <View style={styles.list}>
-              {others.map((v) => (
-                <VehicleCard key={v.engineId} vehicle={v} compactArt flat action={t('garage.use')} onPress={() => setActive(v.engineId)} />
-              ))}
-            </View>
-          </>
-        ) : null}
+        <PressScale accessibilityRole="button" onPress={() => router.push('/garage/vehicules')} style={[row, styles.manage]} pressedStyle={styles.pressed}>
+          <Text variant="body" tone={C.text} style={styles.flex}>
+            {t('look.myVehicles', { n: vehicles.length })}
+          </Text>
+          <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={18} color={C.textMuted} />
+        </PressScale>
 
         {isFull() ? (
           <Text variant="hint" style={styles.centred}>
@@ -158,6 +135,66 @@ export default function GarageScreen() {
         ) : null}
       </View>
     </ScrollView>
+  );
+}
+
+function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehicle; principal: boolean; onMakePrincipal: () => void }) {
+  const { t, rtl } = useI18n();
+  const router = useRouter();
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  const line = [vehicle.engineName, yearSpan(vehicle.yearFrom ?? null, vehicle.yearTo ?? null, t)].filter(Boolean).join(' · ');
+  return (
+    <View style={styles.hero}>
+      <View style={styles.heroGlow} pointerEvents="none" />
+      <PressScale
+        accessibilityRole="button"
+        accessibilityLabel={`${principal ? t('look.principalVehicle') : ''} ${vehicle.makeName} ${vehicle.modelName}, ${line}`}
+        onPress={() => router.push('/garage/vehicules')}
+        scaleTo={0.985}
+        style={styles.heroMain}
+      >
+        <View style={[row, styles.heroTop]}>
+          <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start', gap: 4 }]}>
+            {principal ? (
+              <Text variant="hint" tone={Brand.navy300}>
+                {t('look.principalVehicle')}
+              </Text>
+            ) : null}
+            <Text style={[styles.heroName, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]} numberOfLines={2}>
+              {vehicle.makeName} {vehicle.modelName}
+            </Text>
+            <Text variant="hint" tone="#c7d1e3">
+              {line}
+            </Text>
+            {principal ? (
+              <View style={[styles.pill, row]}>
+                <Feather name="check-circle" size={12} color={Brand.green600} />
+                <Text style={[styles.pillText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.principal')}</Text>
+              </View>
+            ) : null}
+          </View>
+          <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={20} color={Brand.navy300} />
+        </View>
+        <View style={[styles.heroArt, rtl && { transform: [{ scaleX: -1 }] }]} pointerEvents="none">
+          <CarArt width={240} body={Brand.navy600} />
+        </View>
+      </PressScale>
+      <PressScale
+        accessibilityRole="button"
+        onPress={() => router.push({ pathname: '/pieces-compatibles', params: { engine: vehicle.engineId } })}
+        style={[styles.heroCta, row]}
+        pressedStyle={{ backgroundColor: Brand.gold600 }}
+      >
+        <Feather name="check-circle" size={18} color={C.onAccent} />
+        <Text style={[styles.heroCtaText, { fontFamily: familyFor('display', rtl) }]}>{t('home.seeCompatible')}</Text>
+      </PressScale>
+      {!principal ? (
+        <PressScale accessibilityRole="button" onPress={onMakePrincipal} style={[styles.makePrincipal, row]} pressedStyle={{ opacity: 0.7 }}>
+          <Feather name="star" size={15} color={Brand.white} />
+          <Text style={[styles.makePrincipalText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.setPrincipal')}</Text>
+        </PressScale>
+      ) : null}
+    </View>
   );
 }
 
@@ -216,4 +253,17 @@ const styles = StyleSheet.create({
   section: { fontSize: 18, lineHeight: 24, color: C.text },
   seeAll: { alignItems: 'center', gap: 4, minHeight: Tap.min },
   list: { gap: Spacing.two },
+  carousel: { marginHorizontal: -2 },
+  dots: { justifyContent: 'center', gap: 6, paddingTop: Spacing.two },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.border },
+  dotOn: { width: 18, backgroundColor: C.text },
+  makePrincipal: { alignSelf: 'center', alignItems: 'center', gap: 6, minHeight: Tap.min, paddingHorizontal: Spacing.three },
+  makePrincipalText: { fontSize: 14, color: Brand.white },
+  manage: {
+    alignItems: 'center',
+    minHeight: Tap.primary + Spacing.one,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.card,
+    backgroundColor: Brand.white,
+  },
 });

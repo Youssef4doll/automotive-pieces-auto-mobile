@@ -6,6 +6,7 @@ import type { Product } from '@/api/catalogue';
 import { Brand, C, Elevation, familyFor, Radius, Spacing } from '@/constants/theme';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
+import { useAddToCart } from '@/hooks/use-add-to-cart';
 import { PartImage } from './part-image';
 import { PressScale } from './press-scale';
 import { Price } from './price';
@@ -20,8 +21,9 @@ import { Text } from './text';
  * badge, shortened to fit a column, and a tile never drops it: in a grid
  * it is the one thing that separates two parts that look alike.
  *
- * No quick-add here. At half width a "+" competes with the price for the
- * same corner, and the grid is a place to choose, not to buy.
+ * A small "+" adds one without leaving the grid — beside the tile's own
+ * button, never inside it, and absent for a part that cannot be bought or
+ * is known not to fit (that one needs the product page's explanation).
  */
 const FIT: Record<'FITS' | 'UNKNOWN' | 'DOES_NOT_FIT', { icon: React.ComponentProps<typeof Feather>['name']; tone: string; key: DictKey }> = {
   FITS: { icon: 'check-circle', tone: C.success, key: 'look.fit.FITS' },
@@ -37,6 +39,8 @@ const STOCK: Record<Product['availability'], { tone: string; key: DictKey }> = {
 export function ProductTile({ product }: { product: Product }) {
   const { t, rtl } = useI18n();
   const router = useRouter();
+  const addToCart = useAddToCart();
+  const quickAdd = product.availability !== 'UNAVAILABLE' && product.fitment !== 'DOES_NOT_FIT';
   const fit = product.fitment ? FIT[product.fitment] : null;
   const stock = STOCK[product.availability];
   const stockLine = product.lowStockQty !== null ? t('stock.low', { n: product.lowStockQty }) : t(stock.key);
@@ -44,6 +48,7 @@ export function ProductTile({ product }: { product: Product }) {
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   return (
+    <View style={styles.wrap}>
     <PressScale
       accessibilityRole="button"
       accessibilityLabel={[product.brand, product.name, fit ? t(fit.key) : null, stockLine].filter(Boolean).join(', ')}
@@ -82,10 +87,35 @@ export function ProductTile({ product }: { product: Product }) {
         </View>
       </View>
     </PressScale>
+      {quickAdd ? (
+        <PressScale
+          accessibilityRole="button"
+          accessibilityLabel={t('product.quickAdd', { name: product.name })}
+          onPress={() => addToCart(product)}
+          hitSlop={4}
+          scaleTo={0.9}
+          style={[styles.add, rtl ? { left: Spacing.two } : { right: Spacing.two }]}
+          pressedStyle={{ backgroundColor: Brand.gold600 }}
+        >
+          <Feather name="plus" size={20} color={C.onAccent} />
+        </PressScale>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: { flex: 1 },
+  add: {
+    position: 'absolute',
+    bottom: Spacing.two,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Brand.gold500,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tile: {
     flex: 1,
     backgroundColor: Brand.white,

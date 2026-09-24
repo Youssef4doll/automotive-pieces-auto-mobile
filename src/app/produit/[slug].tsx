@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, { ReduceMotion, SlideInDown, SlideOutDown, useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
+import Animated, { FadeIn, ReduceMotion, useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { productApi, type ProductDetail } from '@/api/product';
@@ -98,24 +98,19 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   const compatY = useRef(0);
   const insets = useSafeAreaInsets();
 
-  // The purchase bar follows the customer down the page once the inline
-  // button has scrolled out of sight — and only then, so the first screen
-  // never shows the same button twice.
-  const buyBottom = useRef(Number.POSITIVE_INFINITY);
-  const [sticky, setSticky] = useState(false);
-
-  // "Ajouté au panier" on the button itself for a moment: the toast says it
-  // too, but the eye is on the button that was pressed.
+  // The purchase bar is pinned to the foot of the screen, always within
+  // reach. After an add it says so itself — "Ajouté au panier · Voir le
+  // panier" — for a few seconds, instead of a toast floating over the part.
   const [justAdded, setJustAdded] = useState(false);
   const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => {
     if (addedTimer.current) clearTimeout(addedTimer.current);
   }, []);
   const commit = () => {
-    if (!addToCart(product, qty)) return;
+    if (!addToCart(product, qty, { silent: true })) return;
     setJustAdded(true);
     if (addedTimer.current) clearTimeout(addedTimer.current);
-    addedTimer.current = setTimeout(() => setJustAdded(false), 1600);
+    addedTimer.current = setTimeout(() => setJustAdded(false), 2800);
   };
 
   const buyable = product.availability !== 'UNAVAILABLE';
@@ -140,14 +135,28 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   ];
 
   const carName = active ? `${active.makeName} ${active.modelName}` : '';
+  const engineLine = active ? `${active.engineName}` : '';
+  // Incompatible is a neutral panel with a red mark, not a red alarm: the
+  // part is fine, it is just not listed for this car — and here is why.
   const fit =
     product.fitment === 'FITS'
-      ? { icon: 'check-circle' as const, fg: C.success, bg: C.successSurface, border: C.successBorder, text: t('product.fitsYour', { car: carName }) }
+      ? { icon: 'check-circle' as const, fg: C.success, titleTone: C.success, bg: C.successSurface, text: t('product.fitsYour', { car: carName }), why: engineLine || null }
       : product.fitment === 'DOES_NOT_FIT'
-        ? { icon: 'x-circle' as const, fg: C.danger, bg: C.dangerSurface, border: '#f6d5d9', text: t('product.notYour', { car: carName }) }
+        ? {
+            icon: 'x-circle' as const,
+            fg: C.danger,
+            titleTone: C.text,
+            bg: C.surface,
+            text: t('product.notYour', { car: carName }),
+            why: product.compatibility.total > 0 ? t('look.whyNot', { n: product.compatibility.total, car: carName }) : t('look.whyNotNone'),
+          }
         : product.fitment === 'UNKNOWN'
-          ? { icon: 'help-circle' as const, fg: C.caution, bg: C.cautionSurface, border: C.cautionBorder, text: t('fit.unknown') }
-          : { icon: 'truck' as const, fg: C.text, bg: C.surface, border: C.border, text: t('product.chooseCar') };
+          ? { icon: 'help-circle' as const, fg: C.caution, titleTone: C.text, bg: C.cautionSurface, text: t('fit.unknown'), why: `${t('look.unknownWhy', { car: carName })} ${t('product.unknownNote')}` }
+          : { icon: 'info' as const, fg: C.text, titleTone: C.text, bg: C.surface, text: t('look.chooseToCheck'), why: null };
+  const openCompat = () => {
+    setCompatKey((k) => k + 1);
+    requestAnimationFrame(() => scroll.current?.scrollTo({ y: compatY.current, animated: true }));
+  };
 
   const refCount = product.oeGroups.reduce((n, g) => n + g.refs.length, 0) + product.aftermarketRefs.length;
 
@@ -174,13 +183,8 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
     <View style={styles.root}>
       <ScrollView
         ref={scroll}
-        contentContainerStyle={[styles.scroll, sticky && { paddingBottom: 110 + insets.bottom }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: BAR_HEIGHT + insets.bottom + Spacing.four }]}
         showsVerticalScrollIndicator={false}
-        scrollEventThrottle={32}
-        onScroll={(e) => {
-          const past = e.nativeEvent.contentOffset.y > buyBottom.current;
-          if (past !== sticky) setSticky(past);
-        }}
       >
         <View style={styles.column}>
           <Gallery product={product} />
@@ -205,31 +209,42 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
             </View>
           </View>
 
-          {/* The compatibility pill: the verdict against THEIR car, and a way
-              to its details — or to choosing a car when there is none. */}
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => {
-              if (product.fitment === null) {
-                router.push('/garage/ajouter');
-                return;
-              }
-              setCompatKey((k) => k + 1);
-              requestAnimationFrame(() => scroll.current?.scrollTo({ y: compatY.current, animated: true }));
-            }}
-            style={({ pressed }) => [styles.pill, row, { backgroundColor: fit.bg, borderColor: fit.border }, pressed && styles.pressedDim]}
-          >
-            <Feather name={fit.icon} size={IconSize.medium} color={fit.fg} />
-            <Text variant="hint" tone={fit.fg} numberOfLines={2} style={styles.flex}>
-              {fit.text}
-            </Text>
-            <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.medium} color={fit.fg} />
-          </Pressable>
-          {product.fitment === 'UNKNOWN' ? (
-            <Text variant="hint" style={styles.note}>
-              {t('product.unknownNote')}
-            </Text>
-          ) : null}
+          {/* The verdict against THEIR car — the strongest thing on the
+              page after the part itself. Never an error screen: when it does
+              not fit, it says why, from the shop's own table, and what to do. */}
+          <View style={[styles.fitBlock, { backgroundColor: fit.bg }]}>
+            <View style={[row, styles.fitHead]}>
+              <Feather name={fit.icon} size={22} color={fit.fg} />
+              <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start', gap: 2 }]}>
+                <Text style={[styles.fitTitle, { fontFamily: familyFor('bodySemi', rtl), color: fit.titleTone, textAlign: rtl ? 'right' : 'left' }]}>{fit.text}</Text>
+                {fit.why ? (
+                  <Text variant="hint" tone={C.textMuted} style={{ textAlign: rtl ? 'right' : 'left' }}>
+                    {fit.why}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+            {product.fitment === null ? (
+              <Button label={t('look.changeVehicle')} icon="plus" variant="secondary" onPress={() => router.push('/garage/ajouter')} />
+            ) : (
+              <View style={[row, styles.fitActions]}>
+                {product.compatibility.total > 0 ? (
+                  <Pressable accessibilityRole="button" onPress={openCompat} hitSlop={6} style={styles.fitLink}>
+                    <Text variant="hint" tone={C.text} style={styles.underline}>
+                      {t('look.seeFits')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {product.fitment === 'DOES_NOT_FIT' ? (
+                  <Pressable accessibilityRole="button" onPress={() => router.push('/garage/ajouter')} hitSlop={6} style={styles.fitLink}>
+                    <Text variant="hint" tone={C.text} style={styles.underline}>
+                      {t('look.changeVehicle')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            )}
+          </View>
 
           <View style={[styles.priceRow, row]}>
             <Text style={[styles.price, { fontFamily: familyFor('headingStrong', rtl) }]}>{formatDT(product.price)}</Text>
@@ -251,27 +266,6 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
           {stock.detail ? <Text variant="hint">{stock.detail}</Text> : null}
 
           {/* Quantity and the button, side by side, as in the reference. */}
-          <View
-            style={[styles.buyRow, row]}
-            onLayout={(e) => {
-              buyBottom.current = e.nativeEvent.layout.y + e.nativeEvent.layout.height;
-            }}
-          >
-            {buyable ? (
-              <>
-                <QuantityStepper value={qty} onChange={setQty} size="compact" />
-                <Button
-                  label={justAdded ? t('look.added') : t('product.add')}
-                  icon={justAdded ? 'check' : 'shopping-cart'}
-                  onPress={add}
-                  style={styles.flex}
-                />
-              </>
-            ) : (
-              <Button label={t('stock.unavailable')} onPress={() => undefined} disabled style={styles.flex} />
-            )}
-          </View>
-
           {/* Three facts, each the shop's own: its delay, its warranty, its
               return window. */}
           {settings ? (
@@ -372,28 +366,30 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
         </View>
       </ScrollView>
 
-      {sticky && buyable ? (
-        <Animated.View
-          entering={SlideInDown.duration(220).reduceMotion(ReduceMotion.System)}
-          exiting={SlideOutDown.duration(180).reduceMotion(ReduceMotion.System)}
-          style={[styles.sticky, { paddingBottom: insets.bottom + Spacing.three }]}
-        >
-          <View style={[styles.stickyInner, row]}>
-            <View style={{ alignItems: rtl ? 'flex-end' : 'flex-start' }}>
-              <Text style={[styles.stickyPrice, { fontFamily: familyFor('headingStrong', false) }]}>{formatDT(product.price * qty)}</Text>
-              <Text variant="hint" numberOfLines={1}>
-                {qty > 1 ? `${qty} × ${formatDT(product.price)}` : stock.label}
-              </Text>
-            </View>
-            <Button
-              label={justAdded ? t('look.added') : t('product.add')}
-              icon={justAdded ? 'check' : 'shopping-cart'}
-              onPress={add}
-              style={styles.flex}
-            />
-          </View>
-        </Animated.View>
-      ) : null}
+      <View style={[styles.bar, { paddingBottom: insets.bottom + Spacing.three }]}>
+        <View style={[styles.barInner, row]}>
+          {!buyable ? (
+            <Button label={t('stock.unavailable')} onPress={() => undefined} disabled style={styles.flex} />
+          ) : justAdded ? (
+            <Animated.View entering={FadeIn.duration(160).reduceMotion(ReduceMotion.System)} style={[styles.flex, row, styles.addedRow]}>
+              <View style={[row, styles.addedLabel]}>
+                <View style={styles.addedTick}>
+                  <Feather name="check" size={16} color={Brand.white} />
+                </View>
+                <Text accessibilityLiveRegion="polite" style={[styles.addedText, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={1}>
+                  {t('look.added')}
+                </Text>
+              </View>
+              <Button label={t('look.viewCart')} variant="secondary" onPress={() => router.navigate('/panier')} style={styles.viewCart} />
+            </Animated.View>
+          ) : (
+            <>
+              <QuantityStepper value={qty} onChange={setQty} size="compact" />
+              <Button label={t('product.add')} icon="shopping-cart" onPress={add} style={styles.flex} />
+            </>
+          )}
+        </View>
+      </View>
 
       <BottomSheet visible={confirming} onClose={() => setConfirming(false)} title={t('product.mismatchTitle')}>
         <View style={styles.sheetBody}>
@@ -436,8 +432,7 @@ function Gallery({ product }: { product: ProductDetail }) {
         accessibilityRole="image"
         accessibilityLabel={t('product.illustration', { family: product.family.name })}
       >
-        <View style={styles.stage} />
-        <PartImage slug={product.familySlug} size={170} />
+        <PartImage slug={product.familySlug} size={132} />
       </View>
     );
   }
@@ -618,7 +613,9 @@ function ProductSkeleton() {
   );
 }
 
-const GALLERY_HEIGHT = 240;
+const GALLERY_HEIGHT = 210;
+/** The purchase bar's height above the safe area, for the scroll padding under it. */
+const BAR_HEIGHT = 76;
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
@@ -641,7 +638,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   galleryDrawing: {
-    height: 220,
+    height: 176,
   },
   counter: {
     textAlign: 'center',
@@ -750,7 +747,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     paddingTop: Spacing.three,
   },
-  sticky: {
+  bar: {
     position: 'absolute',
     left: 0,
     right: 0,
@@ -758,23 +755,21 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.three,
     paddingHorizontal: Spacing.three,
     backgroundColor: C.background,
-    borderTopLeftRadius: Radius.sheet,
-    borderTopRightRadius: Radius.sheet,
-    shadowColor: Brand.navy950,
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.1,
-    shadowRadius: 18,
-    elevation: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: C.border,
   },
-  stickyInner: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', alignItems: 'center', gap: Spacing.three },
-  stickyPrice: { fontSize: 20, lineHeight: 25, color: C.text },
-  stage: {
-    position: 'absolute',
-    width: 190,
-    height: 190,
-    borderRadius: 95,
-    backgroundColor: C.surface,
-  },
+  barInner: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', alignItems: 'center', gap: Spacing.two, minHeight: Tap.primary },
+  addedRow: { alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
+  addedLabel: { alignItems: 'center', gap: Spacing.two, flexShrink: 1 },
+  addedTick: { width: 28, height: 28, borderRadius: 14, backgroundColor: C.success, alignItems: 'center', justifyContent: 'center' },
+  addedText: { fontSize: 15, color: C.text, flexShrink: 1 },
+  viewCart: { paddingHorizontal: Spacing.three },
+  fitBlock: { marginTop: Spacing.three, borderRadius: Radius.tile, padding: Spacing.three, gap: Spacing.two },
+  fitHead: { alignItems: 'flex-start', gap: Spacing.three },
+  fitTitle: { fontSize: 16, lineHeight: 21 },
+  fitActions: { flexWrap: 'wrap', gap: Spacing.three },
+  fitLink: { minHeight: Tap.min, justifyContent: 'center' },
+  underline: { textDecorationLine: 'underline' },
   sheetBody: {
     gap: Spacing.three,
     paddingBottom: Spacing.two,

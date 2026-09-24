@@ -153,9 +153,9 @@ async function readBubbles(page, labels) {
       const m = getComputedStyle(body).transform.match(/matrix\(([^)]+)\)/);
       const n = m ? m[1].split(',').map(Number) : [1, 0, 0, 1, 0, 0];
       const r = btn.getBoundingClientRect();
-      out[name] = { scale: Number(n[0].toFixed(2)), y: Math.round(n[5]), x: Math.round(r.x + r.width / 2) };
+      out[name] = { scale: Number(n[0].toFixed(2)), y: Math.round(n[5]), x: Math.round(r.x + r.width / 2), cy: Math.round(r.y + r.height / 2) };
     }
-    let el = document.querySelector('[aria-label="Référence"]');
+    let el = document.querySelector(`[aria-label="${names[0]}"]`);
     while (el && !(el.scrollWidth > el.clientWidth + 8)) el = el.parentElement;
     out.snap = el ? getComputedStyle(el).scrollSnapType : null;
     return out;
@@ -168,16 +168,28 @@ async function readBubbles(page, labels) {
     await addBmw(page);
     await tap(page, 'Accueil');
     await page.waitForTimeout(1800);
-    const b = await readBubbles(page, ['Référence', 'BMW Série 1 (E87)', 'Quelle pièce']);
+    const b = await readBubbles(page, ['Je connais la pièce', 'BMW Série 1 (E87)', 'Une autre voiture']);
     const car = b['BMW Série 1 (E87)'];
-    const left = b['Référence'];
-    const right = b['Quelle pièce'];
+    const left = b['Je connais la pièce'];
+    const right = b['Une autre voiture'];
     if (!car || !left || !right) fail('arc: bubbles not found', b);
     else {
       check(car.scale === 1 && car.y === 0, 'arc: the car is the big centred bubble', car);
       check(left.scale < 0.8 && right.scale < 0.8 && left.y > 0 && right.y > 0, 'arc: neighbours smaller and lower', { left, right });
       check(Math.abs(car.x - 195) < 6, 'arc: opens centred on the car', car.x);
       check(String(b.snap).startsWith('x '), 'arc: snapping', b.snap);
+
+      // The radial rule: a side bubble comes to the centre first and goes nowhere.
+      const url = page.url();
+      await page.mouse.click(right.x, right.cy);
+      await page.waitForTimeout(1200);
+      const after = await readBubbles(page, ['Une autre voiture']);
+      check(page.url() === url && after['Une autre voiture'] && Math.abs(after['Une autre voiture'].x - 195) < 12, 'arc: a side bubble is centred, not opened', {
+        url: page.url(),
+        x: after['Une autre voiture']?.x,
+      });
+      const hint = await page.evaluate(() => document.body.innerText.includes('Marque, modèle, motorisation'));
+      check(hint, 'arc: the caption says what the centred bubble does');
     }
   } catch (e) {
     fail('arc', { threw: String(e).split('\n')[0] });
@@ -203,8 +215,8 @@ async function readBubbles(page, labels) {
 
     // The bubbles run the other way: "Référence", first in French reading
     // order, sits on the RIGHT in Arabic; the car stays in the middle.
-    const b = await readBubbles(page, ['المرجع', 'BMW Série 1 (E87)', 'أي قطعة']);
-    const ok = b['المرجع'] && b['أي قطعة'] && b['المرجع'].x > b['BMW Série 1 (E87)'].x && b['أي قطعة'].x < b['BMW Série 1 (E87)'].x;
+    const b = await readBubbles(page, ['لديّ المرجع', 'BMW Série 1 (E87)', 'أعرف القطعة', 'سيارة أخرى']);
+    const ok = b['لديّ المرجع'] && b['أعرف القطعة'] && b['سيارة أخرى'] && b['لديّ المرجع'].x > b['BMW Série 1 (E87)'].x && b['أعرف القطعة'].x > b['BMW Série 1 (E87)'].x && b['سيارة أخرى'].x < b['BMW Série 1 (E87)'].x;
     check(ok, 'rtl: bubbles reversed', b);
 
     // The greeting sits on the right of an Arabic hero.

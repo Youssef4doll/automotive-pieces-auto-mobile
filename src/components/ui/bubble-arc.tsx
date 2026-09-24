@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  AccessibilityInfo,
   Platform,
   Pressable,
   StyleSheet,
@@ -10,6 +11,8 @@ import {
 import Animated, {
   Extrapolation,
   interpolate,
+  runOnJS,
+  useAnimatedReaction,
   useAnimatedRef,
   useAnimatedScrollHandler,
   useAnimatedStyle,
@@ -39,6 +42,8 @@ export type BubbleItem = {
   key: string;
   icon: React.ReactNode;
   label: string;
+  /** One line under the arc while this bubble is centred: what tapping it does. */
+  hint?: string;
   onPress: () => void;
 };
 
@@ -79,7 +84,52 @@ export function BubbleArc({ items, initial = 0 }: { items: BubbleItem[]; initial
 
   const onLayout = useCallback((e: LayoutChangeEvent) => setWidth(Math.round(e.nativeEvent.layout.width)), []);
 
+  // Which bubble is centred, for the caption and for the tap rule below.
+  // Updated only when the rounded index changes, not on every frame.
+  const [centred, setCentred] = useState(start);
+  useAnimatedReaction(
+    () => (slide ? Math.round(x.value / slide) : start),
+    (now, before) => {
+      if (now !== before) runOnJS(setCentred)(now);
+    },
+    [slide, start],
+  );
+
+  // A radial menu's rule: a side bubble comes to the centre first, the
+  // centred one goes. One tap on the obvious choice, two on any other —
+  // and never a jump somewhere the customer did not see coming.
+  // …except with a screen reader, where a first activation that only moves
+  // things would be a trap: there, every bubble acts on its first activation.
+  const [screenReader, setScreenReader] = useState(false);
+  useEffect(() => {
+    // react-native-web answers `true` unconditionally — it cannot know — so
+    // on the web the radial rule stands; browsers' screen readers activate
+    // the element they are on, which is the centred one after a swipe.
+    if (Platform.OS === 'web') return;
+    let alive = true;
+    AccessibilityInfo.isScreenReaderEnabled().then((on) => alive && setScreenReader(on)).catch(() => undefined);
+    const sub = AccessibilityInfo.addEventListener('screenReaderChanged', setScreenReader);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+
+  const press = useCallback(
+    (index: number) => {
+      const current = slide ? Math.round(x.get() / slide) : start;
+      if (index === current || screenReader) {
+        ordered[index]?.onPress();
+        return;
+      }
+      scroller.current?.scrollTo({ x: index * slide, animated: !reduce });
+    },
+    [slide, start, x, ordered, scroller, reduce, screenReader],
+  );
+  const hint = ordered[Math.min(Math.max(centred, 0), ordered.length - 1)]?.hint;
+
   return (
+    <View>
     <View onLayout={onLayout} style={{ height }}>
       {width ? (
         <>
@@ -116,10 +166,22 @@ export function BubbleArc({ items, initial = 0 }: { items: BubbleItem[]; initial
                 x={x}
                 flat={reduce}
                 start={start}
+                centred={i === centred}
+                onPress={() => press(i)}
               />
             ))}
           </Animated.ScrollView>
         </>
+      ) : null}
+    </View>
+      {hint ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          numberOfLines={1}
+          style={{ fontFamily: familyFor('body', rtl), fontSize: 14, lineHeight: 19, color: '#c7d1e3', textAlign: 'center', paddingHorizontal: 24 }}
+        >
+          {hint}
+        </Text>
       ) : null}
     </View>
   );
@@ -133,6 +195,8 @@ function Bubble({
   x,
   flat,
   start,
+  centred,
+  onPress,
 }: {
   item: BubbleItem;
   index: number;
@@ -141,6 +205,8 @@ function Bubble({
   x: { value: number };
   flat: boolean;
   start: number;
+  centred: boolean;
+  onPress: () => void;
 }) {
   const { rtl } = useI18n();
 
@@ -172,7 +238,8 @@ function Bubble({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={item.label}
-          onPress={item.onPress}
+          accessibilityHint={centred ? item.hint : undefined}
+          onPress={onPress}
           style={({ pressed }) => [
             styles.bubble,
             { width: diameter, height: diameter, borderRadius: diameter / 2 },

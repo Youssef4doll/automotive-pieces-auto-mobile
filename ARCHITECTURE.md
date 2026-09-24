@@ -920,3 +920,72 @@ redrawn in the part-family hand; the carte grise now points at the VIN line
 the garage's gold button) is two buttons side by side, never one inside
 another — nested `<button>`s are invalid on the web and ambiguous to a
 screen reader, and the dev console says so.
+
+---
+
+## 16. One product, not a set of screens
+
+The third pass asked for fewer boxes, one obvious action per screen and
+interactions that behave like an app. What changed, and the rules behind it:
+
+**Navigation is quiet.** The gold pill became a 14×3 gold bar under the
+icon; icon and label go from grey to navy; the cart badge is a 16pt navy
+count ringed in white. The tab bar border is a hairline.
+
+**Home: the search is the action, the car is part of the hero.** The white
+"Votre véhicule" card is gone; under the search sits one translucent line —
+the car, its engine, "Changer" — or "Choisissez votre véhicule · Choisir".
+The search pill ends in a gold arrow.
+
+**The arc is a radial menu** (`ui/bubble-arc.tsx`). The centre is the car
+the app answers for (or "Je connais ma voiture" without one), with "Je
+connais la pièce", "J'ai la référence", "Une autre voiture" and, when the
+shop can be reached, "Photo / Expert" either side. *A side bubble comes to
+the centre when tapped; the centred one goes.* A caption under the arc says
+what the centred bubble does. Native screen readers skip the two-step rule
+(every bubble acts on its first activation); react-native-web always
+reports a screen reader, so the web keeps the rule. Families are a
+horizontal rail, most parts first.
+
+**The product page buys from a pinned bar.** Quantity and "Ajouter au
+panier" live at the foot of the screen, always within reach; after an add
+the bar itself becomes "✓ Ajouté au panier · Voir le panier" for ~3 s — no
+toast over the part, no modal, scroll untouched (`useAddToCart(…, { silent
+})`). The image is smaller and sits on the page, not in a container.
+
+**Compatibility is the strongest element, and "does not fit" is not an
+error.** A panel under the name: green when it fits; neutral with a red
+mark when it does not, *with the shop's reason* — "Listée pour 4
+motorisation(s), pas pour votre BMW Série 1 (E87)." — and "Voir les
+véhicules compatibles" / "Choisir mon véhicule"; amber when unverified, with
+what to check; and "Choisissez votre véhicule…" with its button when there
+is no car. "Ajouter quand même" is still one confirmation away.
+
+**What fits comes first, everywhere a car is known.**
+- Family pages: the *website* orders the list — parts with a fitment row for
+  the engine first, then the rest, paged as one list
+  (`listAppProducts`, two segments), so it holds past page one.
+- Search: exact reference matches stay on top; then fits, unverified, and
+  does-not-fit, the shop's relevance order kept inside each. A switch —
+  "Voir uniquement les pièces compatibles (2 · BMW Série 1)" — narrows to the
+  confirmed ones; when none of the results fit, the screen says so.
+
+**Catalogue** is discovery: "Les plus fournies" as large swipeable
+illustrations, then "Toutes les familles" as a clean list (picture, name,
+subfamilies, count) — no four-column grid, which cut names in half at 320.
+
+**Garage** with several cars is a paged carousel of hero cards (principal
+first, page dots), each with its own "Voir les pièces compatibles" and, for
+the others, "Rendre principal". History / details / add stay three quiet
+doors below.
+
+**Vehicle setup is guided**: a three-segment progress bar and "Étape 2 sur
+3" above the chosen-value chips, and a confirmation when the car is saved
+("Renault Clio IV enregistrée", with the way to its parts). The VIN screen
+shows a success state — "Constructeur identifié : BMW", what remains, and
+"Choisir le modèle" — instead of jumping away.
+
+**Also:** product tiles gained a quick "+" (not on a part known not to fit —
+that one needs its explanation); favourites have an empty state with a way
+to the catalogue; every text input is 16px or larger so iOS Safari never
+zooms on focus.

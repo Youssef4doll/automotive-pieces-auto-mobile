@@ -15,7 +15,7 @@ import { PressScale } from '@/components/ui/press-scale';
 import { PromoBanner } from '@/components/ui/promo-banner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
-import { VehicleCard } from '@/components/ui/vehicle-card';
+import { useVehicleLine } from '@/components/ui/vehicle-card';
 import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
@@ -23,6 +23,7 @@ import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { BubbleCar, BubblePart, BubblePhoto, BubbleReference } from '@/illustrations/bubbles';
 import { RoadScene } from '@/illustrations/road-scene';
 import { CarArt } from '@/illustrations/car-art';
+import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useCheckout } from '@/store/checkout';
 import { useGarage } from '@/store/garage';
@@ -54,6 +55,7 @@ export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const { t, rtl } = useI18n();
   const active = useGarage((s) => s.active);
+  const vehicleLine = useVehicleLine();
   const firstName = useCheckout((s) => s.details.customerName.trim().split(/\s+/)[0] ?? '');
   const [darkHeight, setDarkHeight] = useState(900);
   const onDarkLayout = useCallback((e: LayoutChangeEvent) => setDarkHeight(Math.round(e.nativeEvent.layout.height)), []);
@@ -73,38 +75,44 @@ export default function HomeScreen() {
   const settings = useShopSettings();
   const canAskShop = settings.status === 'loaded' && hasContactChannel(settings.data);
 
-  const bubbles = useMemo<BubbleItem[]>(() => {
-    const items: BubbleItem[] = [
-      {
-        key: 'reference',
-        icon: <BubbleReference size={60} />,
-        label: t('bubble.reference'),
-        onPress: () => router.push({ pathname: '/recherche', params: { mode: 'reference' } }),
-      },
-      {
-        key: 'car',
-        icon: <BubbleCar size={72} />,
-        // Once the garage knows the car, the big bubble IS the car, and it
-        // opens the parts the shop has confirmed for it.
-        label: active ? `${active.makeName} ${active.modelName}` : t('bubble.myCar'),
-        onPress: () =>
-          active
-            ? router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } })
-            : router.push('/garage/ajouter'),
-      },
-      canAskShop
-        ? { key: 'photo', icon: <BubblePhoto size={60} />, label: t('bubble.photo'), onPress: () => router.push('/aide') }
-        : { key: 'part', icon: <BubblePart size={60} />, label: t('bubble.part'), onPress: () => router.push('/catalogue') },
-    ];
-    if (canAskShop) {
-      items.push({ key: 'part', icon: <BubblePart size={60} />, label: t('bubble.part'), onPress: () => router.push('/catalogue') });
-    }
-    return items;
+  // The radial menu: the car in the middle — the one the app answers for,
+  // or the invitation to name one — with the other ways in either side.
+  // Side bubbles come to the centre when tapped; the centred one goes.
+  const { bubbles, centre } = useMemo(() => {
+    const car: BubbleItem = active
+      ? {
+          key: 'car',
+          icon: <BubbleCar size={72} />,
+          label: `${active.makeName} ${active.modelName}`,
+          hint: t('look.hint.car'),
+          onPress: () => router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } }),
+        }
+      : { key: 'car', icon: <BubbleCar size={72} />, label: t('bubble.myCar'), hint: t('look.hint.pick'), onPress: () => router.push('/garage/ajouter') };
+    const reference: BubbleItem = {
+      key: 'reference',
+      icon: <BubbleReference size={60} />,
+      label: t('bubble.reference'),
+      hint: t('look.hint.ref'),
+      onPress: () => router.push({ pathname: '/recherche', params: { mode: 'reference' } }),
+    };
+    const part: BubbleItem = { key: 'part', icon: <BubblePart size={60} />, label: t('bubble.part'), hint: t('look.hint.part'), onPress: () => router.navigate('/catalogue') };
+    const photo: BubbleItem | null = canAskShop
+      ? { key: 'photo', icon: <BubblePhoto size={60} />, label: t('bubble.photo'), hint: t('look.hint.photo'), onPress: () => router.push('/aide') }
+      : null;
+    // Balanced either side of the car: with one, "une autre voiture" takes
+    // the right; without, the reference does. Photo / Expert only when the
+    // shop has published a way to be reached — a promise of advice nobody
+    // can answer is worse than no promise.
+    const items: BubbleItem[] = active
+      ? [reference, part, car, { key: 'other', icon: <BubbleCar size={60} />, label: t('look.otherCar'), hint: t('look.hint.pick'), onPress: () => router.push('/garage/ajouter') }]
+      : [part, car, reference];
+    if (photo) items.push(photo);
+    return { bubbles: items, centre: active ? 2 : 1 };
   }, [active, canAskShop, router, t]);
 
-  // The families with the most parts, the four the reference shows.
-  const popular = useMemo<Family[]>(
-    () => (families.status === 'loaded' ? [...families.data].sort((a, b) => b.productCount - a.productCount).slice(0, 4) : []),
+  // Every family, most parts first — a rail to browse, not four fixed tiles.
+  const rail = useMemo<Family[]>(
+    () => (families.status === 'loaded' ? [...families.data].sort((a, b) => b.productCount - a.productCount) : []),
     [families],
   );
   const careFamily = families.status === 'loaded' ? families.data.find((f) => f.slug === 'filtres') : undefined;
@@ -145,27 +153,46 @@ export default function HomeScreen() {
               <Text style={[styles.subtitle, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.slogan3')}</Text>
             </View>
 
-            <Pressable
+            {/* The main action, and the car it answers for, as one piece:
+                the search, and directly under it the line that says which
+                car every result will be judged against. */}
+            <PressScale
               accessibilityRole="search"
               accessibilityLabel={t('home.searchA11y')}
               onPress={() => router.push('/recherche')}
-              style={({ pressed }) => [styles.searchPill, row, pressed && styles.searchPillPressed]}
+              style={[styles.searchPill, row]}
+              pressedStyle={styles.searchPillPressed}
+              scaleTo={0.985}
             >
               <Feather name="search" size={20} color={C.text} />
-              <Text variant="body" tone={C.textMuted} numberOfLines={1} style={styles.flex}>
-                {t('look.search')}
+              <Text numberOfLines={1} style={[styles.flex, styles.searchText, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+                {t('look.searchBig')}
               </Text>
-            </Pressable>
+              <View style={styles.searchGo}>
+                <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={18} color={C.onAccent} />
+              </View>
+            </PressScale>
 
-            <VehicleCard
-              vehicle={active}
-              label={t('look.yourVehicle')}
-              empty={{ title: t('home.chooseCar'), line: t('look.chooseWhy') }}
+            <PressScale
+              accessibilityRole="button"
+              accessibilityLabel={active ? `${t('look.forVehicle', { car: `${active.makeName} ${active.modelName}` })}, ${t('home.change')}` : t('look.noVehicleLine')}
               onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
-              style={styles.vehicle}
-              action={active ? t('home.change') : undefined}
-              compactArt
-            />
+              style={[styles.vehicleLine, row]}
+              scaleTo={0.985}
+            >
+              <View style={styles.vehicleIcon}>
+                <NavCar size={18} color={Brand.gold400} />
+              </View>
+              <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+                <Text numberOfLines={1} style={[styles.vehicleName, { fontFamily: familyFor('bodySemi', rtl) }]}>
+                  {active ? `${active.makeName} ${active.modelName}` : t('look.noVehicleLine')}
+                </Text>
+                <Text numberOfLines={1} style={[styles.vehicleSub, { fontFamily: familyFor('body', rtl) }]}>
+                  {active ? vehicleLine(active) : t('look.chooseWhy')}
+                </Text>
+              </View>
+              <Text style={[styles.vehicleAction, { fontFamily: familyFor('bodySemi', rtl) }]}>{active ? t('home.change') : t('look.choose')}</Text>
+            </PressScale>
 
             <View style={styles.titles}>
               <Text style={[styles.hello, { fontFamily: familyFor('bodySemi', rtl), textAlign: rtl ? 'right' : 'left' }]}>
@@ -177,7 +204,7 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.arc}>
-            <BubbleArc items={bubbles} initial={1} />
+            <BubbleArc items={bubbles} initial={centre} />
           </View>
           <Pressable
             accessibilityRole="button"
@@ -195,7 +222,7 @@ export default function HomeScreen() {
         <View style={[styles.sheet, { paddingBottom: tabBarSpace }]}>
           <View style={styles.column}>
             <View style={[styles.sectionHead, row]}>
-              <Text style={[styles.sectionTitle, { fontFamily: familyFor('heading', rtl) }]}>{t('home.popular')}</Text>
+              <Text style={[styles.sectionTitle, { fontFamily: familyFor('heading', rtl) }]}>{t('look.browse')}</Text>
               <Pressable accessibilityRole="button" onPress={() => router.navigate('/catalogue')} hitSlop={8} style={[styles.seeAll, row]}>
                 <Text variant="hint" tone={C.text}>
                   {t('catalog.seeAll')}
@@ -204,32 +231,33 @@ export default function HomeScreen() {
               </Pressable>
             </View>
 
-            <View style={[styles.cats, row]}>
-              {families.status === 'loading'
-                ? [0, 1, 2, 3].map((i) => (
-                    <View key={i} style={styles.cat}>
-                      <Skeleton style={styles.catSkeleton} />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.rail, row]}>
+            {families.status === 'loading'
+              ? [0, 1, 2, 3, 4].map((i) => (
+                  <View key={i} style={styles.cat}>
+                    <Skeleton style={styles.catSkeleton} />
+                  </View>
+                ))
+              : rail.map((f) => (
+                  <PressScale
+                    key={f.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
+                    onPress={() => openFamily(f)}
+                    style={styles.cat}
+                    scaleTo={0.94}
+                  >
+                    <View style={styles.catDisc}>
+                      <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 72 : 50} label={f.name} fit="cover" />
                     </View>
-                  ))
-                : popular.map((f) => (
-                    <PressScale
-                      key={f.id}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
-                      onPress={() => openFamily(f)}
-                      style={styles.cat}
-                      scaleTo={0.94}
-                    >
-                      <View style={styles.catDisc}>
-                        <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 72 : 50} label={f.name} fit="cover" />
-                      </View>
-                      <Text variant="hint" tone={C.text} numberOfLines={1} style={styles.catName}>
-                        {f.name}
-                      </Text>
-                    </PressScale>
-                  ))}
-            </View>
-
+                    <Text variant="hint" tone={C.text} numberOfLines={2} style={styles.catName}>
+                      {f.name}
+                    </Text>
+                  </PressScale>
+                ))}
+          </ScrollView>
+          <View style={styles.column}>
             {careFamily ? (
               <PressScale
                 accessibilityRole="button"
@@ -320,14 +348,32 @@ const styles = StyleSheet.create({
     marginTop: Spacing.four,
     alignItems: 'center',
     gap: Spacing.two,
-    minHeight: 52,
-    paddingHorizontal: Spacing.three,
+    minHeight: 56,
+    paddingLeft: Spacing.three,
+    paddingRight: 6,
     borderRadius: Radius.pill,
     backgroundColor: Brand.white,
     ...Elevation.resting,
   },
   searchPillPressed: { backgroundColor: C.surface },
-  vehicle: { marginTop: Spacing.three },
+  searchText: { fontSize: 16, lineHeight: 22, color: C.textMuted },
+  searchGo: { width: 44, height: 44, borderRadius: 22, backgroundColor: Brand.gold500, alignItems: 'center', justifyContent: 'center' },
+  // The car, part of the hero rather than a card on it.
+  vehicleLine: {
+    marginTop: Spacing.two,
+    alignItems: 'center',
+    gap: Spacing.three,
+    minHeight: 56,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.tile,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  vehicleIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(251,192,0,0.14)', alignItems: 'center', justifyContent: 'center' },
+  vehicleName: { fontSize: 15, lineHeight: 20, color: Brand.white },
+  vehicleSub: { fontSize: 13, lineHeight: 17, color: '#aab6cc' },
+  vehicleAction: { fontSize: 14, color: Brand.gold400 },
   titles: { paddingTop: Spacing.five, gap: Spacing.one },
   hello: { fontSize: 16, lineHeight: 22, color: Brand.white },
   title: { fontSize: 28, lineHeight: 34, letterSpacing: -0.4, color: Brand.white },
@@ -361,8 +407,8 @@ const styles = StyleSheet.create({
   sectionHead: { alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { fontSize: 20, lineHeight: 26, color: C.text },
   seeAll: { alignItems: 'center', gap: 4, minHeight: Tap.min },
-  cats: { justifyContent: 'space-between', paddingTop: Spacing.two, gap: Spacing.two },
-  cat: { flex: 1, alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one, borderRadius: Radius.tile },
+  rail: { gap: Spacing.two, paddingHorizontal: Spacing.four - 4, paddingTop: Spacing.two, paddingBottom: Spacing.one },
+  cat: { width: 84, alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one, borderRadius: Radius.tile },
   catPressed: { backgroundColor: C.surface },
   catDisc: {
     width: 72,

@@ -101,6 +101,8 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     ...Type.body,
+    // 16 minimum: below it iOS Safari zooms the page on focus.
+    fontSize: 16,
     color: C.text,
     paddingVertical: Spacing.two,
   },

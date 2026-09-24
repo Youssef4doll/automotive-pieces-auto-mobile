@@ -115,6 +115,7 @@ export function PickerScreen<T>({
   return (
     <Screen edges={['left', 'right', 'bottom']}>
       <View style={styles.head}>
+        <StepProgress steps={trail} />
         <Trail steps={trail} />
         <Text variant="screenTitle" style={styles.heading}>
           {heading}
@@ -246,4 +247,35 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.three,
     paddingBottom: Spacing.two,
   },
+});
+
+/**
+ * A guided setup, not a form: three segments that fill as the customer goes
+ * (make, model, engine) and the words "Étape 2 sur 3", so there is never a
+ * question of how much is left. The chips under it still name what was
+ * chosen and take the customer back to it.
+ */
+function StepProgress({ steps }: { steps: TrailStep[] }) {
+  const { t, rtl } = useI18n();
+  const at = Math.max(0, steps.findIndex((s) => s.state === 'current'));
+  const shown = rtl ? [...steps].reverse() : steps;
+  return (
+    <View style={progress.wrap} accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: steps.length, now: at + 1 }}>
+      <View style={[progress.bar, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+        {shown.map((s, i) => (
+          <View key={i} style={[progress.seg, s.state !== 'upcoming' && progress.segOn]} />
+        ))}
+      </View>
+      <Text variant="hint" tone={C.textMuted} style={{ textAlign: rtl ? 'right' : 'left' }}>
+        {t('look.stepOf', { n: at + 1, total: steps.length })}
+      </Text>
+    </View>
+  );
+}
+
+const progress = StyleSheet.create({
+  wrap: { gap: Spacing.one, paddingBottom: Spacing.two },
+  bar: { gap: 6 },
+  seg: { flex: 1, height: 4, borderRadius: 2, backgroundColor: C.border },
+  segOn: { backgroundColor: C.accent },
 });

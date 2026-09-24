@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError, type ApiFailure } from '@/api/client';
@@ -145,8 +145,14 @@ export default function SearchScreen() {
   const showBrands = !!result && (scope === 'all' || scope === 'brands') && result.brands.length > 0;
   const fitting = result ? result.products.filter((p) => p.fitment === 'FITS') : [];
   const allProducts = result && (scope === 'all' || scope === 'parts') ? result.products : [];
-  const products = fitsOnly ? allProducts.filter((p) => p.fitment === 'FITS') : allProducts;
-  const offerFits = !!car && !fitsOnly && fitting.length > 0 && fitting.length < (result?.products.length ?? 0);
+  // With a car chosen, what fits comes first — after an exact reference
+  // match, which is what the customer typed and must stay on top whatever
+  // its verdict. The shop's relevance order holds inside each group.
+  const rank = (p: (typeof allProducts)[number]) =>
+    p.match === 'reference' ? 0 : p.fitment === 'FITS' ? 1 : p.fitment === 'DOES_NOT_FIT' ? 3 : 2;
+  const ordered = car ? allProducts.map((p, i) => ({ p, i })).sort((a, b) => rank(a.p) - rank(b.p) || a.i - b.i).map((x) => x.p) : allProducts;
+  const products = fitsOnly ? ordered.filter((p) => p.fitment === 'FITS') : ordered;
+  const offerFits = !!car && allProducts.length > 0;
   const nothing = state.status === 'loaded' && result && !result.products.length && !result.families.length && !result.brands.length;
 
   const header = (
@@ -173,38 +179,36 @@ export default function SearchScreen() {
       ) : null}
 
       {offerFits ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => setFitsOnly(true)}
-          style={({ pressed }) => [styles.fitsRow, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.rowPressed]}
-        >
-          <View style={styles.fitsIcon}>
-            <Feather name="check-circle" size={18} color={C.success} />
+        fitting.length > 0 ? (
+          <View style={[styles.fitsRow, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+            <View style={styles.fitsIcon}>
+              <Feather name="check-circle" size={18} color={C.success} />
+            </View>
+            <View style={styles.rowText}>
+              <Text variant="body" tone={C.text} numberOfLines={2}>
+                {t('look.onlyFits')}
+              </Text>
+              <Text variant="hint" tone={C.success} numberOfLines={1}>
+                {`${fitting.length} · ${car}`}
+              </Text>
+            </View>
+            <Switch
+              accessibilityLabel={t('look.onlyFits')}
+              value={fitsOnly}
+              onValueChange={setFitsOnly}
+              trackColor={{ true: C.success, false: C.border }}
+              thumbColor={Brand.white}
+              {...({ activeThumbColor: Brand.white } as object)}
+            />
           </View>
-          <Text variant="body" tone={C.text} style={styles.rowText} numberOfLines={2}>
-            {t('look.fitsFor', { q: trimmed, car })}
-          </Text>
-          <View style={styles.fitsCount}>
-            <Text variant="hint" tone={C.success}>
-              {fitting.length}
+        ) : (
+          <View style={[styles.noneFit, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+            <Feather name="info" size={16} color={C.textMuted} />
+            <Text variant="hint" style={styles.rowText}>
+              {t('look.noneFit', { car })}
             </Text>
           </View>
-        </Pressable>
-      ) : null}
-
-      {fitsOnly ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: true }}
-          onPress={() => setFitsOnly(false)}
-          style={({ pressed }) => [styles.fitsChip, { flexDirection: rtl ? 'row-reverse' : 'row', alignSelf: rtl ? 'flex-end' : 'flex-start' }, pressed && styles.rowPressed]}
-        >
-          <Feather name="check-circle" size={14} color={C.success} />
-          <Text variant="hint" tone={C.success}>
-            {t('look.fitsOnly', { car })}
-          </Text>
-          <Feather name="x" size={14} color={C.success} />
-        </Pressable>
+        )
       ) : null}
 
       {result?.didYouMean ? (
@@ -620,6 +624,7 @@ const styles = StyleSheet.create({
   },
   fitsIcon: { width: 32, alignItems: 'center' },
   fitsCount: { minWidth: 28, height: 24, borderRadius: 12, backgroundColor: Brand.white, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  noneFit: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one },
   fitsChip: {
     alignItems: 'center',
     gap: 6,

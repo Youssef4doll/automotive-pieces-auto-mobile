@@ -26,11 +26,17 @@ export function useAddToCart() {
   const { t } = useI18n();
 
   return useCallback(
-    (product: Pick<Product, 'id' | 'slug' | 'name' | 'sku' | 'brand' | 'familySlug' | 'imageUrl'>, qty = 1) => {
+    (
+      product: Pick<Product, 'id' | 'slug' | 'name' | 'sku' | 'brand' | 'familySlug' | 'imageUrl'>,
+      qty = 1,
+      /** The caller confirms the add itself (the product page's purchase bar). */
+      options: { silent?: boolean } = {},
+    ) => {
       if (!add(product, qty)) {
         show({ message: t('product.cartFull'), tone: 'neutral' });
         return false;
       }
+      if (options.silent) return true;
       show({
         message: t('product.added'),
         action: { label: t('product.viewCart'), onPress: () => router.navigate('/panier') },

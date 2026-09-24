@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -8,7 +9,7 @@ import { vehiclesApi } from '@/api/vehicles';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
 import { Text } from '@/components/ui/text';
-import { C, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { Brand, C, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { CarteGrise } from '@/illustrations/carte-grise';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
@@ -39,6 +40,9 @@ export default function VinScreen() {
   const [vin, setVin] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<DictKey | null>(null);
+  // The maker the shop recognised: shown as a result, with the next step
+  // named, instead of jumping to another screen the customer did not expect.
+  const [found, setFound] = useState<{ slug: string; name: string; id: string } | null>(null);
 
   // A VIN never contains I, O or Q — precisely because they are mistaken for
   // 1 and 0 — so a typed O is a zero the customer read off a worn card, and
@@ -66,10 +70,8 @@ export default function VinScreen() {
         setBusy(false);
         return;
       }
-      router.replace({
-        pathname: '/garage/ajouter/[make]',
-        params: { make: make.slug, makeName: make.name, makeId: make.id, notice: t('vin.recognised', { make: make.name }) },
-      });
+      setFound(make);
+      setBusy(false);
     } catch (err) {
       const kind = err instanceof ApiError ? err.failure.kind : 'offline';
       setMessage(kind === 'offline' || kind === 'timeout' ? 'state.offlineBody' : 'state.serverBody');
@@ -93,6 +95,7 @@ export default function VinScreen() {
             onChangeText={(v) => {
               setVin(clean(v));
               setMessage(null);
+              setFound(null);
             }}
             counter={`${vin.length}/${VIN_LENGTH}`}
             hint={t('vin.where')}
@@ -118,7 +121,33 @@ export default function VinScreen() {
             </View>
           ) : null}
 
-          <Button label={t('vin.submit')} onPress={identify} loading={busy} disabled={!valid} />
+          {found ? (
+            <Animated.View entering={FadeInDown.duration(220).reduceMotion(ReduceMotion.System)} style={styles.success}>
+              <View style={[styles.successHead, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+                <View style={styles.successTick}>
+                  <Feather name="check" size={18} color={Brand.white} />
+                </View>
+                <View style={styles.infoText}>
+                  <Text variant="rowTitle" accessibilityLiveRegion="polite">
+                    {t('look.vinOk', { make: found.name })}
+                  </Text>
+                  <Text variant="hint">{t('look.vinOkWhy')}</Text>
+                </View>
+              </View>
+              <Button
+                label={t('look.vinNext')}
+                icon={rtl ? 'arrow-left' : 'arrow-right'}
+                onPress={() =>
+                  router.replace({
+                    pathname: '/garage/ajouter/[make]',
+                    params: { make: found.slug, makeName: found.name, makeId: found.id, notice: t('vin.recognised', { make: found.name }) },
+                  })
+                }
+              />
+            </Animated.View>
+          ) : (
+            <Button label={t('vin.submit')} onPress={identify} loading={busy} disabled={!valid} />
+          )}
 
           {/* The reference's reassurance, under the button rather than above
               the field: the field is what the customer came to fill in. */}
@@ -139,6 +168,9 @@ export default function VinScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
+  success: { gap: Spacing.three, padding: Spacing.three, borderRadius: 16, backgroundColor: C.successSurface },
+  successHead: { alignItems: 'flex-start', gap: Spacing.three },
+  successTick: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.success, alignItems: 'center', justifyContent: 'center' },
   info: { gap: Spacing.three, padding: Spacing.three, borderRadius: 16, backgroundColor: C.surface, alignItems: 'flex-start' },
   infoText: { flex: 1, gap: 2 },
   scroll: { paddingBottom: Spacing.six },
