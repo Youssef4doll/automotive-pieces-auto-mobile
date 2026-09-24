@@ -76,6 +76,7 @@ export async function open({ width = 390, height = 844, locale = 'fr-FR', firstL
  */
 export async function tap(page, text, { exact = true, timeout = 15_000, settle = 1100 } = {}) {
   const deadline = Date.now() + timeout;
+  let scrolled = false;
   for (;;) {
     const point = await page.evaluate(
       ({ txt, exact }) => {
@@ -99,9 +100,42 @@ export async function tap(page, text, { exact = true, timeout = 15_000, settle =
       await page.waitForTimeout(settle);
       return;
     }
+    // Not on screen: scroll it there, as a thumb would, and look again. The
+    // home screen's choices sit below its photograph, so on a short or wide
+    // phone they start under the fold.
+    if (!scrolled) {
+      scrolled = await reveal(page, text, exact);
+      if (scrolled) continue;
+    }
     if (Date.now() > deadline) throw new Error(`nothing hittable reads "${text}"`);
     await page.waitForTimeout(250);
   }
+}
+
+/**
+ * Scroll the innermost visible element reading `text` to the middle of the
+ * screen. True when it found one to scroll. Screens kept mounted behind the
+ * current one are skipped: their elements have no rendered box.
+ */
+export async function reveal(page, text, exact = true) {
+  const done = await page.evaluate(
+    ({ txt, exact }) => {
+      for (const el of [...document.querySelectorAll('div,span,button,[aria-label]')].reverse()) {
+        const own = (el.getAttribute('aria-label') === txt ? txt : (el.textContent || '').trim());
+        if (exact ? own !== txt : !own.includes(txt)) continue;
+        if (el.children.length > 1 && el.getAttribute('aria-label') !== txt) continue;
+        if (el.checkVisibility && !el.checkVisibility()) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) continue;
+        el.scrollIntoView({ block: 'center', inline: 'nearest' });
+        return true;
+      }
+      return false;
+    },
+    { txt: text, exact },
+  );
+  if (done) await page.waitForTimeout(700);
+  return done;
 }
 
 /** The same, by accessibility label — for controls whose face is an icon. */

@@ -56,3 +56,19 @@ export async function photoForm(field: 'files' | 'file', photo: PickedPhoto): Pr
   }
   return form;
 }
+
+/**
+ * A profile photo: chosen from the library, squared by the system's own
+ * crop, shrunk to 320 px and kept as a data URL on this phone only — never
+ * sent to the shop. `null` when the person cancelled.
+ */
+export async function pickAvatar(): Promise<string | null> {
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 1, allowsEditing: true, aspect: [1, 1] });
+  if (result.canceled || !result.assets[0]) return null;
+  const asset = result.assets[0];
+  const context = ImageManipulator.manipulate(asset.uri);
+  context.resize(asset.width >= asset.height ? { height: 320 } : { width: 320 });
+  const image = await context.renderAsync();
+  const saved = await image.saveAsync({ compress: 0.8, format: SaveFormat.JPEG, base64: true });
+  return saved.base64 ? `data:image/jpeg;base64,${saved.base64}` : saved.uri;
+}

@@ -168,6 +168,13 @@ async function readBubbles(page, labels) {
     await addBmw(page);
     await tap(page, 'Accueil');
     await page.waitForTimeout(1800);
+    // The choices sit under the photograph: bring the arc up first. By its
+    // label — the car's name is also on the vehicle line above it.
+    await page.evaluate(() => {
+      const b = [...document.querySelectorAll('[aria-label]')].find((e) => e.getAttribute('aria-label') === 'Une autre voiture' && e.checkVisibility());
+      b?.scrollIntoView({ block: 'center', inline: 'nearest' });
+    });
+    await page.waitForTimeout(900);
     const b = await readBubbles(page, ['Je connais la pièce', 'BMW Série 1 (E87)', 'Une autre voiture']);
     const car = b['BMW Série 1 (E87)'];
     const left = b['Je connais la pièce'];

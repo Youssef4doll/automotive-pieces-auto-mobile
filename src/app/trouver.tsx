@@ -7,7 +7,9 @@ import { PressScale } from '@/components/ui/press-scale';
 import { Text } from '@/components/ui/text';
 import { Brand, C, Elevation, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useShopSettings } from '@/hooks/use-shop-settings';
-import { BubbleCar, BubblePart, BubblePhoto, BubbleReference } from '@/illustrations/bubbles';
+import { Image } from 'expo-image';
+
+import { familyRender, RENDERS } from '@/illustrations/renders';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
@@ -29,10 +31,10 @@ export default function FindScreen() {
   const canAsk = settings.status === 'loaded' && hasContactChannel(settings.data);
 
   const ways: { key: Way; title: DictKey; why: DictKey; icon: React.ReactNode }[] = [
-    { key: 'car', title: 'look.find.car', why: 'look.find.carWhy', icon: <BubbleCar size={52} /> },
-    { key: 'part', title: 'look.find.part', why: 'look.find.partWhy', icon: <BubblePart size={52} /> },
-    { key: 'ref', title: 'look.find.ref', why: 'look.find.refWhy', icon: <BubbleReference size={52} /> },
-    ...(canAsk ? [{ key: 'photo' as Way, title: 'look.find.photo' as DictKey, why: 'look.find.photoWhy' as DictKey, icon: <BubblePhoto size={52} /> }] : []),
+    { key: 'car', title: 'look.find.car', why: 'look.find.carWhy', icon: <WayArt source={RENDERS.key} /> },
+    { key: 'part', title: 'look.find.part', why: 'look.find.partWhy', icon: <WayArt source={familyRender('freinage') ?? RENDERS.magnifier} /> },
+    { key: 'ref', title: 'look.find.ref', why: 'look.find.refWhy', icon: <WayArt source={RENDERS.magnifier} /> },
+    ...(canAsk ? [{ key: 'photo' as Way, title: 'look.find.photo' as DictKey, why: 'look.find.photoWhy' as DictKey, icon: <WayArt source={RENDERS.phone} /> }] : []),
   ];
 
   // One tap, straight to the path: choosing and then confirming the choice
@@ -86,3 +88,7 @@ const styles = StyleSheet.create({
   icon: { width: 64, height: 64, borderRadius: 32, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
   text: { flex: 1, gap: 2 },
 });
+
+function WayArt({ source }: { source: React.ComponentProps<typeof Image>['source'] }) {
+  return <Image source={source} style={{ width: 60, height: 60 }} contentFit="contain" />;
+}

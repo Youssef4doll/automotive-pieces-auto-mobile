@@ -1,5 +1,4 @@
 import { Feather } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -8,10 +7,10 @@ import { vehiclesApi, type Make } from '@/api/vehicles';
 import { PickerScreen, type PickerItem } from '@/components/picker-screen';
 import type { TrailStep } from '@/components/ui/chip';
 import { Text } from '@/components/ui/text';
-import { API_BASE_URL } from '@/constants/config';
 import { Border, C, Elevation, familyFor, IconSize, Radius, Spacing } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { CarteGrise } from '@/illustrations/carte-grise';
+import { MakeLogo } from '@/components/ui/make-logo';
 import { VehicleCard } from '@/components/ui/vehicle-card';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
@@ -38,8 +37,9 @@ const RAIL_SIZE = 8;
  *
  *   a rail of the makes the shop has the most parts for, ranked by that real
  *   count and nothing else. A badge is the shop's uploaded logo when there is
- *   one and a monogram when there is not — the manufacturers' own marks are
- *   theirs, and the app does not ship copies of them.
+ *   one, otherwise the make's real mark (illustrations/marques — there to
+ *   say which car, the way every parts catalogue does), and initials only
+ *   for a make nobody has a mark for.
  */
 export default function MakesScreen() {
   const router = useRouter();
@@ -65,6 +65,7 @@ export default function MakesScreen() {
         subtitle: t('picker.modelCount', { n: make.modelCount }),
         note: make.partCount > 0 ? t('picker.partCount', { n: make.partCount }) : null,
         haystack: make.name,
+        leading: <MakeLogo name={make.name} slug={make.slug} logoUrl={make.logoUrl} size={40} lifted={false} />,
         onPress: () => open(make),
       })),
     [open, t],
@@ -123,13 +124,7 @@ function Shortcuts({ topMakes, onMake }: { topMakes: Make[]; onMake: (make: Make
               onPress={() => onMake(m)}
               style={({ pressed }) => [styles.badge, pressed && styles.pressed]}
             >
-              <View style={styles.disc}>
-                {m.logoUrl ? (
-                  <Image source={{ uri: m.logoUrl.startsWith('http') ? m.logoUrl : `${API_BASE_URL}${m.logoUrl}` }} style={styles.logo} contentFit="contain" />
-                ) : (
-                  <Text style={{ fontFamily: familyFor('headingStrong', false), fontSize: 18, lineHeight: 22, color: C.text }}>{monogram(m.name)}</Text>
-                )}
-              </View>
+              <MakeLogo name={m.name} slug={m.slug} logoUrl={m.logoUrl} size={60} />
               <Text variant="hint" tone={C.text} numberOfLines={1} style={styles.badgeName}>
                 {m.name}
               </Text>
@@ -176,13 +171,6 @@ function Shortcuts({ topMakes, onMake }: { topMakes: Make[]; onMake: (make: Make
   );
 }
 
-/** "BMW" stays "BMW"; "Land Rover" becomes "LR"; "Citroën" becomes "CI". */
-function monogram(name: string) {
-  const words = name.split(/[\s-]+/).filter(Boolean);
-  if (name.length <= 3) return name.toUpperCase();
-  if (words.length > 1) return (words[0][0] + words[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
 
 const styles = StyleSheet.create({
   flex: { flex: 1, gap: 2 },

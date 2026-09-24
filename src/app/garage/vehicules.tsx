@@ -9,7 +9,9 @@ import { PressScale } from '@/components/ui/press-scale';
 import { Text } from '@/components/ui/text';
 import { VehicleCard } from '@/components/ui/vehicle-card';
 import { Border, Brand, C, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
-import { CarArt } from '@/illustrations/car-art';
+import { Image } from 'expo-image';
+
+import { RENDERS } from '@/illustrations/renders';
 import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel, type SavedVehicle } from '@/store/garage';
 
@@ -67,7 +69,7 @@ export default function VehiclesScreen() {
         ))}
 
         <View style={styles.more}>
-          <CarArt width={150} body={Brand.navy400} />
+          <Image source={RENDERS.key} style={{ width: 120, height: 120 }} contentFit="contain" />
           <Text variant="rowTitle" style={styles.centred}>
             {t('look.addAnother')}
           </Text>

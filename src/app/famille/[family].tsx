@@ -85,7 +85,7 @@ export default function FamilyScreen() {
           </Text>
         </View>
         <View style={[styles.art, rtl ? { left: Spacing.three } : { right: Spacing.three }]} pointerEvents="none">
-          <PartImage slug={family} imageUrl={current?.imageUrl} size={150} label={name} fit={current?.imageUrl ? 'cover' : 'contain'} />
+          <PartImage slug={family} imageUrl={current?.imageUrl} size={176} label={name} fit={current?.imageUrl ? 'cover' : 'contain'} />
         </View>
         <Text style={[styles.tagline, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{tagline}</Text>
       </View>

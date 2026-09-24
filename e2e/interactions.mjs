@@ -132,7 +132,7 @@ try {
 
   // ---- catalogue filter
   await go('/catalogue');
-  await page.getByLabel('Rechercher une catégorie…').fill('frein');
+  await page.getByLabel('Rechercher une catégorie…', { exact: true }).fill('frein');
   await page.waitForTimeout(600);
   const listed = await page.evaluate(() => [...document.querySelectorAll('[aria-label*="pièce(s)"]')].map((e) => e.getAttribute('aria-label')));
   check(listed.length > 0 && listed.every((l) => /frein/i.test(l)), 'catalogue: the filter narrows the families', listed);
@@ -178,10 +178,10 @@ try {
 
   // ---- VIN
   await go('/garage/vin');
-  await page.getByLabel('N° de série (VIN)').fill('WBAUF11070E1');
+  await page.getByLabel('N° de série (VIN)', { exact: true }).fill('WBAUF11070E1');
   check(await page.getByRole('button', { name: /Identifier mon véhicule/ }).isDisabled(), 'vin: disabled until 17 characters');
   check(await says(page, '12/17'), 'vin: live counter');
-  await page.getByLabel('N° de série (VIN)').fill('WBAUF11070E123456');
+  await page.getByLabel('N° de série (VIN)', { exact: true }).fill('WBAUF11070E123456');
   await page.getByRole('button', { name: /Identifier mon véhicule/ }).click();
   await page.waitForTimeout(2000);
   check(await says(page, 'Constructeur identifié : BMW'), 'vin: success state names the maker');

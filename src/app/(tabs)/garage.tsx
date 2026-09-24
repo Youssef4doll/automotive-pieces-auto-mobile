@@ -8,7 +8,10 @@ import { PressScale } from '@/components/ui/press-scale';
 import { Text } from '@/components/ui/text';
 import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
-import { CarArt } from '@/illustrations/car-art';
+import { Image } from 'expo-image';
+
+import { MakeLogo } from '@/components/ui/make-logo';
+import { RENDERS } from '@/illustrations/renders';
 import { useI18n } from '@/i18n/provider';
 import { yearSpan } from '@/lib/format';
 import { useGarage, type SavedVehicle } from '@/store/garage';
@@ -40,7 +43,7 @@ export default function GarageScreen() {
   if (!active) {
     return (
       <View style={[styles.root, styles.empty]}>
-        <CarArt width={220} />
+        <Image source={RENDERS.key} style={{ width: 180, height: 180 }} contentFit="contain" />
         <Text variant="screenTitle" style={styles.centred}>
           {t('garage.title')}
         </Text>
@@ -174,8 +177,12 @@ function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehic
           </View>
           <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={20} color={Brand.navy300} />
         </View>
-        <View style={[styles.heroArt, rtl && { transform: [{ scaleX: -1 }] }]} pointerEvents="none">
-          <CarArt width={240} body={Brand.navy600} />
+        {/* The car's own make, large: the card is about this car, and a
+            picture of some other car standing in for it would say otherwise. */}
+        <View style={styles.heroArt} pointerEvents="none">
+          <View style={styles.heroHalo}>
+            <MakeLogo name={vehicle.makeName} slug={vehicle.makeSlug} size={96} />
+          </View>
         </View>
       </PressScale>
       <PressScale
@@ -227,7 +234,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(22,163,74,0.16)',
   },
   pillText: { fontSize: 12, lineHeight: 16, color: '#86efac' },
-  heroArt: { alignItems: 'center', paddingVertical: Spacing.one },
+  heroArt: { alignItems: 'center', paddingVertical: Spacing.three },
+  heroHalo: {
+    padding: 10,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(251,192,0,0.35)',
+  },
   heroCta: {
     alignItems: 'center',
     justifyContent: 'center',

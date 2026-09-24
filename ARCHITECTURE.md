@@ -1060,3 +1060,32 @@ all three platforms.
 **Tested:** `e2e/account.mjs` (guest order → account → claim → sign-out →
 second phone → deletion), `e2e/welcome.mjs`, and the sweep now includes the
 sign-in and welcome screens at every width, French and Arabic.
+
+---
+
+## 18. Real pictures (September 2026)
+
+Asked for: "use great icons and images like this … make it look so real … use
+real images if needed". The full account is `docs/imagery.md`; the decisions:
+
+- **Parts are photographed — in a studio that exists only in code.** Sixteen
+  families, a car key, a magnifier, a phone and the home hero are Blender
+  renders (`tools/renders`, Cycles, softbox lighting on a dark room so steel
+  reads as steel). Real stock photography was not an option twice over: the
+  sandbox reaches no photo library, and the brief forbids showing a
+  photograph of one part as another. The renders show a *kind* of part,
+  branded by nobody.
+- **A product without its own photograph says "Illustration"** on the
+  picture (PartImage `tagIllustration`) and, on its page, "Illustration de
+  la famille … — pas encore de photo de cette pièce". The shop's upload
+  replaces it with no release.
+- **A car is its make's mark, not a picture of a car.** A generic hatchback
+  beside "BMW Série 1 (E87)" would be a claim about the customer's car that
+  is false. The marks are the real ones (Simple Icons data, CC0), drawn in
+  the shop's navy, under an uploaded logo when there is one. A procedural
+  car was modelled and dropped: it read as a toy.
+- **Home** opens on the brake-disc hero with room left for it between the
+  promise and the search, as the reference leaves room for its car; the
+  ways in are the key, the disc, the magnifier and the phone.
+- **Compte** shows the customer's own photo if they choose one — cropped
+  square, 320 px, kept on the phone, never uploaded.

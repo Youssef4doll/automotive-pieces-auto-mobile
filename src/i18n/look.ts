@@ -11,6 +11,7 @@
  */
 export const look = {
   fr: {
+    'look.illustration': 'Illustration',
     'look.forVehicle': 'Pour votre {car}',
     'look.noVehicleLine': 'Choisissez votre véhicule',
     'look.choose': 'Choisir',
@@ -133,6 +134,7 @@ export const look = {
     'look.continue': 'Continuer',
   },
   en: {
+    'look.illustration': 'Illustration',
     'look.forVehicle': 'For your {car}',
     'look.noVehicleLine': 'Choose your vehicle',
     'look.choose': 'Choose',
@@ -255,6 +257,7 @@ export const look = {
     'look.continue': 'Continue',
   },
   ar: {
+    'look.illustration': 'صورة توضيحية',
     'look.forVehicle': 'لسيارتك {car}',
     'look.noVehicleLine': 'اختر سيارتك',
     'look.choose': 'اختيار',

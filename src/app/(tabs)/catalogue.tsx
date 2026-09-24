@@ -101,7 +101,7 @@ export default function CatalogueScreen() {
                         scaleTo={0.96}
                       >
                         <View style={styles.bigArt}>
-                          <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 132 : 84} label={f.name} fit="cover" />
+                          <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 132 : 116} label={f.name} fit="cover" />
                         </View>
                         <Text variant="rowTitle" numberOfLines={1} style={{ textAlign: rtl ? 'right' : 'left' }}>
                           {f.name}

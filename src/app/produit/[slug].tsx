@@ -439,7 +439,7 @@ function Gallery({ product }: { product: ProductDetail }) {
         accessibilityRole="image"
         accessibilityLabel={t('product.illustration', { family: product.family.name })}
       >
-        <PartImage slug={product.familySlug} size={132} />
+        <PartImage slug={product.familySlug} size={220} tagIllustration />
       </View>
     );
   }

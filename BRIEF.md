@@ -181,6 +181,10 @@ Say this out loud rather than designing around a fiction:
 - **Almost no product photographs.** The website draws a per-family line
   drawing for anything unphotographed. The app needs the same honest fallback,
   not a stock photo of a different part.
+  *(September 2026: the app's fallback is now a studio render of the part's
+  kind, branded by nobody and marked "Illustration" on a product — see
+  docs/imagery.md. Still never a photograph of a different part presented as
+  this one.)*
 - **Shop identity fields are placeholders** in production — WhatsApp number,
   phone, address, tax id, email. They are the owner's to fill in. Do not invent
   them, and do not ship a screen that prints a fake one.

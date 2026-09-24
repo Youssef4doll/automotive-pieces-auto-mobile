@@ -2,10 +2,13 @@ import { Feather } from '@expo/vector-icons';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Brand, C, Elevation, familyFor, Radius, Spacing } from '@/constants/theme';
-import { CarArt } from '@/illustrations/car-art';
+import { RENDERS } from '@/illustrations/renders';
 import { useI18n } from '@/i18n/provider';
 import { yearSpan } from '@/lib/format';
 import type { SavedVehicle } from '@/store/garage';
+import { Image } from 'expo-image';
+
+import { MakeLogo } from './make-logo';
 import { PressScale } from './press-scale';
 import { Text } from './text';
 
@@ -16,8 +19,9 @@ export function useVehicleLine() {
 }
 
 /**
- * A car as the reference draws it everywhere — the illustration on the
- * left, a small label, the car in bold, the engine and years, and the green
+ * A car as the reference lays it out everywhere — the maker's mark on the
+ * left (the car's own make, not a picture of some other car standing in for
+ * it), a small label, the car in bold, the engine and years, and the green
  * "Véhicule principal" pill on the active one.
  *
  * `selected` is the navy outline "Mes véhicules" puts round the car being
@@ -61,8 +65,12 @@ export function VehicleCard({
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
   const body = (
     <>
-      <View style={[styles.art, rtl && { transform: [{ scaleX: -1 }] }]}>
-        <CarArt width={compactArt ? 84 : 104} />
+      <View style={styles.art}>
+        {vehicle ? (
+          <MakeLogo name={vehicle.makeName} slug={vehicle.makeSlug} size={compactArt ? 56 : 64} />
+        ) : (
+          <Image source={RENDERS.key} style={{ width: compactArt ? 60 : 72, height: compactArt ? 60 : 72 }} contentFit="contain" />
+        )}
       </View>
       <View style={[styles.body, start]}>
         {label || action ? (

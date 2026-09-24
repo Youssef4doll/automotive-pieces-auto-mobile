@@ -37,6 +37,8 @@ export type PickerItem = {
   haystack: string;
   /** Grid only: draws the accent outline and a check. */
   marked?: boolean;
+  /** List only: a mark before the title (a make's logo). */
+  leading?: React.ReactNode;
   onPress: () => void;
 };
 
@@ -177,6 +179,7 @@ export function PickerScreen<T>({
                     />
                   ) : (
                     <ListRow
+                      leading={item.leading}
                       title={item.title}
                       subtitle={item.subtitle}
                       note={item.note}

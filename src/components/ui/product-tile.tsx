@@ -57,7 +57,7 @@ export function ProductTile({ product }: { product: Product }) {
       pressedStyle={styles.pressed}
     >
       <View style={styles.art}>
-        <PartImage slug={product.familySlug} imageUrl={product.imageUrl} size={96} label={product.name} />
+        <PartImage slug={product.familySlug} imageUrl={product.imageUrl} size={96} label={product.name} tagIllustration />
       </View>
       <View style={[styles.body, start]}>
         {product.brand ? (

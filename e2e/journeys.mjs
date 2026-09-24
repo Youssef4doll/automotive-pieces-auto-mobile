@@ -63,11 +63,11 @@ async function checkout(page) {
   await page.waitForTimeout(3000);
   await page.getByRole('button', { name: /Passer la commande/ }).click();
   await page.waitForTimeout(1800);
-  await page.getByLabel('Nom et prénom').fill('Test Journées');
-  await page.getByLabel('Téléphone').fill('20 111 222');
+  await page.getByLabel('Nom et prénom', { exact: true }).fill('Test Journées');
+  await page.getByLabel('Téléphone', { exact: true }).fill('20 111 222');
   await tapLabel(page, 'Gouvernorat');
   await tap(page, 'Ariana');
-  await page.getByLabel('Adresse').fill('3 rue du Test, Ariana');
+  await page.getByLabel('Adresse', { exact: true }).fill('3 rue du Test, Ariana');
   await tap(page, 'Continuer');
   await page.waitForTimeout(3000);
   await page.getByRole('button', { name: /Confirmer la commande/ }).click();

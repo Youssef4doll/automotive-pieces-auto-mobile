@@ -3,7 +3,8 @@ import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useState } from 'react';
 import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type ImageSourcePropType } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { catalogueApi, type Family } from '@/api/catalogue';
@@ -15,17 +16,17 @@ import { PressScale } from '@/components/ui/press-scale';
 import { PromoBanner } from '@/components/ui/promo-banner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { MakeLogo } from '@/components/ui/make-logo';
 import { useVehicleLine } from '@/components/ui/vehicle-card';
 import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
-import { BubbleCar, BubblePart, BubblePhoto, BubbleReference } from '@/illustrations/bubbles';
-import { RoadScene } from '@/illustrations/road-scene';
-import { CarArt } from '@/illustrations/car-art';
+import { familyRender, RENDERS } from '@/illustrations/renders';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useCheckout } from '@/store/checkout';
+import { useAccount } from '@/store/account';
 import { useGarage } from '@/store/garage';
 import { useOnboarding } from '@/store/onboarding';
 
@@ -59,9 +60,13 @@ export default function HomeScreen() {
   const { t, rtl } = useI18n();
   const active = useGarage((s) => s.active);
   const vehicleLine = useVehicleLine();
-  const firstName = useCheckout((s) => s.details.customerName.trim().split(/\s+/)[0] ?? '');
-  const [darkHeight, setDarkHeight] = useState(900);
-  const onDarkLayout = useCallback((e: LayoutChangeEvent) => setDarkHeight(Math.round(e.nativeEvent.layout.height)), []);
+  const accountName = useAccount((s) => (s.status === 'signedIn' ? s.account?.name : null));
+  const checkoutName = useCheckout((s) => s.details.customerName);
+  const firstName = ((accountName ?? checkoutName).trim().split(/\s+/)[0] ?? '').slice(0, 24);
+  // The hero photograph is 3:4; it is lifted so the part sits beside the
+  // slogan and under the search, then fades into the navy below.
+  const heroHeight = Math.round(Math.min(width, MaxContentWidth + 120) * 4 / 3);
+  const heroLift = Math.round(heroHeight * 0.06);
 
   // Light clock and battery over the night road; dark again on the white
   // screens. The tabs stay mounted, so this follows focus rather than mount.
@@ -85,29 +90,29 @@ export default function HomeScreen() {
     const car: BubbleItem = active
       ? {
           key: 'car',
-          icon: <BubbleCar size={72} />,
+          icon: <MakeLogo name={active.makeName} slug={active.makeSlug} size={62} lifted={false} />,
           label: `${active.makeName} ${active.modelName}`,
           hint: t('look.hint.car'),
           onPress: () => router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } }),
         }
-      : { key: 'car', icon: <BubbleCar size={72} />, label: t('bubble.myCar'), hint: t('look.hint.pick'), onPress: () => router.push('/garage/ajouter') };
+      : { key: 'car', icon: <Render source={RENDERS.key} size={84} />, label: t('bubble.myCar'), hint: t('look.hint.pick'), onPress: () => router.push('/garage/ajouter') };
     const reference: BubbleItem = {
       key: 'reference',
-      icon: <BubbleReference size={60} />,
+      icon: <Render source={RENDERS.magnifier} size={70} />,
       label: t('bubble.reference'),
       hint: t('look.hint.ref'),
       onPress: () => router.push({ pathname: '/recherche', params: { mode: 'reference' } }),
     };
-    const part: BubbleItem = { key: 'part', icon: <BubblePart size={60} />, label: t('bubble.part'), hint: t('look.hint.part'), onPress: () => router.navigate('/catalogue') };
+    const part: BubbleItem = { key: 'part', icon: <Render source={familyRender('freinage') ?? RENDERS.magnifier} size={70} />, label: t('bubble.part'), hint: t('look.hint.part'), onPress: () => router.navigate('/catalogue') };
     const photo: BubbleItem | null = canAskShop
-      ? { key: 'photo', icon: <BubblePhoto size={60} />, label: t('bubble.photo'), hint: t('look.hint.photo'), onPress: () => router.push('/aide') }
+      ? { key: 'photo', icon: <Render source={RENDERS.phone} size={70} />, label: t('bubble.photo'), hint: t('look.hint.photo'), onPress: () => router.push('/aide') }
       : null;
     // Balanced either side of the car: with one, "une autre voiture" takes
     // the right; without, the reference does. Photo / Expert only when the
     // shop has published a way to be reached — a promise of advice nobody
     // can answer is worse than no promise.
     const items: BubbleItem[] = active
-      ? [reference, part, car, { key: 'other', icon: <BubbleCar size={60} />, label: t('look.otherCar'), hint: t('look.hint.pick'), onPress: () => router.push('/garage/ajouter') }]
+      ? [reference, part, car, { key: 'other', icon: <Render source={RENDERS.key} size={70} />, label: t('look.otherCar'), hint: t('look.hint.pick'), onPress: () => router.push('/garage/ajouter') }]
       : [part, car, reference];
     if (photo) items.push(photo);
     return { bubbles: items, centre: active ? 2 : 1 };
@@ -132,9 +137,32 @@ export default function HomeScreen() {
     <View style={styles.root}>
       {focused ? <StatusBar style="light" /> : null}
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View onLayout={onDarkLayout}>
-          <View style={styles.heroBg} pointerEvents="none">
-            <RoadScene width={width} height={darkHeight} />
+        <View>
+          <View style={[styles.heroBg, { top: -heroLift }]} pointerEvents="none">
+            <Image
+              source={RENDERS.hero}
+              style={{ width: '100%', height: heroHeight, transform: rtl ? [{ scaleX: -1 }] : undefined }}
+              contentFit="cover"
+              contentPosition={rtl ? 'left center' : 'right center'}
+              accessibilityIgnoresInvertColors
+            />
+            {/* Into the navy: the photograph ends where the questions start. */}
+            <Svg style={StyleSheet.absoluteFill} width="100%" height={heroHeight}>
+              <Defs>
+                <LinearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={Brand.navy950} stopOpacity="0.55" />
+                  <Stop offset="0.3" stopColor={Brand.navy950} stopOpacity="0.05" />
+                  <Stop offset="0.72" stopColor={Brand.navy950} stopOpacity="0.15" />
+                  <Stop offset="0.94" stopColor={Brand.navy950} stopOpacity="1" />
+                </LinearGradient>
+                <LinearGradient id="side" x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="0">
+                  <Stop offset="0" stopColor={Brand.navy950} stopOpacity="0.5" />
+                  <Stop offset="0.5" stopColor={Brand.navy950} stopOpacity="0" />
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height={heroHeight} fill="url(#side)" />
+              <Rect x="0" y="0" width="100%" height={heroHeight} fill="url(#fade)" />
+            </Svg>
           </View>
 
           <View style={[styles.column, { paddingTop: insets.top + Spacing.three }]}>
@@ -159,6 +187,10 @@ export default function HomeScreen() {
               </Text>
               <Text style={[styles.subtitle, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.slogan3')}</Text>
             </View>
+
+            {/* Room for the photograph between the promise and the search, as
+                the reference leaves room for its car. */}
+            <View style={{ height: Math.round(heroHeight * 0.44) }} />
 
             {/* The main action, and the car it answers for, as one piece:
                 the search, and directly under it the line that says which
@@ -187,9 +219,13 @@ export default function HomeScreen() {
               style={[styles.vehicleLine, row]}
               scaleTo={0.985}
             >
-              <View style={styles.vehicleIcon}>
-                <NavCar size={18} color={Brand.gold400} />
-              </View>
+              {active ? (
+                <MakeLogo name={active.makeName} slug={active.makeSlug} size={36} lifted={false} />
+              ) : (
+                <View style={styles.vehicleIcon}>
+                  <NavCar size={18} color={Brand.gold400} />
+                </View>
+              )}
               <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
                 <Text numberOfLines={1} style={[styles.vehicleName, { fontFamily: familyFor('bodySemi', rtl) }]}>
                   {active ? `${active.makeName} ${active.modelName}` : t('look.noVehicleLine')}
@@ -282,8 +318,8 @@ export default function HomeScreen() {
                     <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={Brand.navy900} />
                   </View>
                 </View>
-                <View style={[styles.careArt, rtl ? { left: -18, transform: [{ scaleX: -1 }] } : { right: -18 }]} pointerEvents="none">
-                  <CarArt width={180} body={Brand.navy600} />
+                <View style={[styles.careArt, rtl ? { left: -6 } : { right: -6 }]} pointerEvents="none">
+                  <Image source={familyRender('lubrifiant') ?? RENDERS.key} style={{ width: 132, height: 132 }} contentFit="contain" />
                 </View>
               </PressScale>
             ) : null}
@@ -304,7 +340,7 @@ export default function HomeScreen() {
             <View style={styles.column}>
               <View style={[styles.advice, row]}>
                 <View style={styles.adviceArt}>
-                  <BubblePhoto size={64} />
+                  <Image source={RENDERS.phone} style={{ width: 92, height: 92 }} contentFit="contain" />
                 </View>
                 <View style={[styles.flex, { gap: 6, alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
                   <Text style={[styles.careTitle, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('look.advice')}</Text>
@@ -352,7 +388,7 @@ const styles = StyleSheet.create({
   sloganText: { fontSize: 30, lineHeight: 36, letterSpacing: -0.4, color: Brand.white },
   sloganAccent: { color: Brand.gold500 },
   searchPill: {
-    marginTop: Spacing.four,
+    marginTop: 0,
     alignItems: 'center',
     gap: Spacing.two,
     minHeight: 56,
@@ -483,3 +519,8 @@ const styles = StyleSheet.create({
   },
   adviceCtaText: { fontSize: 15, color: C.onAccent },
 });
+
+/** A studio render inside an arc bubble. */
+function Render({ source, size }: { source: ImageSourcePropType; size: number }) {
+  return <Image source={source} style={{ width: size, height: size }} contentFit="contain" />;
+}

@@ -33,7 +33,10 @@ export function ListRow({
   note = null,
   onPress,
   selected = false,
+  leading = null,
 }: {
+  /** A mark before the title — a make's logo in the picker. */
+  leading?: React.ReactNode;
   title: string;
   subtitle?: string | null;
   note?: string | null;
@@ -55,6 +58,7 @@ export function ListRow({
         pressed && styles.pressed,
       ]}
     >
+      {leading}
       <View style={styles.text}>
         <Text variant="rowTitle">{title}</Text>
         {subtitle ? <Text variant="hint">{subtitle}</Text> : null}

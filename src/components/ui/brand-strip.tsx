@@ -9,14 +9,16 @@ import { API_BASE_URL } from '@/constants/config';
 import { Brand, C, familyFor, Fonts, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
+import { findMark, MarkGlyph } from './make-logo';
 import { Text } from './text';
 
 /**
  * "Nos marques" — the parts makers the shop actually carries, most parts
  * first, each a door to that maker's parts.
  *
- * The mark is the one uploaded in /admin/catalogue/marques; without one the
- * name is set in type. Never a drawn stand-in: that would be an invented
+ * The mark is the one uploaded in /admin/catalogue/marques; then the maker's
+ * real mark where one is on record (illustrations/marques); otherwise the
+ * name set in type. Never a drawn stand-in: that would be an invented
  * trademark. Renders nothing until the list is in, and nothing at all when
  * the shop carries no branded parts — an empty strip is worse than none.
  */
@@ -43,6 +45,7 @@ export function BrandStrip() {
 }
 
 function BrandTile({ brand, onPress }: { brand: PartsBrand; onPress: () => void }) {
+  const mark = findMark('parts', brand.slug) ?? findMark('parts', brand.name);
   return (
     <Pressable
       accessibilityRole="button"
@@ -56,6 +59,13 @@ function BrandTile({ brand, onPress }: { brand: PartsBrand; onPress: () => void 
           style={styles.logo}
           contentFit="contain"
         />
+      ) : mark ? (
+        <View style={styles.markRow}>
+          <MarkGlyph mark={mark} size={22} color={Brand.navy900} />
+          <Text numberOfLines={1} style={styles.word}>
+            {brand.name}
+          </Text>
+        </View>
       ) : (
         <Text numberOfLines={1} style={styles.word}>
           {brand.name}
@@ -94,6 +104,7 @@ const styles = StyleSheet.create({
   },
   pressed: { backgroundColor: C.surface },
   logo: { width: 84, height: 32 },
+  markRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   // A maker's name as a wordmark stand-in would be invented; plain heavy
   // type, the shop's navy, says the name and nothing more.
   word: { fontFamily: Fonts.headingStrong, fontSize: 16, color: Brand.navy900, fontStyle: 'italic' },

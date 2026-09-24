@@ -8,6 +8,10 @@
  */
 export const account = {
   fr: {
+    'profile.photo': 'Photo de profil',
+    'profile.photoWhy': 'Gardée sur ce téléphone, jamais envoyée à la boutique.',
+    'profile.photoChoose': 'Choisir une photo',
+    'profile.photoRemove': 'Retirer la photo',
     'common.back': 'Retour',
     'welcome.v1': 'Dites-nous quelle voiture vous avez.',
     'welcome.v2': 'Cherchez la pièce par son nom ou par la référence gravée dessus.',
@@ -59,6 +63,10 @@ export const account = {
     'auth.err.admin': 'Le compte de la boutique ne peut pas être supprimé depuis l’application.',
   },
   en: {
+    'profile.photo': 'Profile photo',
+    'profile.photoWhy': 'Kept on this phone, never sent to the shop.',
+    'profile.photoChoose': 'Choose a photo',
+    'profile.photoRemove': 'Remove the photo',
     'common.back': 'Back',
     'welcome.v1': 'Tell us which car you drive.',
     'welcome.v2': 'Search for the part by name, or by the reference stamped on it.',
@@ -110,6 +118,10 @@ export const account = {
     'auth.err.admin': 'The shop’s own account cannot be deleted from the app.',
   },
   ar: {
+    'profile.photo': 'صورة الملف الشخصي',
+    'profile.photoWhy': 'تبقى على هذا الهاتف ولا تُرسل إلى المتجر.',
+    'profile.photoChoose': 'اختيار صورة',
+    'profile.photoRemove': 'إزالة الصورة',
     'common.back': 'رجوع',
     'welcome.v1': 'أخبرنا بسيارتك.',
     'welcome.v2': 'ابحث عن القطعة باسمها أو بالمرجع المنقوش عليها.',

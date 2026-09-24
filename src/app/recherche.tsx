@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError, type ApiFailure } from '@/api/client';
 import { searchApi, type SearchResult } from '@/api/search';
 import { catalogueApi, type Family } from '@/api/catalogue';
+import { MakeLogo } from '@/components/ui/make-logo';
 import { PartImage } from '@/components/ui/part-image';
 import { ProductCard } from '@/components/ui/product-card';
 import { ProductListSkeleton } from '@/components/ui/skeleton';
@@ -288,11 +289,7 @@ export default function SearchScreen() {
               onPress={() => submit(b.name)}
               style={({ pressed }) => [styles.row, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.rowPressed]}
             >
-              <View style={styles.monogram}>
-                <Text style={{ fontFamily: familyFor('headingStrong', false), fontSize: 14, color: C.text }}>
-                  {b.name.slice(0, 2).toUpperCase()}
-                </Text>
-              </View>
+              <MakeLogo name={b.name} kind="parts" size={40} lifted={false} />
               <View style={styles.rowText}>
                 <Text variant="rowTitle" numberOfLines={1}>
                   {b.name}

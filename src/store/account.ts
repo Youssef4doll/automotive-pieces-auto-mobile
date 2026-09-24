@@ -116,6 +116,8 @@ export const useAccount = create<AccountState>()(
         track('account_deleted');
         await forgetLocally(set);
         useCheckout.getState().forget();
+        const { useProfilePhoto } = await import('./profile-photo');
+        useProfilePhoto.getState().clear();
       },
 
       syncOrders: async () => {

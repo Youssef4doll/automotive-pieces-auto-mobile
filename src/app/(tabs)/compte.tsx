@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Image } from 'expo-image';
+
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -10,12 +12,14 @@ import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
+import { pickAvatar } from '@/lib/photo';
 import { useAccount } from '@/store/account';
 import { useCheckout } from '@/store/checkout';
 import { useGarage } from '@/store/garage';
 import { useOrders } from '@/store/orders';
 import { useFavourites } from '@/store/favourites';
 import { useStaff } from '@/store/staff';
+import { useProfilePhoto } from '@/store/profile-photo';
 import { useToast } from '@/store/toast';
 
 /**
@@ -44,6 +48,15 @@ export default function AccountScreen() {
   const toast = useToast((s) => s.show);
   const settings = useShopSettings();
   const [confirming, setConfirming] = useState(false);
+  const [photoSheet, setPhotoSheet] = useState(false);
+  const photo = useProfilePhoto((s) => s.photo);
+  const setPhoto = useProfilePhoto((s) => s.set);
+  const clearPhoto = useProfilePhoto((s) => s.clear);
+  const choosePhoto = async () => {
+    setPhotoSheet(false);
+    const picked = await pickAvatar().catch(() => null);
+    if (picked) setPhoto(picked);
+  };
   const staffSignedIn = useStaff((s) => s.status === 'signedIn');
   const favCount = useFavourites((s) => s.items.length);
   const restoreStaff = useStaff((s) => s.restore);
@@ -74,13 +87,23 @@ export default function AccountScreen() {
     <ScrollView style={styles.root} contentContainerStyle={styles.scroll}>
       <View style={styles.column}>
         <View style={[styles.profile, row]}>
-          <View style={styles.avatar}>
-            {initials ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${t('profile.photo')}. ${t('profile.photoWhy')}`}
+            onPress={() => (photo ? setPhotoSheet(true) : choosePhoto())}
+            style={({ pressed }) => [styles.avatar, pressed && { opacity: 0.8 }]}
+          >
+            {photo ? (
+              <Image source={{ uri: photo }} style={styles.avatarPhoto} contentFit="cover" />
+            ) : initials ? (
               <Text style={{ fontFamily: familyFor('headingStrong', false), fontSize: 20, color: Brand.white }}>{initials}</Text>
             ) : (
               <Feather name="user" size={26} color={Brand.white} />
             )}
-          </View>
+            <View style={styles.avatarEdit}>
+              <Feather name="camera" size={12} color={Brand.navy950} />
+            </View>
+          </Pressable>
           <View style={styles.flex}>
             <Text style={[styles.name, { fontFamily: familyFor('heading', rtl) }]}>{name || t('account.guestName')}</Text>
             <Text variant="hint" numberOfLines={1}>
@@ -169,6 +192,21 @@ export default function AccountScreen() {
         ) : null}
       </View>
 
+      <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title={t('profile.photo')}>
+        <View style={styles.sheet}>
+          <Text variant="hint">{t('profile.photoWhy')}</Text>
+          <Button label={t('profile.photoChoose')} icon="image" onPress={choosePhoto} />
+          <Button
+            label={t('profile.photoRemove')}
+            variant="secondary"
+            onPress={() => {
+              clearPhoto();
+              setPhotoSheet(false);
+            }}
+          />
+        </View>
+      </BottomSheet>
+
       <BottomSheet visible={confirming} onClose={() => setConfirming(false)} title={t('account.clearData')}>
         <View style={styles.sheet}>
           <Text variant="body">{t('account.clearConfirm')}</Text>
@@ -177,6 +215,7 @@ export default function AccountScreen() {
             variant="danger"
             onPress={() => {
               forget();
+              clearPhoto();
               setConfirming(false);
               toast({ message: t('account.forgetDetailsDone'), tone: 'neutral' });
             }}
@@ -240,10 +279,24 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   profile: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: Brand.navy700,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarPhoto: { width: 64, height: 64, borderRadius: 32 },
+  avatarEdit: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Brand.gold500,
+    borderWidth: 2,
+    borderColor: Brand.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
