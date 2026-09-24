@@ -1,12 +1,11 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { hasContactChannel } from '@/api/shop';
-import { Button } from '@/components/ui/button';
+import { PressScale } from '@/components/ui/press-scale';
 import { Text } from '@/components/ui/text';
-import { Border, Brand, C, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { Brand, C, Elevation, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { BubbleCar, BubblePart, BubblePhoto, BubbleReference } from '@/illustrations/bubbles';
 import type { DictKey } from '@/i18n/dictionaries';
@@ -14,8 +13,8 @@ import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 
 /**
- * "Comment trouver votre pièce ?" — the four ways in, as a list to choose
- * from and a button to go, for anybody who would rather read than swipe the
+ * "Comment trouver votre pièce ?" — the four ways in, as a list where each
+ * row goes straight down its path, for anybody who would rather read than swipe the
  * home screen's arc. The fourth ("je ne sais pas comment ça s'appelle") is
  * offered only when the shop has published a way to be reached, like its
  * bubble: a promise of advice nobody can answer is worse than no promise.
@@ -28,16 +27,17 @@ export default function FindScreen() {
   const active = useGarage((s) => s.active);
   const settings = useShopSettings();
   const canAsk = settings.status === 'loaded' && hasContactChannel(settings.data);
-  const [way, setWay] = useState<Way>('car');
 
   const ways: { key: Way; title: DictKey; why: DictKey; icon: React.ReactNode }[] = [
-    { key: 'car', title: 'look.find.car', why: 'look.find.carWhy', icon: <BubbleCar size={34} /> },
-    { key: 'part', title: 'look.find.part', why: 'look.find.partWhy', icon: <BubblePart size={30} /> },
-    { key: 'ref', title: 'look.find.ref', why: 'look.find.refWhy', icon: <BubbleReference size={30} /> },
-    ...(canAsk ? [{ key: 'photo' as Way, title: 'look.find.photo' as DictKey, why: 'look.find.photoWhy' as DictKey, icon: <BubblePhoto size={30} /> }] : []),
+    { key: 'car', title: 'look.find.car', why: 'look.find.carWhy', icon: <BubbleCar size={52} /> },
+    { key: 'part', title: 'look.find.part', why: 'look.find.partWhy', icon: <BubblePart size={52} /> },
+    { key: 'ref', title: 'look.find.ref', why: 'look.find.refWhy', icon: <BubbleReference size={52} /> },
+    ...(canAsk ? [{ key: 'photo' as Way, title: 'look.find.photo' as DictKey, why: 'look.find.photoWhy' as DictKey, icon: <BubblePhoto size={52} /> }] : []),
   ];
 
-  const go = () => {
+  // One tap, straight to the path: choosing and then confirming the choice
+  // was a second decision about the same thing.
+  const go = (way: Way) => {
     if (way === 'car') return active ? router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } }) : router.push('/garage/ajouter');
     if (way === 'part') return router.navigate('/catalogue');
     if (way === 'ref') return router.push({ pathname: '/recherche', params: { mode: 'reference' } });
@@ -48,26 +48,23 @@ export default function FindScreen() {
     <ScrollView style={styles.root} contentContainerStyle={styles.scroll}>
       <Stack.Screen options={{ title: t('look.find') }} />
       <View style={styles.column}>
-        {ways.map((w) => {
-          const on = w.key === way;
-          return (
-            <Pressable
-              key={w.key}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: on }}
-              onPress={() => setWay(w.key)}
-              style={({ pressed }) => [styles.row, { flexDirection: rtl ? 'row-reverse' : 'row' }, on && styles.on, pressed && styles.pressed]}
-            >
-              <View style={styles.icon}>{w.icon}</View>
-              <View style={[styles.text, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
-                <Text variant="rowTitle">{t(w.title)}</Text>
-                <Text variant="hint">{t(w.why)}</Text>
-              </View>
-              <Feather name={on ? 'check-circle' : rtl ? 'chevron-left' : 'chevron-right'} size={20} color={on ? Brand.navy700 : C.textMuted} />
-            </Pressable>
-          );
-        })}
-        <Button label={t('look.continue')} onPress={go} />
+        {ways.map((w) => (
+          <PressScale
+            key={w.key}
+            accessibilityRole="button"
+            accessibilityLabel={`${t(w.title)}. ${t(w.why)}`}
+            onPress={() => go(w.key)}
+            style={[styles.row, { flexDirection: rtl ? 'row-reverse' : 'row' }]}
+            pressedStyle={styles.pressed}
+          >
+            <View style={styles.icon}>{w.icon}</View>
+            <View style={[styles.text, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+              <Text variant="rowTitle">{t(w.title)}</Text>
+              <Text variant="hint">{t(w.why)}</Text>
+            </View>
+            <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={20} color={C.textMuted} />
+          </PressScale>
+        ))}
       </View>
     </ScrollView>
   );
@@ -82,12 +79,10 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     padding: Spacing.three,
     borderRadius: Radius.card,
-    borderWidth: Border.thin,
-    borderColor: C.border,
     backgroundColor: Brand.white,
+    ...Elevation.resting,
   },
-  on: { borderColor: Brand.navy700, borderWidth: 1.5 },
-  pressed: { backgroundColor: C.surface },
-  icon: { width: 48, height: 48, borderRadius: 24, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
+  pressed: { backgroundColor: C.surfacePressed },
+  icon: { width: 64, height: 64, borderRadius: 32, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
   text: { flex: 1, gap: 2 },
 });

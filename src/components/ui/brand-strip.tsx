@@ -6,7 +6,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { catalogueApi, type PartsBrand } from '@/api/catalogue';
 import { API_BASE_URL } from '@/constants/config';
-import { Border, Brand, C, familyFor, Fonts, Radius, Spacing, Tap } from '@/constants/theme';
+import { Brand, C, familyFor, Fonts, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
 import { Text } from './text';
@@ -88,9 +88,7 @@ const styles = StyleSheet.create({
     height: 56,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.tile,
-    borderWidth: Border.thin,
-    borderColor: C.border,
-    backgroundColor: Brand.white,
+    backgroundColor: C.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },

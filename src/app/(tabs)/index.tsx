@@ -11,6 +11,7 @@ import { hasContactChannel } from '@/api/shop';
 import { BrandStrip } from '@/components/ui/brand-strip';
 import { BubbleArc, type BubbleItem } from '@/components/ui/bubble-arc';
 import { PartImage } from '@/components/ui/part-image';
+import { PressScale } from '@/components/ui/press-scale';
 import { PromoBanner } from '@/components/ui/promo-banner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
@@ -76,13 +77,13 @@ export default function HomeScreen() {
     const items: BubbleItem[] = [
       {
         key: 'reference',
-        icon: <BubbleReference size={52} />,
+        icon: <BubbleReference size={60} />,
         label: t('bubble.reference'),
         onPress: () => router.push({ pathname: '/recherche', params: { mode: 'reference' } }),
       },
       {
         key: 'car',
-        icon: <BubbleCar size={64} />,
+        icon: <BubbleCar size={72} />,
         // Once the garage knows the car, the big bubble IS the car, and it
         // opens the parts the shop has confirmed for it.
         label: active ? `${active.makeName} ${active.modelName}` : t('bubble.myCar'),
@@ -92,11 +93,11 @@ export default function HomeScreen() {
             : router.push('/garage/ajouter'),
       },
       canAskShop
-        ? { key: 'photo', icon: <BubblePhoto size={52} />, label: t('bubble.photo'), onPress: () => router.push('/aide') }
-        : { key: 'part', icon: <BubblePart size={52} />, label: t('bubble.part'), onPress: () => router.push('/catalogue') },
+        ? { key: 'photo', icon: <BubblePhoto size={60} />, label: t('bubble.photo'), onPress: () => router.push('/aide') }
+        : { key: 'part', icon: <BubblePart size={60} />, label: t('bubble.part'), onPress: () => router.push('/catalogue') },
     ];
     if (canAskShop) {
-      items.push({ key: 'part', icon: <BubblePart size={52} />, label: t('bubble.part'), onPress: () => router.push('/catalogue') });
+      items.push({ key: 'part', icon: <BubblePart size={60} />, label: t('bubble.part'), onPress: () => router.push('/catalogue') });
     }
     return items;
   }, [active, canAskShop, router, t]);
@@ -162,6 +163,7 @@ export default function HomeScreen() {
               empty={{ title: t('home.chooseCar'), line: t('look.chooseWhy') }}
               onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
               style={styles.vehicle}
+              action={active ? t('home.change') : undefined}
               compactArt
             />
 
@@ -210,12 +212,13 @@ export default function HomeScreen() {
                     </View>
                   ))
                 : popular.map((f) => (
-                    <Pressable
+                    <PressScale
                       key={f.id}
                       accessibilityRole="button"
                       accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
                       onPress={() => openFamily(f)}
-                      style={({ pressed }) => [styles.cat, pressed && styles.catPressed]}
+                      style={styles.cat}
+                      scaleTo={0.94}
                     >
                       <View style={styles.catDisc}>
                         <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 72 : 50} label={f.name} fit="cover" />
@@ -223,16 +226,18 @@ export default function HomeScreen() {
                       <Text variant="hint" tone={C.text} numberOfLines={1} style={styles.catName}>
                         {f.name}
                       </Text>
-                    </Pressable>
+                    </PressScale>
                   ))}
             </View>
 
             {careFamily ? (
-              <Pressable
+              <PressScale
                 accessibilityRole="button"
                 accessibilityLabel={`${t('home.care')}. ${t('home.careWhy')}`}
                 onPress={() => openFamily(careFamily)}
-                style={({ pressed }) => [styles.care, row, pressed && styles.carePressed]}
+                style={[styles.care, row]}
+                pressedStyle={styles.carePressed}
+                scaleTo={0.985}
               >
                 <View style={styles.careText}>
                   <Text style={[styles.careTitle, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('home.care')}</Text>
@@ -245,18 +250,20 @@ export default function HomeScreen() {
                 <View style={[styles.careArt, rtl ? { left: -18, transform: [{ scaleX: -1 }] } : { right: -18 }]} pointerEvents="none">
                   <CarArt width={180} body={Brand.navy600} />
                 </View>
-              </Pressable>
+              </PressScale>
             ) : null}
 
-            <View style={styles.block}>
-              <BrandStrip />
-            </View>
           </View>
 
           {/* The shop's real campaigns, when it is running one. */}
           <View style={styles.promo}>
             <PromoBanner />
           </View>
+
+          <View style={[styles.column, styles.block]}>
+            <BrandStrip />
+          </View>
+
 
           {canAskShop ? (
             <View style={styles.column}>
@@ -326,7 +333,19 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, lineHeight: 34, letterSpacing: -0.4, color: Brand.white },
   subtitle: { fontSize: 15, lineHeight: 21, color: '#c7d1e3', maxWidth: 320 },
   arc: { marginTop: Spacing.three, height: 250 },
-  allWays: { alignSelf: 'center', alignItems: 'center', gap: 6, minHeight: Tap.min, paddingHorizontal: Spacing.three, marginBottom: Spacing.four },
+  // On its own dark pill: it sits over the road's centre line.
+  allWays: {
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: Tap.min,
+    paddingHorizontal: Spacing.four,
+    marginBottom: Spacing.four,
+    borderRadius: Radius.pill,
+    backgroundColor: Brand.navy900,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
   // The white sheet runs to the bottom of the content, so a short page never
   // shows the navy root beneath it.
   scroll: { flexGrow: 1 },

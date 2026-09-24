@@ -1,12 +1,13 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import type { Product } from '@/api/catalogue';
-import { Border, Brand, C, familyFor, Radius, Spacing } from '@/constants/theme';
+import { Brand, C, Elevation, familyFor, Radius, Spacing } from '@/constants/theme';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
 import { PartImage } from './part-image';
+import { PressScale } from './press-scale';
 import { Price } from './price';
 import { Text } from './text';
 
@@ -43,11 +44,12 @@ export function ProductTile({ product }: { product: Product }) {
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   return (
-    <Pressable
+    <PressScale
       accessibilityRole="button"
       accessibilityLabel={[product.brand, product.name, fit ? t(fit.key) : null, stockLine].filter(Boolean).join(', ')}
       onPress={() => router.push({ pathname: '/produit/[slug]', params: { slug: product.slug } })}
-      style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
+      style={styles.tile}
+      pressedStyle={styles.pressed}
     >
       <View style={styles.art}>
         <PartImage slug={product.familySlug} imageUrl={product.imageUrl} size={96} label={product.name} />
@@ -79,7 +81,7 @@ export function ProductTile({ product }: { product: Product }) {
           </Text>
         </View>
       </View>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -88,9 +90,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Brand.white,
     borderRadius: Radius.tile,
-    borderWidth: Border.thin,
-    borderColor: C.border,
     padding: Spacing.two,
+    ...Elevation.resting,
     gap: Spacing.two,
   },
   pressed: { backgroundColor: C.surface },

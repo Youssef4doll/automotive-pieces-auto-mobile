@@ -1,4 +1,4 @@
-import Svg, { Circle, G, Line, Rect } from 'react-native-svg';
+import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 
 import { Brand } from '@/constants/theme';
 
@@ -69,6 +69,18 @@ export function CarteGrise({ width = 280, compact = false }: { width?: number; c
           <Line x1={74} y1={y} x2={y === 132 ? 150 : 206} y2={y} stroke={Brand.navy400} strokeWidth={3} strokeLinecap="round" />
         </G>
       ))}
+
+      {/* The registration office's round stamp, drawn as a plain ring — its
+          place on a real card, none of its content. */}
+      <Circle cx={232} cy={141} r={17} fill="none" stroke="#e1112c" strokeOpacity={0.55} strokeWidth={2.2} />
+      <Circle cx={232} cy={141} r={11} fill="none" stroke="#e1112c" strokeOpacity={0.35} strokeWidth={1.4} />
+
+      {/* "Here": a tag pointing at the VIN line, so the customer looks at
+          the right place on their own card. */}
+      <Path d="M206 66h48a6 6 0 0 1 6 6v8a6 6 0 0 1-6 6h-18l-6 6-6-6h-18a6 6 0 0 1-6-6v-8a6 6 0 0 1 6-6z" fill={Brand.navy900} />
+      <SvgText x={230} y={80} fontSize={11} fontWeight="700" fill={Brand.gold500} textAnchor="middle">
+        VIN · 17
+      </SvgText>
     </Svg>
   );
 }

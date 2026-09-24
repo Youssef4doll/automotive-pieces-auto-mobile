@@ -1,16 +1,17 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { BrandStrip } from '@/components/ui/brand-strip';
 import { PartImage } from '@/components/ui/part-image';
+import { PressScale } from '@/components/ui/press-scale';
 import { SearchLauncher } from '@/components/ui/search-launcher';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Empty, Failed } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
-import { Border, Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
+import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { useI18n } from '@/i18n/provider';
@@ -91,12 +92,13 @@ export default function CatalogueScreen() {
           ) : (
             <View style={[styles.grid, row]}>
               {shown.map((f) => (
-                <Pressable
+                <PressScale
                   key={f.id}
                   accessibilityRole="button"
                   accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
                   onPress={() => router.push({ pathname: '/famille/[family]', params: { family: f.slug, familyName: f.name } })}
-                  style={({ pressed }) => [styles.cell, { width: `${100 / columns}%` }, pressed && styles.pressed]}
+                  style={[styles.cell, { width: `${100 / columns}%` }]}
+                  scaleTo={0.94}
                 >
                   <View style={styles.disc}>
                     <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 64 : 44} label={f.name} fit="cover" />
@@ -107,7 +109,7 @@ export default function CatalogueScreen() {
                   <Text variant="hint" tone={C.textFaint} style={styles.count}>
                     {f.productCount}
                   </Text>
-                </Pressable>
+                </PressScale>
               ))}
             </View>
           )}
@@ -128,10 +130,9 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Brand.white,
     borderRadius: Radius.card,
-    borderWidth: Border.thin,
-    borderColor: C.border,
     padding: Spacing.three,
     gap: Spacing.three,
+    ...Elevation.resting,
   },
   title: { fontSize: 19, lineHeight: 25, color: C.text },
   filter: {

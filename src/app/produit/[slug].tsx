@@ -1,8 +1,10 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, { ReduceMotion, SlideInDown, SlideOutDown, useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { productApi, type ProductDetail } from '@/api/product';
 import type { ShopSettings } from '@/api/shop';
@@ -94,6 +96,27 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   const [compatKey, setCompatKey] = useState(0);
   const scroll = useRef<ScrollView>(null);
   const compatY = useRef(0);
+  const insets = useSafeAreaInsets();
+
+  // The purchase bar follows the customer down the page once the inline
+  // button has scrolled out of sight — and only then, so the first screen
+  // never shows the same button twice.
+  const buyBottom = useRef(Number.POSITIVE_INFINITY);
+  const [sticky, setSticky] = useState(false);
+
+  // "Ajouté au panier" on the button itself for a moment: the toast says it
+  // too, but the eye is on the button that was pressed.
+  const [justAdded, setJustAdded] = useState(false);
+  const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (addedTimer.current) clearTimeout(addedTimer.current);
+  }, []);
+  const commit = () => {
+    if (!addToCart(product, qty)) return;
+    setJustAdded(true);
+    if (addedTimer.current) clearTimeout(addedTimer.current);
+    addedTimer.current = setTimeout(() => setJustAdded(false), 1600);
+  };
 
   const buyable = product.availability !== 'UNAVAILABLE';
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
@@ -103,7 +126,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
       setConfirming(true);
       return;
     }
-    addToCart(product, qty);
+    commit();
   };
 
   const position = [
@@ -149,7 +172,16 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
 
   return (
     <View style={styles.root}>
-      <ScrollView ref={scroll} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        ref={scroll}
+        contentContainerStyle={[styles.scroll, sticky && { paddingBottom: 110 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={32}
+        onScroll={(e) => {
+          const past = e.nativeEvent.contentOffset.y > buyBottom.current;
+          if (past !== sticky) setSticky(past);
+        }}
+      >
         <View style={styles.column}>
           <Gallery product={product} />
 
@@ -219,11 +251,21 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
           {stock.detail ? <Text variant="hint">{stock.detail}</Text> : null}
 
           {/* Quantity and the button, side by side, as in the reference. */}
-          <View style={[styles.buyRow, row]}>
+          <View
+            style={[styles.buyRow, row]}
+            onLayout={(e) => {
+              buyBottom.current = e.nativeEvent.layout.y + e.nativeEvent.layout.height;
+            }}
+          >
             {buyable ? (
               <>
                 <QuantityStepper value={qty} onChange={setQty} size="compact" />
-                <Button label={t('product.add')} onPress={add} style={styles.flex} />
+                <Button
+                  label={justAdded ? t('look.added') : t('product.add')}
+                  icon={justAdded ? 'check' : 'shopping-cart'}
+                  onPress={add}
+                  style={styles.flex}
+                />
               </>
             ) : (
               <Button label={t('stock.unavailable')} onPress={() => undefined} disabled style={styles.flex} />
@@ -330,6 +372,29 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
         </View>
       </ScrollView>
 
+      {sticky && buyable ? (
+        <Animated.View
+          entering={SlideInDown.duration(220).reduceMotion(ReduceMotion.System)}
+          exiting={SlideOutDown.duration(180).reduceMotion(ReduceMotion.System)}
+          style={[styles.sticky, { paddingBottom: insets.bottom + Spacing.three }]}
+        >
+          <View style={[styles.stickyInner, row]}>
+            <View style={{ alignItems: rtl ? 'flex-end' : 'flex-start' }}>
+              <Text style={[styles.stickyPrice, { fontFamily: familyFor('headingStrong', false) }]}>{formatDT(product.price * qty)}</Text>
+              <Text variant="hint" numberOfLines={1}>
+                {qty > 1 ? `${qty} × ${formatDT(product.price)}` : stock.label}
+              </Text>
+            </View>
+            <Button
+              label={justAdded ? t('look.added') : t('product.add')}
+              icon={justAdded ? 'check' : 'shopping-cart'}
+              onPress={add}
+              style={styles.flex}
+            />
+          </View>
+        </Animated.View>
+      ) : null}
+
       <BottomSheet visible={confirming} onClose={() => setConfirming(false)} title={t('product.mismatchTitle')}>
         <View style={styles.sheetBody}>
           <Text variant="body">{t('product.mismatchBody', { vehicle: vehicleLabel(active) ?? '' })}</Text>
@@ -338,7 +403,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
             variant="secondary"
             onPress={() => {
               setConfirming(false);
-              addToCart(product, qty);
+              commit();
             }}
           />
           <Button label={t('garage.cancel')} onPress={() => setConfirming(false)} />
@@ -371,6 +436,7 @@ function Gallery({ product }: { product: ProductDetail }) {
         accessibilityRole="image"
         accessibilityLabel={t('product.illustration', { family: product.family.name })}
       >
+        <View style={styles.stage} />
         <PartImage slug={product.familySlug} size={170} />
       </View>
     );
@@ -445,7 +511,7 @@ function Compatibility({ product, activeEngineId }: { product: ProductDetail; ac
 function Fact({ icon, title, value }: { icon: React.ComponentProps<typeof Feather>['name']; title: string; value: string }) {
   return (
     <View style={styles.fact}>
-      <Feather name={icon} size={IconSize.large} color={C.text} />
+      <Feather name={icon} size={IconSize.medium} color={C.textMuted} />
       <Text variant="hint" tone={C.text} style={styles.factText}>
         {title}
       </Text>
@@ -507,24 +573,35 @@ function HeartButton({ product }: { product: ProductDetail }) {
   const { t } = useI18n();
   const on = useFavourites((s) => s.items.some((f) => f.slug === product.slug));
   const toggle = useFavourites((s) => s.toggle);
+  // A small pop when a part is kept — felt, not watched. Nothing on removal.
+  const scale = useSharedValue(1);
+  const pop = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={on ? t('look.favRemove') : t('look.favAdd')}
       accessibilityState={{ selected: on }}
       hitSlop={8}
-      onPress={() =>
-        toggle({
+      onPress={() => {
+        const nowOn = toggle({
           slug: product.slug,
           name: product.name,
           brand: product.brand,
           familySlug: product.familySlug,
           imageUrl: product.imageUrl,
-        })
-      }
+        });
+        if (nowOn) {
+          scale.value = withSequence(
+            withSpring(1.28, { damping: 8, stiffness: 420, reduceMotion: ReduceMotion.System }),
+            withSpring(1, { damping: 14, stiffness: 260, reduceMotion: ReduceMotion.System }),
+          );
+        }
+      }}
       style={styles.share}
     >
-      <HeartIcon filled={on} />
+      <Animated.View style={pop}>
+        <HeartIcon filled={on} />
+      </Animated.View>
     </Pressable>
   );
 }
@@ -591,12 +668,10 @@ const styles = StyleSheet.create({
   price: { fontSize: 28, lineHeight: 34, color: C.text },
   struck: { textDecorationLine: 'line-through' },
   dot: { width: 8, height: 8, borderRadius: 4 },
+  // Reassurance, not a second call to action: no box, muted, below the button.
   facts: {
-    marginTop: Spacing.four,
-    paddingVertical: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: Border.thin,
-    borderColor: C.border,
+    marginTop: Spacing.three,
+    paddingVertical: Spacing.two,
   },
   fact: { flex: 1, alignItems: 'center', gap: 4, paddingHorizontal: Spacing.one },
   factText: { textAlign: 'center' },
@@ -674,6 +749,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
     paddingTop: Spacing.three,
+  },
+  sticky: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingTop: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    backgroundColor: C.background,
+    borderTopLeftRadius: Radius.sheet,
+    borderTopRightRadius: Radius.sheet,
+    shadowColor: Brand.navy950,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 18,
+    elevation: 12,
+  },
+  stickyInner: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', alignItems: 'center', gap: Spacing.three },
+  stickyPrice: { fontSize: 20, lineHeight: 25, color: C.text },
+  stage: {
+    position: 'absolute',
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: C.surface,
   },
   sheetBody: {
     gap: Spacing.three,

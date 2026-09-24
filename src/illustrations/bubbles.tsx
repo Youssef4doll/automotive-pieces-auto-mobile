@@ -1,98 +1,101 @@
-import Svg, { Circle, Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 
 import { Brand } from '@/constants/theme';
 
 /**
- * The three bubble drawings on the home arc: filled, lightly shaded, in the
- * shop's navy and gold with one brighter blue for the car — the reference's
- * look, drawn by hand so nothing in them belongs to anybody else.
+ * The four ways in — "Je connais ma voiture", "Je sais quelle pièce",
+ * "J'ai la référence", "Je ne sais pas comment ça s'appelle" — drawn in the
+ * hand of the part-family illustrations the website serves
+ * (automotive-pieces-auto: src/lib/part-art.ts): a 64-unit grid, navy
+ * outline, flat metal greys, the brand's yellow as the one accent, a soft
+ * ground shadow. On the home arc they sit beside the family tiles and
+ * should look drawn by the same person.
+ *
+ * Our own drawings; the car belongs to no maker.
  */
 
-const BLUE = '#1f5fd6';
-const BLUE_DARK = '#1747a6';
+const O = Brand.navy950;
+const N = Brand.navy700;
+const M1 = '#eef2f8';
+const M2 = '#c9d3e3';
+const M3 = '#8f9db6';
+const D = '#26324a';
+const Y = Brand.gold500;
+const W = Brand.white;
 
-/** The car, head on — the big centre bubble. */
-export function BubbleCar({ size = 64 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size * 0.72} viewBox="0 0 64 46">
-      <Defs>
-        <LinearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={BLUE} />
-          <Stop offset="1" stopColor={BLUE_DARK} />
-        </LinearGradient>
-      </Defs>
-      {/* wheels */}
-      <Rect x={8} y={34} width={10} height={10} rx={3} fill={Brand.navy950} />
-      <Rect x={46} y={34} width={10} height={10} rx={3} fill={Brand.navy950} />
-      {/* body */}
-      <Path d="M6 24 L13 10 C14 7 16.5 5.5 19.5 5.5 L44.5 5.5 C47.5 5.5 50 7 51 10 L58 24 L60 26 L60 36 C60 38 58.5 39 57 39 L7 39 C5.5 39 4 38 4 36 L4 26 Z" fill="url(#body)" />
-      {/* windscreen */}
-      <Path d="M15.5 21 L19.5 11 C20 9.8 21 9 22.3 9 L41.7 9 C43 9 44 9.8 44.5 11 L48.5 21 Z" fill="#dbe7ff" />
-      <Path d="M18 21 L22 11.5 L30 11.5 L25 21 Z" fill="#ffffff" opacity={0.55} />
-      {/* lamps and grille */}
-      <Rect x={8} y={27} width={11} height={5} rx={2.5} fill={Brand.gold400} />
-      <Rect x={45} y={27} width={11} height={5} rx={2.5} fill={Brand.gold400} />
-      <Rect x={23} y={29} width={18} height={4} rx={2} fill={BLUE_DARK} />
-      <Rect x={4} y={24} width={56} height={2} fill="#ffffff" opacity={0.15} />
-    </Svg>
-  );
-}
+type Props = { size?: number };
 
-/** "Référence" — a part carrying its stamped number on a tag. */
-export function BubbleReference({ size = 56 }: { size?: number }) {
+function Frame({ size = 56, children }: Props & { children: React.ReactNode }) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 56 56">
-      <Defs>
-        <LinearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#d7dde8" />
-          <Stop offset="1" stopColor="#7f8aa0" />
-        </LinearGradient>
-      </Defs>
-      {/* a gear-toothed disc */}
-      <G>
-        {Array.from({ length: 10 }, (_, i) => {
-          const a = (i / 10) * Math.PI * 2;
-          const cx = 24 + Math.cos(a) * 18;
-          const cy = 24 + Math.sin(a) * 18;
-          return <Circle key={i} cx={cx} cy={cy} r={4.2} fill="url(#metal)" />;
-        })}
-        <Circle cx={24} cy={24} r={18} fill="url(#metal)" />
-        <Circle cx={24} cy={24} r={11} fill="#eef2f8" stroke={Brand.navy700} strokeWidth={1.4} />
-        <Circle cx={24} cy={24} r={4.5} fill={Brand.navy700} />
+    <Svg width={size} height={size} viewBox="0 0 64 64">
+      <Ellipse cx={32} cy={60} rx={20} ry={2.6} fill={O} opacity={0.1} />
+      <G stroke={O} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+        {children}
       </G>
-      {/* the tag */}
-      <Path d="M32 34 L50 34 L54 41 L50 48 L32 48 Z" fill={Brand.gold500} stroke={Brand.navy900} strokeWidth={1.4} strokeLinejoin="round" />
-      <Rect x={35} y={39.5} width={11} height={1.8} rx={0.9} fill={Brand.navy900} />
-      <Rect x={35} y={43} width={8} height={1.8} rx={0.9} fill={Brand.navy900} />
     </Svg>
   );
 }
 
-/** "Photo / Expert" — a camera in front of a part. */
-export function BubblePhoto({ size = 56 }: { size?: number }) {
+/** A car head on — "Je connais ma voiture". */
+export function BubbleCar({ size }: Props) {
   return (
-    <Svg width={size} height={size} viewBox="0 0 56 56">
-      <Rect x={20} y={6} width={22} height={24} rx={4} fill="#c9d1de" stroke={Brand.navy700} strokeWidth={1.2} />
-      <Rect x={25} y={11} width={12} height={3} rx={1.5} fill={Brand.navy700} />
-      <Rect x={25} y={17} width={9} height={3} rx={1.5} fill={Brand.navy700} />
-      <Path d="M8 24 C8 21.8 9.8 20 12 20 L18 20 L21 15.5 L33 15.5 L36 20 L44 20 C46.2 20 48 21.8 48 24 L48 44 C48 46.2 46.2 48 44 48 L12 48 C9.8 48 8 46.2 8 44 Z" fill={Brand.navy800} />
-      <Circle cx={28} cy={34} r={10} fill="#e9eef6" />
-      <Circle cx={28} cy={34} r={6.5} fill={Brand.navy600} />
-      <Circle cx={25.8} cy={31.8} r={2} fill="#ffffff" opacity={0.8} />
-      <Rect x={39} y={24} width={5} height={3} rx={1.5} fill={Brand.gold500} />
-    </Svg>
+    <Frame size={size}>
+      <Rect x={10} y={42} width={10} height={12} rx={3} fill={D} />
+      <Rect x={44} y={42} width={10} height={12} rx={3} fill={D} />
+      <Path d="M6 46v-9c0-3.2 2-5.6 4.8-6.5l5.6-13.2c1.1-2.6 3.4-4.3 6.2-4.3h18.8c2.8 0 5.1 1.7 6.2 4.3l5.6 13.2c2.8.9 4.8 3.3 4.8 6.5v9z" fill={N} />
+      <Path d="M18.5 29l4.3-10c.5-1.3 1.8-2.1 3.2-2.1h12c1.4 0 2.7.8 3.2 2.1l4.3 10z" fill={M2} />
+      <Path d="M22 27l3.3-7.4h6.2l-4.4 7.4z" fill={W} stroke="none" opacity={0.7} />
+      <Rect x={10} y={34} width={11} height={5} rx={2.5} fill={Y} />
+      <Rect x={43} y={34} width={11} height={5} rx={2.5} fill={Y} />
+      <Rect x={25} y={36} width={14} height={4} rx={2} fill={D} />
+      <Path d="M6 42.5h52" fill="none" stroke={W} strokeOpacity={0.3} strokeWidth={1.4} />
+    </Frame>
   );
 }
 
-/** "Quelle pièce" — a part in its box, for the slot when no channel exists. */
-export function BubblePart({ size = 56 }: { size?: number }) {
+/** A brake disc and its pad — "Je sais quelle pièce". */
+export function BubblePart({ size }: Props) {
+  const holes = Array.from({ length: 10 }, (_, i) => {
+    const a = (i / 10) * Math.PI * 2;
+    return <Circle key={i} cx={24 + 15 * Math.cos(a)} cy={34 + 15 * Math.sin(a)} r={1} fill={M3} stroke="none" />;
+  });
   return (
-    <Svg width={size} height={size} viewBox="0 0 56 56">
-      <Path d="M8 18 L28 9 L48 18 L48 40 L28 49 L8 40 Z" fill="#e6c16a" stroke={Brand.navy900} strokeWidth={1.4} strokeLinejoin="round" />
-      <Path d="M8 18 L28 27 L48 18" fill="none" stroke={Brand.navy900} strokeWidth={1.4} strokeLinejoin="round" />
-      <Path d="M28 27 L28 49" stroke={Brand.navy900} strokeWidth={1.4} />
-      <Path d="M18 13.5 L38 22.5 L38 29" fill="none" stroke={Brand.navy900} strokeWidth={1.4} />
-      <Path d="M8 18 L28 27 L28 49 L8 40 Z" fill="#000" opacity={0.08} />
-    </Svg>
+    <Frame size={size}>
+      <Circle cx={24} cy={34} r={19} fill={M1} />
+      <Circle cx={24} cy={34} r={12} fill={M2} />
+      {holes}
+      <Circle cx={24} cy={34} r={6} fill={M1} />
+      <Circle cx={24} cy={34} r={1.8} fill={O} stroke="none" />
+      <Path d="M42 12h11c2.8 0 5 2.2 5 5v26c0 2.8-2.2 5-5 5H42z" fill={Y} />
+      <Path d="M46 17h7v26h-7z" fill={D} />
+    </Frame>
+  );
+}
+
+/** A part's label with its stamped number — "J'ai la référence". */
+export function BubbleReference({ size }: Props) {
+  return (
+    <Frame size={size}>
+      <Path d="M8 15h34l14 17-14 17H8c-2.2 0-4-1.8-4-4V19c0-2.2 1.8-4 4-4z" fill={W} />
+      <Circle cx={45} cy={32} r={3} fill={M2} />
+      <Path d="M11 21v16M14 21v16M18 21v16M20 21v16M24 21v16M27 21v16M31 21v16M33 21v16" stroke={O} strokeWidth={1.6} fill="none" />
+      <Rect x={10} y={40.5} width={24} height={4.5} rx={1.5} fill={Y} />
+    </Frame>
+  );
+}
+
+/** A phone photographing a part, and a question for the shop — "Je ne sais pas comment ça s'appelle". */
+export function BubblePhoto({ size }: Props) {
+  return (
+    <Frame size={size}>
+      <Rect x={12} y={8} width={30} height={50} rx={5} fill={N} />
+      <Rect x={15.5} y={14} width={23} height={36} rx={2} fill={M1} />
+      <Circle cx={27} cy={32} r={7.5} fill={M2} />
+      <Circle cx={27} cy={32} r={2.8} fill={M1} />
+      <Path d="M22 53.5h10" stroke={W} strokeOpacity={0.6} fill="none" />
+      <Path d="M44 6h13c2.2 0 4 1.8 4 4v9c0 2.2-1.8 4-4 4h-6l-5 5v-5h-2c-2.2 0-4-1.8-4-4v-9c0-2.2 1.8-4 4-4z" fill={Y} />
+      <Path d="M48.6 11.6a2.6 2.6 0 1 1 3.4 2.5c-.7.3-1 .9-1 1.6" fill="none" strokeWidth={1.8} />
+      <Circle cx={51} cy={19.2} r={0.9} fill={O} stroke="none" />
+    </Frame>
   );
 }

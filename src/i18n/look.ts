@@ -11,6 +11,9 @@
  */
 export const look = {
   fr: {
+    'look.fitsFor': '« {q} » compatibles avec votre {car}',
+    'look.fitsOnly': 'Compatibles · {car}',
+    'look.added': 'Ajouté au panier',
     'look.fit.FITS': 'Compatible',
     'look.fit.UNKNOWN': 'À vérifier',
     'look.fit.DOES_NOT_FIT': 'Incompatible',
@@ -100,6 +103,9 @@ export const look = {
     'look.continue': 'Continuer',
   },
   en: {
+    'look.fitsFor': '“{q}” that fit your {car}',
+    'look.fitsOnly': 'Fits · {car}',
+    'look.added': 'Added to basket',
     'look.fit.FITS': 'Fits',
     'look.fit.UNKNOWN': 'To check',
     'look.fit.DOES_NOT_FIT': 'Does not fit',
@@ -189,6 +195,9 @@ export const look = {
     'look.continue': 'Continue',
   },
   ar: {
+    'look.fitsFor': '«{q}» المتوافقة مع سيارتك {car}',
+    'look.fitsOnly': 'متوافقة · {car}',
+    'look.added': 'أضيفت إلى السلة',
     'look.fit.FITS': 'متوافقة',
     'look.fit.UNKNOWN': 'للتحقّق',
     'look.fit.DOES_NOT_FIT': 'غير متوافقة',

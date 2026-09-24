@@ -13,14 +13,14 @@ import { ProductListSkeleton } from '@/components/ui/skeleton';
 import { Failed } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
 import { VehicleBar } from '@/components/ui/vehicle-bar';
-import { Border, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap, Type } from '@/constants/theme';
+import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap, Type } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 import { useRecentSearches } from '@/store/recent-searches';
 
 /** Long enough that a steady typist does not fire a request per letter. */
-const DEBOUNCE_MS = 250;
+const DEBOUNCE_MS = 180;
 
 type Scope = 'all' | 'parts' | 'families' | 'brands';
 
@@ -56,6 +56,10 @@ export default function SearchScreen() {
   const { t, rtl } = useI18n();
 
   const engineId = useGarage((s) => s.active?.engineId);
+  const car = useGarage((s) => (s.active ? `${s.active.makeName} ${s.active.modelName}` : ''));
+  // "Only the ones that fit my car" — a narrowing of these results, offered
+  // as the first suggestion whenever some of them are confirmed for it.
+  const [fitsOnly, setFitsOnly] = useState(false);
   const recents = useRecentSearches();
   const loadFamilies = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(loadFamilies);
@@ -107,7 +111,10 @@ export default function SearchScreen() {
 
   // A new query starts on "Tout": a scope chosen for "bosch" makes no sense
   // for "filtre huile".
-  useEffect(() => setScope('all'), [trimmed]);
+  useEffect(() => {
+    setScope('all');
+    setFitsOnly(false);
+  }, [trimmed]);
 
   const submit = useCallback(
     (value = query) => {
@@ -136,7 +143,10 @@ export default function SearchScreen() {
 
   const showFamilies = !!result && (scope === 'all' || scope === 'families') && result.families.length > 0;
   const showBrands = !!result && (scope === 'all' || scope === 'brands') && result.brands.length > 0;
-  const products = result && (scope === 'all' || scope === 'parts') ? result.products : [];
+  const fitting = result ? result.products.filter((p) => p.fitment === 'FITS') : [];
+  const allProducts = result && (scope === 'all' || scope === 'parts') ? result.products : [];
+  const products = fitsOnly ? allProducts.filter((p) => p.fitment === 'FITS') : allProducts;
+  const offerFits = !!car && !fitsOnly && fitting.length > 0 && fitting.length < (result?.products.length ?? 0);
   const nothing = state.status === 'loaded' && result && !result.products.length && !result.families.length && !result.brands.length;
 
   const header = (
@@ -160,6 +170,41 @@ export default function SearchScreen() {
             />
           ))}
         </ScrollView>
+      ) : null}
+
+      {offerFits ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => setFitsOnly(true)}
+          style={({ pressed }) => [styles.fitsRow, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.rowPressed]}
+        >
+          <View style={styles.fitsIcon}>
+            <Feather name="check-circle" size={18} color={C.success} />
+          </View>
+          <Text variant="body" tone={C.text} style={styles.rowText} numberOfLines={2}>
+            {t('look.fitsFor', { q: trimmed, car })}
+          </Text>
+          <View style={styles.fitsCount}>
+            <Text variant="hint" tone={C.success}>
+              {fitting.length}
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
+
+      {fitsOnly ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: true }}
+          onPress={() => setFitsOnly(false)}
+          style={({ pressed }) => [styles.fitsChip, { flexDirection: rtl ? 'row-reverse' : 'row', alignSelf: rtl ? 'flex-end' : 'flex-start' }, pressed && styles.rowPressed]}
+        >
+          <Feather name="check-circle" size={14} color={C.success} />
+          <Text variant="hint" tone={C.success}>
+            {t('look.fitsOnly', { car })}
+          </Text>
+          <Feather name="x" size={14} color={C.success} />
+        </Pressable>
       ) : null}
 
       {result?.didYouMean ? (
@@ -244,7 +289,7 @@ export default function SearchScreen() {
 
       {products.length ? (
         <Text variant="label" style={styles.partsTitle}>
-          {t('search.results', { n: result?.products.length ?? 0, q: result?.query ?? trimmed })}
+          {t('search.results', { n: products.length, q: result?.query ?? trimmed })}
         </Text>
       ) : null}
     </View>
@@ -565,6 +610,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipWrap: { flexWrap: 'wrap', gap: Spacing.two },
+  fitsRow: {
+    alignItems: 'center',
+    gap: Spacing.three,
+    minHeight: Tap.primary + Spacing.one,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.card,
+    backgroundColor: C.successSurface,
+  },
+  fitsIcon: { width: 32, alignItems: 'center' },
+  fitsCount: { minWidth: 28, height: 24, borderRadius: 12, backgroundColor: Brand.white, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  fitsChip: {
+    alignItems: 'center',
+    gap: 6,
+    minHeight: Tap.min,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    backgroundColor: C.successSurface,
+  },
   idleChip: {
     alignItems: 'center',
     gap: 6,

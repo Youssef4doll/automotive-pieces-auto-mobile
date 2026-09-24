@@ -865,3 +865,58 @@ the shop does not have, not a style choice:
   then the name is set in type, never a drawn copy of a trademark;
 - production years show only where the shop recorded them
   (`SavedVehicle.yearFrom/yearTo`, new and optional).
+
+---
+
+## 15. The refinement pass
+
+Same screens, same features; this pass is about how they feel.
+
+**Less noise.** Cards lost their outlines and sit on a soft lift
+(`Elevation.resting`) — product cards and tiles, vehicle cards, catalogue
+panels, the "four ways" rows. The brand tiles are flat surface, the
+product page's delivery/warranty/returns strip lost its box and went muted:
+reassurance under the button, not a second thing to press.
+
+**Hierarchy.** Product cards read brand (red capitals) → name → a
+compatibility *sentence naming the customer's car* ("Compatible avec votre
+BMW Série 1") → price → stock, instead of a generic pill. The garage leads
+with the car as a navy centrepiece carrying the one action it exists for
+("Voir les pièces compatibles", gold); history, details and "add" are three
+quiet doors under it, not three more identical cards.
+
+**Motion, all of it on the UI thread and all of it off under Reduce
+Motion:**
+- `ui/press-scale.tsx` — cards settle to ~97% under the thumb and spring
+  back (tiles, vehicle cards, category discs, the family grid, the garage);
+- the heart pops once when a part is kept, and does nothing on removal;
+- "Ajouter au panier" becomes "✓ Ajouté au panier" for 1.6 s, as well as the
+  toast and the badge;
+- on a product page long enough to need it, a purchase bar slides up once
+  the inline button has scrolled out of view (price × quantity, the same
+  button), and slides away when it is back.
+
+**Flow.**
+- Search offers the vehicle as its first suggestion when some results fit
+  the car in the garage — "« filtre » compatibles avec votre BMW Série 1
+  (2)" — which narrows the list to the confirmed ones, with a chip to undo
+  it. It narrows *these results*; it never invents fits. Autocomplete
+  debounce is 180 ms.
+- "Comment trouver votre pièce ?" goes straight down a path in one tap (it
+  used to be choose, then Continuer).
+- "Mes véhicules" is a list of rows; each row's "…" opens its actions in a
+  sheet (pièces compatibles, rendre principal, supprimer — which asks).
+  Tapping a row makes it the car the app answers for.
+- Favourites are shown as ordinary product tiles, each read fresh from the
+  shop — the phone keeps which parts, never their price.
+- Home follows the brief's order: hero, search, vehicle ("Changer →" on the
+  card), the arc, popular families, the shop's campaigns, then its brands.
+
+**Illustrations.** The four ways in (`illustrations/bubbles.tsx`) are
+redrawn in the part-family hand; the carte grise now points at the VIN line
+("VIN · 17") and shows where the registration stamp sits.
+
+**A rule this pass enforces:** a card with its own secondary action ("…",
+the garage's gold button) is two buttons side by side, never one inside
+another — nested `<button>`s are invalid on the web and ambiguous to a
+screen reader, and the dev console says so.

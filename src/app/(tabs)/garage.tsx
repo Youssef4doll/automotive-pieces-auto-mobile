@@ -1,14 +1,16 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { PressScale } from '@/components/ui/press-scale';
 import { Text } from '@/components/ui/text';
 import { VehicleCard } from '@/components/ui/vehicle-card';
-import { Border, Brand, C, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
+import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { CarArt } from '@/illustrations/car-art';
 import { useI18n } from '@/i18n/provider';
+import { yearSpan } from '@/lib/format';
 import { useGarage } from '@/store/garage';
 
 /**
@@ -48,12 +50,13 @@ export default function GarageScreen() {
     );
   }
 
-  const bento: { icon: React.ComponentProps<typeof Feather>['name']; label: string; onPress: () => void; disabled?: boolean }[] = [
-    { icon: 'check-circle', label: t('look.bento.parts'), onPress: () => router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } }) },
+  const others = vehicles.filter((v) => v.engineId !== active.engineId);
+  const small: { icon: React.ComponentProps<typeof Feather>['name']; label: string; onPress: () => void; disabled?: boolean }[] = [
     { icon: 'clock', label: t('look.bento.history'), onPress: () => router.push('/compte/commandes') },
     { icon: 'info', label: t('look.bento.info'), onPress: () => router.push('/garage/vehicules') },
     { icon: 'plus', label: t('look.bento.add'), onPress: () => router.push('/garage/ajouter'), disabled: isFull() },
   ];
+  const line = [active.engineName, yearSpan(active.yearFrom ?? null, active.yearTo ?? null, t)].filter(Boolean).join(' · ');
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
@@ -63,47 +66,91 @@ export default function GarageScreen() {
           {t('look.garageCount', { n: vehicles.length })}
         </Text>
 
-        <VehicleCard vehicle={active} label={t('look.principalVehicle')} principal onPress={() => router.push('/garage/vehicules')} />
+        {/* The car, as the space's centrepiece: navy, the drawing large, the
+            one action it exists for in gold. */}
+        <View style={styles.hero}>
+          <View style={styles.heroGlow} pointerEvents="none" />
+          <PressScale
+            accessibilityRole="button"
+            accessibilityLabel={`${t('look.principalVehicle')}, ${active.makeName} ${active.modelName}, ${line}`}
+            onPress={() => router.push('/garage/vehicules')}
+            scaleTo={0.985}
+            style={styles.heroMain}
+          >
+            <View style={[row, styles.heroTop]}>
+              <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start', gap: 4 }]}>
+                <Text variant="hint" tone={Brand.navy300}>
+                  {t('look.principalVehicle')}
+                </Text>
+                <Text style={[styles.heroName, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+                  {active.makeName} {active.modelName}
+                </Text>
+                <Text variant="hint" tone="#c7d1e3">
+                  {line}
+                </Text>
+                <View style={[styles.pill, row]}>
+                  <Feather name="check-circle" size={12} color={Brand.green600} />
+                  <Text style={[styles.pillText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.principal')}</Text>
+                </View>
+              </View>
+              <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={20} color={Brand.navy300} />
+            </View>
+            <View style={[styles.heroArt, rtl && { transform: [{ scaleX: -1 }] }]} pointerEvents="none">
+              <CarArt width={250} body={Brand.navy600} />
+            </View>
+          </PressScale>
+          <PressScale
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } })}
+            style={[styles.heroCta, row]}
+            pressedStyle={{ backgroundColor: Brand.gold600 }}
+          >
+            <Feather name="check-circle" size={18} color={C.onAccent} />
+            <Text style={[styles.heroCtaText, { fontFamily: familyFor('display', rtl) }]}>{t('home.seeCompatible')}</Text>
+          </PressScale>
+        </View>
 
-        <View style={[styles.bento, row]}>
-          {bento.map((b) => (
-            <Pressable
+        {/* Three quieter doors: icon and word, no card each. */}
+        <View style={[styles.quick, row]}>
+          {small.map((b) => (
+            <PressScale
               key={b.label}
               accessibilityRole="button"
               accessibilityState={{ disabled: b.disabled }}
               disabled={b.disabled}
               onPress={b.onPress}
-              style={({ pressed }) => [styles.tile, pressed && styles.pressed, b.disabled && styles.disabled, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}
+              style={[styles.quickItem, b.disabled && styles.disabled]}
+              pressedStyle={styles.pressed}
             >
-              <View style={styles.tileIcon}>
+              <View style={styles.quickIcon}>
                 <Feather name={b.icon} size={20} color={C.text} />
               </View>
-              <Text style={[styles.tileLabel, { fontFamily: familyFor('bodySemi', rtl), textAlign: rtl ? 'right' : 'left' }]}>{b.label}</Text>
-            </Pressable>
+              <Text style={[styles.quickLabel, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={2}>
+                {b.label}
+              </Text>
+            </PressScale>
           ))}
         </View>
 
-        <View style={[styles.head, row]}>
-          <Text style={[styles.section, { fontFamily: familyFor('heading', rtl) }]}>{t('look.myVehicles', { n: vehicles.length })}</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/garage/vehicules')} hitSlop={8} style={[styles.seeAll, row]}>
-            <Text variant="hint" tone={C.text}>
-              {t('catalog.seeAll')}
-            </Text>
-            <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={C.text} />
-          </Pressable>
-        </View>
+        {others.length ? (
+          <>
+            <View style={[styles.head, row]}>
+              <Text style={[styles.section, { fontFamily: familyFor('heading', rtl) }]}>{t('look.myVehicles', { n: vehicles.length })}</Text>
+              <PressScale accessibilityRole="button" onPress={() => router.push('/garage/vehicules')} hitSlop={8} style={[styles.seeAll, row]}>
+                <Text variant="hint" tone={C.text}>
+                  {t('catalog.seeAll')}
+                </Text>
+                <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={C.text} />
+              </PressScale>
+            </View>
+            <View style={styles.list}>
+              {others.map((v) => (
+                <VehicleCard key={v.engineId} vehicle={v} compactArt flat action={t('garage.use')} onPress={() => setActive(v.engineId)} />
+              ))}
+            </View>
+          </>
+        ) : null}
 
-        {vehicles.map((v) => (
-          <VehicleCard
-            key={v.engineId}
-            vehicle={v}
-            principal={v.engineId === active.engineId}
-            compactArt
-            onPress={() => (v.engineId === active.engineId ? router.push('/garage/vehicules') : setActive(v.engineId))}
-          />
-        ))}
-
-        <Button label={t('garage.add')} icon="plus" onPress={() => router.push('/garage/ajouter')} disabled={isFull()} />
         {isFull() ? (
           <Text variant="hint" style={styles.centred}>
             {t('garage.full')}
@@ -118,33 +165,55 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.surface },
   scroll: { paddingTop: Spacing.one },
   column: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', paddingHorizontal: Spacing.three, gap: Spacing.three },
+  flex: { flex: 1, minWidth: 0 },
   empty: { alignItems: 'center', justifyContent: 'center', gap: Spacing.three, padding: Spacing.four, backgroundColor: C.background },
   centred: { textAlign: 'center' },
   wide: { alignSelf: 'stretch' },
-  bento: { flexWrap: 'wrap', gap: Spacing.two },
-  tile: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    minHeight: 92,
-    padding: Spacing.three,
-    gap: Spacing.two,
-    borderRadius: Radius.tile,
-    borderWidth: Border.thin,
-    borderColor: C.border,
-    backgroundColor: Brand.white,
+  hero: {
+    borderRadius: Radius.card,
+    backgroundColor: Brand.navy900,
+    padding: Spacing.four,
+    paddingBottom: Spacing.three,
+    overflow: 'hidden',
+    gap: Spacing.three,
   },
-  pressed: { backgroundColor: C.surfacePressed },
-  disabled: { opacity: 0.5 },
-  tileIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: C.surface,
+  heroGlow: { position: 'absolute', width: 300, height: 300, borderRadius: 150, right: -80, top: 40, backgroundColor: Brand.navy700, opacity: 0.6 },
+  heroMain: { gap: Spacing.two },
+  heroTop: { alignItems: 'flex-start', gap: Spacing.two },
+  heroName: { fontSize: 24, lineHeight: 30, color: Brand.white },
+  pill: {
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+    backgroundColor: 'rgba(22,163,74,0.16)',
+  },
+  pillText: { fontSize: 12, lineHeight: 16, color: '#86efac' },
+  heroArt: { alignItems: 'center', paddingVertical: Spacing.one },
+  heroCta: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.two,
+    minHeight: Tap.primary,
+    borderRadius: Radius.pill,
+    backgroundColor: Brand.gold500,
   },
-  tileLabel: { fontSize: 14, lineHeight: 18, color: C.text },
+  heroCtaText: { fontSize: 16, color: C.onAccent },
+  quick: {
+    backgroundColor: Brand.white,
+    borderRadius: Radius.card,
+    paddingVertical: Spacing.three,
+    ...Elevation.resting,
+  },
+  quickItem: { flex: 1, alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.one, borderRadius: Radius.tile, paddingVertical: Spacing.one },
+  quickIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
+  quickLabel: { fontSize: 13, lineHeight: 17, color: C.text, textAlign: 'center' },
+  pressed: { backgroundColor: C.surface },
+  disabled: { opacity: 0.45 },
   head: { alignItems: 'center', justifyContent: 'space-between', paddingTop: Spacing.one },
   section: { fontSize: 18, lineHeight: 24, color: C.text },
   seeAll: { alignItems: 'center', gap: 4, minHeight: Tap.min },
+  list: { gap: Spacing.two },
 });
