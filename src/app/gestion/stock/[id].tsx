@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ApiError, type ApiFailure } from '@/api/client';
@@ -104,7 +104,13 @@ function Editor({ product, onChange }: { product: ProductDetail; onChange: (p: P
   const [counted, setCounted] = useState(String(Math.max(0, product.stockQty)));
   const [countError, setCountError] = useState(false);
   const [savingCount, setSavingCount] = useState(false);
-  useEffect(() => setCounted(String(Math.max(0, product.stockQty))), [product.stockQty]);
+  // A count saved (here or on another phone) replaces what is in the box —
+  // adjusted during render, React's pattern for state that follows a prop.
+  const [countedFor, setCountedFor] = useState(product.stockQty);
+  if (countedFor !== product.stockQty) {
+    setCountedFor(product.stockQty);
+    setCounted(String(Math.max(0, product.stockQty)));
+  }
   const step = (d: number) => {
     const n = parseCount(counted) ?? 0;
     setCounted(String(Math.max(0, n + d)));

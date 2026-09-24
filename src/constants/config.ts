@@ -171,8 +171,25 @@ function withoutTrailingSlash(url: string) {
   return url.replace(/\/+$/, '');
 }
 
+/**
+ * Which build this is — set by app.config.ts from `APP_ENV`. A build that
+ * does not say (an old app.json-only build) is treated as production only
+ * when it is also a release build, which is what it always was.
+ */
+export const APP_ENV: 'development' | 'preview' | 'production' = (() => {
+  const raw = (Constants.expoConfig?.extra as Record<string, unknown> | undefined)?.appEnv;
+  if (raw === 'development' || raw === 'preview' || raw === 'production') return raw;
+  return __DEV__ ? 'development' : 'production';
+})();
+
+/**
+ * Only a production build may fall back to the live shop. A development or
+ * preview build with no address configured looks for a local website rather
+ * than quietly placing test orders in the real one — app.config.ts refuses
+ * to build a preview without its staging address in the first place.
+ */
 export const API_BASE_URL = withoutTrailingSlash(
-  readConfiguredBaseUrl() ?? (__DEV__ ? devDefault() : PRODUCTION),
+  readConfiguredBaseUrl() ?? (APP_ENV === 'production' ? PRODUCTION : devDefault()),
 );
 
 /**

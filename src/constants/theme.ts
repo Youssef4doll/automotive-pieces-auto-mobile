@@ -15,7 +15,7 @@
  *   for anything a finger touches; 48 is what a primary action gets.
  */
 
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 /** The brand ramp, whole. Prefer a semantic colour below where one exists. */
 export const Brand = {

@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Redirect, Stack, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import type { ShopSettings } from '@/api/shop';
@@ -18,6 +18,7 @@ import { formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { useCart } from '@/store/cart';
 import { useCheckout } from '@/store/checkout';
+import { track } from '@/services/analytics';
 
 /**
  * Commande, step 2 of 4: who, and where.
@@ -36,6 +37,9 @@ import { useCheckout } from '@/store/checkout';
 export default function DeliveryStep() {
   const { t } = useI18n();
   const settings = useShopSettings();
+  useEffect(() => {
+    track('begin_checkout', { lines: useCart.getState().items.length });
+  }, []);
 
   return (
     <>

@@ -23,7 +23,7 @@ const ROUTES = [
   '/famille/freinage', '/famille/filtres', '/marque/bosch',
   `/produit/${fits}`, `/produit/${misfit}`, '/pieces-compatibles',
   '/garage/ajouter', '/garage/ajouter/bmw', '/garage/vin', '/garage/vehicules', '/trouver',
-  '/compte/favoris', '/compte/commandes', '/compte/parametres', '/compte/adresses', '/compte/retrouver',
+  '/compte/favoris', '/compte/commandes', '/compte/parametres', '/compte/adresses', '/compte/retrouver', '/compte/connexion', '/bienvenue',
   '/aide', '/commande/livraison',
 ];
 

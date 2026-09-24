@@ -306,7 +306,7 @@ TRACK      Suivi              the status in words, then the dated history
 The home screen follows the owner's reference mockup, placement for placement:
 
 ```
-Bonjour 👋, search        greeting (no name: there is no sign-in) and the magnifier
+Bonjour 👋, search        greeting and the magnifier
 Que recherchez-vous ?     over a drawn night road (no stock photography)
 three bubbles on an arc   Référence · the car (big, gold ring) · Photo / Expert
                           — the photo bubble only when the shop has a channel;
@@ -619,8 +619,9 @@ What landed, and one change from the plan:
   the only key to it exist together or not at all. That was tested by
   accident: a dev server with a stale Prisma client failed to write the
   token, and the stock it had claimed came back.
-- `GET /orders/:ref` accepts the token **only** — no session yet, because
-  the app has no sign-in. That is also what lets the route take CORS `*`:
+- `GET /orders/:ref` accepts the order's token, or (since §17) the app
+  session of the account that owns the order — never a cookie. That is
+  also what lets the route take CORS `*`:
   the danger of `*` is ambient credentials, and a bearer header is not
   ambient. The rule is written on the route helper: a route with the write
   profile never reads a cookie.
@@ -724,14 +725,12 @@ channel). The eight shopper journeys in the redesign brief are walked by
   WhatsApp conversation with the shop, and the shop's WhatsApp, phone and
   e-mail are still placeholders. The card is absent until the owner fills
   one in at /admin/parametres; it then appears with no release.
-- **Notifications, and "Bonjour Youssef".** No push service and no sign-in.
+- **Notifications.** No push service yet (needs the owner's FCM/APNs keys).
 
 **Next, in order:**
 
-1. **Sign-in and "Mes commandes" across devices.** `POST /api/v1/auth/*` with
-   a bearer session (not the website's cookie — see §10), then orders and the
-   garage synced to the account. Until then Compte says plainly that
-   everything lives on this phone.
+1. ~~**Sign-in and "Mes commandes" across devices.**~~ Done — §17. The
+   garage is not synced to the account yet.
 2. **Camera OCR of the carte grise.** Needs on-device text recognition (a
    native module outside Expo Go) or a service. The VIN screen is the typed
    version and says it only identifies the make.
@@ -741,9 +740,7 @@ channel). The eight shopper journeys in the redesign brief are walked by
    written, and must never read as a diagnosis.
 5. **Pagination on a family and on search.** Both endpoints page; the screens
    show the first page. Fine at 55 parts, not at 5 000.
-6. **Analytics.** The website has an `AnalyticsEvent` table and a `track()`;
-   the app should send the brief's event list to it. Not wired: a stub that
-   records nothing would look like instrumentation and measure nothing.
+6. ~~**Analytics.**~~ Done — §17, into the website's own table.
 7. **Shared transitions** (card → product image). Reanimated 4 supports them;
    worth doing once there are real photographs to carry across.
 
@@ -989,3 +986,77 @@ shows a success state — "Constructeur identifié : BMW", what remains, and
 that one needs its explanation); favourites have an empty state with a way
 to the catalogue; every text input is 16px or larger so iOS Safari never
 zooms on focus.
+
+---
+
+## 17. Foundation pass: accounts, analytics, environments, CI (September 2026)
+
+The master specification asked for an assessment before code; it is
+`docs/PLAN.md`, with what exists, what is reused, what changes and what
+deliberately does not. This section is what Phase 1 and the first part of
+Phase 2 actually built.
+
+**Customer accounts, on the website's own accounts.** The app signs in with
+the same e-mail and password as the website, through `POST
+/api/v1/auth/session`, and gets a bearer token kept in the Keychain /
+Keystore (`store/account.ts`, key `apa-account.session`). On the shop it is a
+`CustomerSession` row — 32 random bytes, SHA-256 at rest, thirty days,
+revocable — in its own table, so a customer token can never open the staff
+door, whatever the account's role. The password check, lockout and timing
+are `lib/credentials`, shared by all three doors. A password changed or reset
+on the website signs every phone out.
+
+- **Optional, and said to be.** Nothing routes a customer to sign in; the
+  Compte tab offers it in one quiet row; the welcome's primary button is
+  "Continuer sans compte". Guest checkout is unchanged.
+- **Orders follow the account, proven by their own tokens.** On sign-in the
+  app sends the order tokens this phone holds (`/account/orders/claim`);
+  orders with no owner join the account. Never matched by e-mail. The
+  account's orders from other devices are listed in "Mes commandes" and open
+  with the session (`GET /orders/:ref` accepts the owner's session as well
+  as the order token). Signing out removes those rows from this phone and
+  keeps the ones it placed itself.
+- **Deletion** is one tap from Compte, finished with the password, and says
+  what goes (the person, sessions, baskets, reset links, the link from
+  events and messages) and what stays (orders, detached — an invoice has to
+  be kept). The owner's own account is refused, so a phone cannot lock the
+  shop out of its back office.
+- **Forgotten password** sends the website's reset e-mail; the new password
+  is chosen on the website. One reset flow, not two.
+
+**Analytics.** `src/services/analytics.ts` is the only door: `track(name,
+props)`, batched every five seconds and on backgrounding, decisive steps
+(`purchase`, `sign_up`, `login`…) sent at once. `POST /api/v1/events`
+writes the website's `AnalyticsEvent` table tagged `app: true` + platform, so
+one dashboard reads both front doors. The user id comes from the session on
+the server, never from the body; property bags are bounded; no names,
+phones, e-mails or addresses are sent. The events wired are listed in
+PLAN.md §11.
+
+**Environments.** `app.config.ts` reads `APP_ENV`: development (local shop,
+found automatically), preview (a staging shop — required, and refused if it
+is the live one), production (the live shop, and only it). Each has its own
+bundle identifier, so test and store apps sit side by side. `config.ts` no
+longer falls back to the live shop from anything but a production build.
+`eas.json` carries the three profiles. EAS Update, push and the store
+submission need the owner's Expo project and credentials (PLAN.md, end).
+
+**First launch** (`/bienvenue`): four true sentences, the account (optional),
+the car — or "Plus tard"; "Passer" on every step; once, then never. Only the
+home screen sends a first-timer there, so a link opens what it points at.
+No permission is asked.
+
+**Quality gates.** ESLint (`eslint-config-expo`) in the app with zero
+warnings allowed; the React Compiler rules it brought found real things —
+state reset inside effects in the three data hooks (now derived from the
+request it answers, so a new request reads "loading" on its first render),
+Reanimated values written with `.value =` from React code (now `.set()`),
+`Math.random` in a render. The website's 13 pre-existing lint errors are
+fixed the same way. Unit tests (`node --test` via tsx) for the pure rules in
+both repos. GitHub Actions CI in both: lint, typecheck, tests, and a build —
+the website's against a throwaway Postgres migrated from zero, the app's for
+all three platforms.
+
+**Tested:** `e2e/account.mjs` (guest order → account → claim → sign-out →
+second phone → deletion), `e2e/welcome.mjs`, and the sweep now includes the
+sign-in and welcome screens at every width, French and Arabic.

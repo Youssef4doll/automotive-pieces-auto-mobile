@@ -27,7 +27,6 @@ export function useCartQuote(deliveryMethod?: DeliveryMethod) {
   const items = useCart((s) => s.items);
   const hydrated = useCart((s) => s.hydrated);
   const engineId = useGarage((s) => s.active?.engineId);
-  const [state, setState] = useState<QuoteState>({ status: 'empty' });
   const [attempt, setAttempt] = useState(0);
 
   // What the shop is asked about, and nothing else: ids and quantities.
@@ -35,44 +34,56 @@ export function useCartQuote(deliveryMethod?: DeliveryMethod) {
     () => ({ items: items.map((i) => ({ productId: i.productId, qty: i.qty })), engineId, deliveryMethod }),
     [items, engineId, deliveryMethod],
   );
-  const key = JSON.stringify(request);
+  // One question per basket and attempt; the answer is filed under it, so a
+  // changed basket reads "loading" from its first render with the previous
+  // total kept beside it — derived here, not reset inside the effect.
+  const question = `${JSON.stringify(request)}#${attempt}`;
+  const [answer, setAnswer] = useState<{
+    for: string;
+    value: { status: 'loaded'; data: CartQuote } | { status: 'failed'; failure: ApiFailure };
+  } | null>(null);
+  const [last, setLast] = useState<CartQuote | null>(null);
+  const empty = !hydrated || request.items.length === 0;
 
   useEffect(() => {
-    if (!hydrated) return;
-    if (request.items.length === 0) {
-      setState({ status: 'empty' });
-      return;
-    }
+    if (empty) return;
     const controller = new AbortController();
-    setState((s) => ({
-      status: 'loading',
-      previous: s.status === 'loaded' ? s.data : s.status === 'loading' || s.status === 'failed' ? s.previous : null,
-    }));
     const timer = setTimeout(() => {
       ordersApi
         .quote(request, controller.signal)
         .then((data) => {
-          if (!controller.signal.aborted) setState({ status: 'loaded', data });
+          if (controller.signal.aborted) return;
+          setAnswer({ for: question, value: { status: 'loaded', data } });
+          setLast(data);
         })
         .catch((err: unknown) => {
           if (controller.signal.aborted) return;
           if (err instanceof Error && err.name === 'AbortError') return;
-          setState((s) => ({
-            status: 'failed',
-            failure: err instanceof ApiError ? err.failure : { kind: 'offline' },
-            previous: s.status === 'loading' ? s.previous : null,
-          }));
+          setAnswer({
+            for: question,
+            value: { status: 'failed', failure: err instanceof ApiError ? err.failure : { kind: 'offline' } },
+          });
         });
     }, DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-    // `key` stands in for `request`, whose identity changes on every render.
+    // `question` stands in for `request`, whose identity changes on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, hydrated, attempt]);
+  }, [question, empty]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
+
+  // The last total is only a fair stand-in for a basket that still shares a
+  // part with it — not for one emptied and filled again with something else.
+  const previous =
+    last && last.lines.some((l) => request.items.some((i) => i.productId === l.productId)) ? last : null;
+  let state: QuoteState;
+  if (empty) state = { status: 'empty' };
+  else if (answer?.for === question) {
+    state = answer.value.status === 'loaded' ? answer.value : { status: 'failed', failure: answer.value.failure, previous };
+  } else state = { status: 'loading', previous };
   return { state, retry, hydrated };
 }
 

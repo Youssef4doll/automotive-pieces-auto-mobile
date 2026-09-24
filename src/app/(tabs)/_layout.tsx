@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Border, C, familyFor, IconSize, Radius, Spacing, TabBarHeight } from '@/constants/theme';
+import { C, familyFor, Spacing, TabBarHeight } from '@/constants/theme';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useCartCount } from '@/store/cart';

@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 
 import { ApiError } from '@/api/client';
@@ -49,7 +49,7 @@ export default function StaffShop() {
       ) : settings.status === 'failed' ? (
         <Failed failure={settings.failure} onRetry={settings.retry} />
       ) : (
-        <Form settings={settings.data} onSaved={settings.set} />
+        <Form key={settings.data.map((s) => `${s.key}=${s.value}`).join('\u0001')} settings={settings.data} onSaved={settings.set} />
       )}
     </>
   );
@@ -62,7 +62,8 @@ function Form({ settings, onSaved }: { settings: Setting[]; onSaved: (s: Setting
   const [values, setValues] = useState<Record<string, string>>(() => Object.fromEntries(settings.map((s) => [s.key, s.value])));
   const [saving, setSaving] = useState(false);
   const [badKey, setBadKey] = useState<string | null>(null);
-  useEffect(() => setValues(Object.fromEntries(settings.map((s) => [s.key, s.value]))), [settings]);
+  // A save hands back new settings; the parent keys this form on their
+  // values, so the boxes start again from what the shop now holds.
 
   const changed = Object.fromEntries(Object.entries(values).filter(([k, v]) => byKey[k] && byKey[k].value !== v));
   const save = async () => {

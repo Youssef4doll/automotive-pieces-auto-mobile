@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { deviceStorage } from './storage';
+import { track } from '@/services/analytics';
 
 /**
  * The parts the customer hearted, on this phone, newest first.
@@ -29,6 +30,7 @@ export const useFavourites = create<FavState>()(
       has: (slug) => get().items.some((f) => f.slug === slug),
       toggle: (item) => {
         const on = get().has(item.slug);
+        if (!on) track('favorite_added', { slug: item.slug });
         set({ items: on ? get().items.filter((f) => f.slug !== item.slug) : [item, ...get().items].slice(0, MAX) });
         return !on;
       },

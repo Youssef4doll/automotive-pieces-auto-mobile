@@ -21,6 +21,11 @@ export type PlacedOrder = {
   placedAt: string;
   total: number;
   itemCount: number;
+  /**
+   * Listed because the signed-in account owns it, not because this phone
+   * holds its token. Opened with the account session; removed on sign-out.
+   */
+  fromAccount?: boolean;
 };
 
 const tokenKey = (ref: string) => `apa-order.${ref}`;
@@ -29,8 +34,16 @@ type OrdersState = {
   orders: PlacedOrder[];
   hydrated: boolean;
   remember: (order: PlacedOrder, token: string) => Promise<void>;
+  /**
+   * The key that opens this order: the phone's own order token, or — for an
+   * order the signed-in account owns — the account session.
+   */
   tokenFor: (ref: string) => Promise<string | null>;
+  /** This phone's own order token only. */
+  ownToken: (ref: string) => Promise<string | null>;
   forget: (ref: string) => Promise<void>;
+  mergeAccountOrders: (list: { ref: string; placedAt: string; total: number; itemCount: number }[]) => void;
+  dropAccountOrders: () => void;
 };
 
 export const useOrders = create<OrdersState>()(
@@ -47,7 +60,27 @@ export const useOrders = create<OrdersState>()(
         set({ orders: [order, ...rest] });
       },
 
-      tokenFor: (ref) => secrets.get(tokenKey(ref)),
+      tokenFor: async (ref) => {
+        const own = await secrets.get(tokenKey(ref)).catch(() => null);
+        if (own) return own;
+        // Lazy, to keep the two stores from importing each other at load.
+        const { accountToken } = await import('./account');
+        return accountToken() ?? null;
+      },
+
+      ownToken: (ref) => secrets.get(tokenKey(ref)).catch(() => null),
+
+      mergeAccountOrders: (list) => {
+        const local = get().orders;
+        const known = new Set(local.map((o) => o.ref));
+        const added = list
+          .filter((o) => !known.has(o.ref))
+          .map((o) => ({ ref: o.ref, placedAt: o.placedAt, total: o.total, itemCount: o.itemCount, fromAccount: true }));
+        if (!added.length) return;
+        set({ orders: [...local, ...added].sort((a, b) => b.placedAt.localeCompare(a.placedAt)) });
+      },
+
+      dropAccountOrders: () => set({ orders: get().orders.filter((o) => !o.fromAccount) }),
 
       forget: async (ref) => {
         await secrets.remove(tokenKey(ref));

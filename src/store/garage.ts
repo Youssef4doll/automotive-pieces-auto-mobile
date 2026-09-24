@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { deviceStorage as storage } from './storage';
+import { track } from '@/services/analytics';
 
 /**
  * The customer's cars, on this phone.
@@ -75,7 +76,8 @@ export const useGarage = create<GarageState>()(
       active: null,
       hydrated: false,
 
-      add: (vehicle) =>
+      add: (vehicle) => {
+        track('vehicle_added', { makeId: vehicle.makeId, modelId: vehicle.modelId, engineId: vehicle.engineId });
         set((state) => {
           const rest = state.vehicles.filter((v) => v.engineId !== vehicle.engineId);
           // Re-adding a car already in the garage is a reorder, not a
@@ -83,11 +85,15 @@ export const useGarage = create<GarageState>()(
           // from the picker.
           const vehicles = [vehicle, ...rest].slice(0, MAX_GARAGE_SIZE);
           return { vehicles, active: vehicle };
-        }),
+        });
+      },
 
       setActive: (engineId) => {
         const found = get().vehicles.find((v) => v.engineId === engineId);
-        if (found) set({ active: found });
+        if (found) {
+          set({ active: found });
+          track('vehicle_selected', { engineId });
+        }
       },
 
       remove: (engineId) =>

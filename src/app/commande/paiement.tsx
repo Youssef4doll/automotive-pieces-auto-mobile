@@ -18,7 +18,9 @@ import { useI18n } from '@/i18n/provider';
 import { useCart } from '@/store/cart';
 import { useCheckout } from '@/store/checkout';
 import { useGarage, vehicleLabel } from '@/store/garage';
+import { accountToken } from '@/store/account';
 import { useOrders } from '@/store/orders';
+import { track } from '@/services/analytics';
 
 /**
  * Commande, step 3 of 4: how to pay, and a last look.
@@ -66,7 +68,7 @@ export default function PaymentStep() {
         notes: details.notes.trim() || undefined,
         vehicleEngineId: active?.engineId,
         items: items.map((i) => ({ productId: i.productId, qty: i.qty })),
-      });
+      }, accountToken());
       // The key first, then everything that depends on the order existing.
       await remember(
         {
@@ -78,6 +80,14 @@ export default function PaymentStep() {
         result.token,
       );
       justPlaced.set(result.ref, result.order);
+      track('purchase', {
+        ref: result.ref,
+        total: result.order.total,
+        items: result.order.items.reduce((n, i) => n + i.qty, 0),
+        delivery: result.order.deliveryMethod,
+        payment: 'COD',
+        vehicle: Boolean(active),
+      });
       clearCart();
       settle();
       // Back to the tabs, then forward to the confirmation: the stack ends up
@@ -86,6 +96,7 @@ export default function PaymentStep() {
       router.dismissAll();
       router.push({ pathname: '/commande/confirmation/[ref]', params: { ref: result.ref } });
     } catch (err) {
+      track('purchase_failed', { reason: err instanceof ApiError ? err.failure.kind : 'offline' });
       setError(messageFor(err instanceof ApiError ? err.failure : { kind: 'offline' }));
       setPlacing(false);
     }

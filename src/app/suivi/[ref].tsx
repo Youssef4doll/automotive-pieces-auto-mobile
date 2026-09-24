@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
@@ -17,6 +17,7 @@ import { useI18n } from '@/i18n/provider';
 import { useCart } from '@/store/cart';
 import { useOrders } from '@/store/orders';
 import { useToast } from '@/store/toast';
+import { track } from '@/services/analytics';
 
 /** The shop's own status flow — see `ORDER_STATUS_FLOW` on the website. */
 const FLOW: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PREPARED', 'SHIPPED', 'DELIVERED'];
@@ -49,6 +50,10 @@ export default function TrackingScreen() {
     [ref, tokenFor],
   );
   const order = useResource(load);
+  const status = order.status === 'loaded' ? order.data.status : null;
+  useEffect(() => {
+    if (status) track('order_viewed', { ref, status });
+  }, [ref, status]);
 
   return (
     <>

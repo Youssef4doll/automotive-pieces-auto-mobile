@@ -3,6 +3,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 import type { Product } from '@/api/catalogue';
 import { deviceStorage } from './storage';
+import { track } from '@/services/analytics';
 
 /**
  * The basket, on this phone.
@@ -52,6 +53,7 @@ export const useCart = create<CartState>()(
 
       add: (product, qty = 1) => {
         const items = get().items;
+        track('add_to_cart', { productId: product.id, slug: product.slug, brand: product.brand, qty });
         const existing = items.find((i) => i.productId === product.id);
         if (existing) {
           set({
@@ -87,7 +89,10 @@ export const useCart = create<CartState>()(
         });
       },
 
-      remove: (productId) => set({ items: get().items.filter((i) => i.productId !== productId) }),
+      remove: (productId) => {
+        track('remove_from_cart', { productId });
+        set({ items: get().items.filter((i) => i.productId !== productId) });
+      },
 
       clear: () => set({ items: [] }),
     }),

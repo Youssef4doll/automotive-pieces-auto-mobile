@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,6 +16,7 @@ import { useResource } from '@/hooks/use-resource';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
+import { track } from '@/services/analytics';
 
 /**
  * One family of parts — the reference's "Freinage" screen.
@@ -56,6 +57,9 @@ export default function FamilyScreen() {
     [family, engineId, subcategory],
   );
   const products = useResource(loadProducts);
+  useEffect(() => {
+    track('category_viewed', { family, subcategory, vehicle: Boolean(engineId) });
+  }, [family, subcategory, engineId]);
 
   const current = useMemo<Family | undefined>(
     () => (families.status === 'loaded' ? families.data.find((f) => f.slug === family) : undefined),

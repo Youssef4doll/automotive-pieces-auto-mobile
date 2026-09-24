@@ -18,6 +18,7 @@ import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 import { useRecentSearches } from '@/store/recent-searches';
+import { track } from '@/services/analytics';
 
 /** Long enough that a steady typist does not fire a request per letter. */
 const DEBOUNCE_MS = 180;
@@ -59,45 +60,63 @@ export default function SearchScreen() {
   const car = useGarage((s) => (s.active ? `${s.active.makeName} ${s.active.modelName}` : ''));
   // "Only the ones that fit my car" — a narrowing of these results, offered
   // as the first suggestion whenever some of them are confirmed for it.
-  const [fitsOnly, setFitsOnly] = useState(false);
   const recents = useRecentSearches();
   const loadFamilies = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(loadFamilies);
 
   const [query, setQuery] = useState(params.q ?? '');
-  const [state, setState] = useState<State>({ status: 'idle' });
-  const [scope, setScope] = useState<Scope>('all');
   const [attempt, setAttempt] = useState(0);
+  // Answers are filed under the question they answer (the text, the car, the
+  // attempt), and the screen's state is derived from that: a new letter reads
+  // "loading" with the last results kept beside it, from its first render.
+  const [answer, setAnswer] = useState<{
+    for: string;
+    value: { status: 'loaded'; data: SearchResult } | { status: 'failed'; failure: ApiFailure };
+  } | null>(null);
+  const [last, setLast] = useState<SearchResult | null>(null);
+  // A new query starts on "Tout" with the filter off: a scope chosen for
+  // "bosch" makes no sense for "filtre huile". Filed under the query too.
+  const [narrowing, setNarrowing] = useState<{ q: string; scope: Scope; fitsOnly: boolean }>({ q: '', scope: 'all', fitsOnly: false });
   const submitted = useRef(false);
   const input = useRef<TextInput>(null);
 
   const trimmed = query.trim();
   const reference = params.mode === 'reference';
+  const question = `${trimmed}|${engineId ?? ''}|${attempt}`;
+  const state: State =
+    trimmed.length < 2
+      ? { status: 'idle' }
+      : answer?.for === question
+        ? answer.value
+        : { status: 'loading', previous: last };
+  const scope: Scope = narrowing.q === trimmed ? narrowing.scope : 'all';
+  const fitsOnly = narrowing.q === trimmed ? narrowing.fitsOnly : false;
+  const setScope = (next: Scope) => setNarrowing({ q: trimmed, scope: next, fitsOnly });
+  const setFitsOnly = (next: boolean) => setNarrowing({ q: trimmed, scope, fitsOnly: next });
 
   // Live results, debounced. A pending request is aborted when the next
   // letter arrives, so a slow answer for "pla" can never overwrite the
   // answer for "plaquettes".
   useEffect(() => {
-    if (trimmed.length < 2) {
-      setState({ status: 'idle' });
-      return;
-    }
+    if (trimmed.length < 2) return;
     const controller = new AbortController();
     const isSubmit = submitted.current;
     submitted.current = false;
-    setState((s) => ({ status: 'loading', previous: s.status === 'loaded' ? s.data : s.status === 'loading' ? s.previous : null }));
 
     const timer = setTimeout(
       () => {
         searchApi
           .query(trimmed, { engineId, take: 30, submitted: isSubmit }, controller.signal)
           .then((data) => {
-            if (!controller.signal.aborted) setState({ status: 'loaded', data });
+            if (controller.signal.aborted) return;
+            setAnswer({ for: question, value: { status: 'loaded', data } });
+            setLast(data);
+            track('search_query', { q: trimmed.slice(0, 80), results: data.products.length, vehicle: Boolean(engineId), submitted: isSubmit });
           })
           .catch((err: unknown) => {
             if (controller.signal.aborted) return;
             if (err instanceof Error && err.name === 'AbortError') return;
-            setState({ status: 'failed', failure: err instanceof ApiError ? err.failure : { kind: 'offline' } });
+            setAnswer({ for: question, value: { status: 'failed', failure: err instanceof ApiError ? err.failure : { kind: 'offline' } } });
           });
       },
       isSubmit ? 0 : DEBOUNCE_MS,
@@ -107,14 +126,9 @@ export default function SearchScreen() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [trimmed, engineId, attempt]);
-
-  // A new query starts on "Tout": a scope chosen for "bosch" makes no sense
-  // for "filtre huile".
-  useEffect(() => {
-    setScope('all');
-    setFitsOnly(false);
-  }, [trimmed]);
+    // `question` is trimmed + engineId + attempt, already listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question]);
 
   const submit = useCallback(
     (value = query) => {

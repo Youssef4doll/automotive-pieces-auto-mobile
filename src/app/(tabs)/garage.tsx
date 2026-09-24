@@ -6,7 +6,6 @@ import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { PressScale } from '@/components/ui/press-scale';
 import { Text } from '@/components/ui/text';
-import { VehicleCard } from '@/components/ui/vehicle-card';
 import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { CarArt } from '@/illustrations/car-art';

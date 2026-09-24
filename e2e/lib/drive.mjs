@@ -18,7 +18,12 @@ import { chromium } from 'playwright';
 export const APP_URL = process.env.APP_URL ?? 'http://localhost:8081';
 export const CHROMIUM = process.env.CHROMIUM_PATH ?? '/opt/pw-browsers/chromium';
 
-export async function open({ width = 390, height = 844, locale = 'fr-FR' } = {}) {
+/**
+ * `firstLaunch: true` opens the app as a phone that has never run it, so the
+ * welcome shows. Every other suite starts past it — it would otherwise stand
+ * in front of the home screen each suite is there to test.
+ */
+export async function open({ width = 390, height = 844, locale = 'fr-FR', firstLaunch = false } = {}) {
   const browser = await chromium.launch({ executablePath: CHROMIUM });
   const context = await browser.newContext({
     viewport: { width, height },
@@ -27,6 +32,15 @@ export async function open({ width = 390, height = 844, locale = 'fr-FR' } = {})
     hasTouch: true,
     locale,
   });
+  if (!firstLaunch) {
+    await context.addInitScript(() => {
+      try {
+        if (!localStorage.getItem('apa-onboarding')) {
+          localStorage.setItem('apa-onboarding', JSON.stringify({ state: { done: true }, version: 0 }));
+        }
+      } catch {}
+    });
+  }
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e).slice(0, 200)));

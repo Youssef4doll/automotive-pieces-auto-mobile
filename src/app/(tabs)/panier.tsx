@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
 import type { CartQuoteLine } from '@/api/orders';
@@ -18,6 +19,7 @@ import { PartImage } from '@/components/ui/part-image';
 import { formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { MAX_QTY, useCart, type CartItem } from '@/store/cart';
+import { track } from '@/services/analytics';
 
 /**
  * Panier.
@@ -44,6 +46,12 @@ export default function CartScreen() {
   const remove = useCart((s) => s.remove);
   const { state, retry, hydrated } = useCartQuote();
   const quote = quoteOf(state);
+  const lines = items.length;
+  useFocusEffect(
+    useCallback(() => {
+      track('view_cart', { lines });
+    }, [lines]),
+  );
 
   if (!hydrated) return <Loading />;
 

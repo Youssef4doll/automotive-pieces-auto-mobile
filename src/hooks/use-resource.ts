@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ApiError, type ApiFailure } from '@/api/client';
 
@@ -25,46 +25,41 @@ export type Resource<T> =
  * on a list screen is a request per keystroke of the filter box.
  */
 export function useResource<T>(load: (signal: AbortSignal) => Promise<T>): Resource<T> {
-  const [state, setState] = useState<
-    { status: 'loading' } | { status: 'failed'; failure: ApiFailure } | { status: 'loaded'; data: T }
-  >({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
-  const mounted = useRef(true);
-
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
+  // Each answer is filed under the request it answers. A new `load` (the
+  // screen asked for something else) or a retry is a new request, so the
+  // screen reads "loading" from the first render after the change — never
+  // one frame of the previous answer, and never a state reset inside the
+  // effect, which is a second render for nothing.
+  const request = useMemo(() => ({ load, attempt }), [load, attempt]);
+  const [answer, setAnswer] = useState<{
+    for: typeof request;
+    value: { status: 'failed'; failure: ApiFailure } | { status: 'loaded'; data: T };
+  } | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    setState({ status: 'loading' });
-
-    load(controller.signal)
+    request
+      .load(controller.signal)
       .then((data) => {
-        if (!controller.signal.aborted && mounted.current) setState({ status: 'loaded', data });
+        if (!controller.signal.aborted) setAnswer({ for: request, value: { status: 'loaded', data } });
       })
       .catch((err: unknown) => {
-        // The screen went away mid-request. Not a failure, and setting state
-        // here is how you get the "update on an unmounted component" warning
-        // that everyone learns to ignore and then misses a real one behind.
-        if (controller.signal.aborted || !mounted.current) return;
+        // The screen went away or asked for something else mid-request:
+        // not a failure, and not this request's answer to give any more.
+        if (controller.signal.aborted) return;
         if (err instanceof Error && err.name === 'AbortError') return;
-
-        setState({
-          status: 'failed',
-          failure: err instanceof ApiError ? err.failure : { kind: 'offline' },
+        setAnswer({
+          for: request,
+          value: { status: 'failed', failure: err instanceof ApiError ? err.failure : { kind: 'offline' } },
         });
       });
-
     return () => controller.abort();
-  }, [load, attempt]);
+  }, [request]);
 
   const again = useCallback(() => setAttempt((n) => n + 1), []);
 
-  if (state.status === 'loaded') return { status: 'loaded', data: state.data, reload: again };
-  if (state.status === 'failed') return { status: 'failed', failure: state.failure, retry: again };
-  return { status: 'loading' };
+  if (!answer || answer.for !== request) return { status: 'loading' };
+  if (answer.value.status === 'loaded') return { status: 'loaded', data: answer.value.data, reload: again };
+  return { status: 'failed', failure: answer.value.failure, retry: again };
 }

@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useState } from 'react';
 import { Image } from 'expo-image';
@@ -27,6 +27,7 @@ import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useCheckout } from '@/store/checkout';
 import { useGarage } from '@/store/garage';
+import { useOnboarding } from '@/store/onboarding';
 
 const LOGO = require('../../../assets/images/logo-lockup.png');
 
@@ -49,6 +50,8 @@ const LOGO = require('../../../assets/images/logo-lockup.png');
  * no notifications to ring it.
  */
 export default function HomeScreen() {
+  const onboarded = useOnboarding((s) => s.done);
+  const onboardingRead = useOnboarding((s) => s.hydrated);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const tabBarSpace = useTabBarSpace();
@@ -120,6 +123,10 @@ export default function HomeScreen() {
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
   const openFamily = (f: Family) =>
     router.push({ pathname: '/famille/[family]', params: { family: f.slug, familyName: f.name } });
+
+  // First launch: the welcome, once. Only from here — a link into the app
+  // opens what it points at.
+  if (onboardingRead && !onboarded) return <Redirect href="/bienvenue" />;
 
   return (
     <View style={styles.root}>

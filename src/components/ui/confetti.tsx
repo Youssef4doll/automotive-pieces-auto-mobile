@@ -20,19 +20,27 @@ import { useReduceMotion } from '@/hooks/use-reduce-motion';
 const PIECES = 18;
 const COLOURS = [Brand.gold500, Brand.navy900, Brand.gold400, Brand.navy300];
 
+/** A number in [0, 1) that looks random and is a pure function of its inputs. */
+function scatter(i: number, salt: number) {
+  const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+}
+
 export function Confetti() {
   const reduce = useReduceMotion();
   const { width } = useWindowDimensions();
 
+  // Scattered, but the same scatter every render: a hash of the piece's
+  // index rather than Math.random, which a render must not call.
   const pieces = useMemo(
     () =>
       Array.from({ length: PIECES }, (_, i) => ({
         key: i,
-        x: (width / PIECES) * i + Math.random() * 16 - 8,
-        delay: Math.random() * 260,
-        fall: 180 + Math.random() * 140,
-        drift: Math.random() * 40 - 20,
-        spin: (Math.random() > 0.5 ? 1 : -1) * (180 + Math.random() * 360),
+        x: (width / PIECES) * i + scatter(i, 1) * 16 - 8,
+        delay: scatter(i, 2) * 260,
+        fall: 180 + scatter(i, 3) * 140,
+        drift: scatter(i, 4) * 40 - 20,
+        spin: (scatter(i, 5) > 0.5 ? 1 : -1) * (180 + scatter(i, 6) * 360),
         colour: COLOURS[i % COLOURS.length],
         tall: i % 3 === 0,
       })),

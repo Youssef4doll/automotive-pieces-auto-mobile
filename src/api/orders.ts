@@ -91,9 +91,13 @@ export const ordersApi = {
     signal?: AbortSignal,
   ) => send<CartQuote>('/api/v1/cart/quote', { method: 'POST', body: input, signal }),
 
-  /** Place the order. Returns the token — the only proof this phone will hold. */
-  place: (input: OrderInput) =>
-    send<{ ref: string; token: string; order: Order }>('/api/v1/orders', { method: 'POST', body: input }),
+  /**
+   * Place the order. Returns the token — the proof this phone will hold.
+   * `session` is the signed-in account's, when there is one: the order then
+   * joins the account too.
+   */
+  place: (input: OrderInput, session?: string) =>
+    send<{ ref: string; token: string; order: Order }>('/api/v1/orders', { method: 'POST', body: input, token: session }),
 
   get: (ref: string, token: string, signal?: AbortSignal) =>
     send<Order>(`/api/v1/orders/${encodeURIComponent(ref)}`, { token, signal }),

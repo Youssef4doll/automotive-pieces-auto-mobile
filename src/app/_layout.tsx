@@ -8,6 +8,8 @@ import { ToastHost } from '@/components/ui/toast';
 import { C, familyFor } from '@/constants/theme';
 import { useAppFonts } from '@/hooks/use-app-fonts';
 import { I18nProvider, useI18n } from '@/i18n/provider';
+import { track } from '@/services/analytics';
+import { useAccount } from '@/store/account';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,11 +35,17 @@ export default function RootLayout() {
 
 function App() {
   const fontsSettled = useAppFonts();
-  const { rtl } = useI18n();
+  const { rtl, t } = useI18n();
 
   useEffect(() => {
     if (fontsSettled) SplashScreen.hideAsync();
   }, [fontsSettled]);
+
+  // Once per launch: is the saved account still signed in, and the funnel's first step.
+  useEffect(() => {
+    void useAccount.getState().restore();
+    track('app_open');
+  }, []);
 
   if (!fontsSettled) return null;
 
@@ -56,6 +64,9 @@ function App() {
           headerShadowVisible: false,
           headerTitleStyle: { fontFamily: familyFor('heading', rtl), fontSize: 18 },
           headerBackButtonDisplayMode: 'minimal',
+          // What a screen reader says for the arrow. Without it the label is
+          // the previous route's name, and from any tab that is "(tabs)".
+          headerBackTitle: t('common.back'),
           contentStyle: { backgroundColor: C.background },
         }}
       >

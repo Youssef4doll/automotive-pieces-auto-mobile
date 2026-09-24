@@ -74,12 +74,12 @@ export function BubbleArc({ items, initial = 0 }: { items: BubbleItem[]; initial
   // width is known.
   useEffect(() => {
     if (!slide) return;
-    x.value = start * slide;
+    x.set(start * slide);
     const id = requestAnimationFrame(() => scroller.current?.scrollTo({ x: start * slide, animated: false }));
     return () => cancelAnimationFrame(id);
   }, [slide, start, scroller, x]);
   const onScroll = useAnimatedScrollHandler((e) => {
-    x.value = e.contentOffset.x;
+    x.set(e.contentOffset.x);
   });
 
   const onLayout = useCallback((e: LayoutChangeEvent) => setWidth(Math.round(e.nativeEvent.layout.width)), []);

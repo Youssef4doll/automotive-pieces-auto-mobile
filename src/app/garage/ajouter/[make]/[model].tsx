@@ -112,6 +112,7 @@ export default function EnginesScreen() {
     // `vehicles` is in here on purpose: `isSaved` reads the store at call
     // time, so without it the "déjà dans votre garage" note would not appear
     // until the screen remounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [choose, isSaved, t, vehicles],
   );
 

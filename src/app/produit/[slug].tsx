@@ -26,6 +26,7 @@ import { useI18n } from '@/i18n/provider';
 import { HeartIcon } from '@/illustrations/heart';
 import { useFavourites } from '@/store/favourites';
 import { useGarage, vehicleLabel } from '@/store/garage';
+import { track } from '@/services/analytics';
 
 /**
  * Fiche produit.
@@ -56,6 +57,12 @@ export default function ProductScreen() {
   const load = useCallback((signal: AbortSignal) => productApi.bySlug(slug, engineId, signal), [slug, engineId]);
   const product = useResource(load);
   const settings = useShopSettings();
+  const viewed = product.status === 'loaded' ? product.data : null;
+  useEffect(() => {
+    if (!viewed) return;
+    track('product_viewed', { productId: viewed.id, slug: viewed.slug, brand: viewed.brand, price: viewed.price, family: viewed.familySlug });
+    if (engineId) track('compatibility_checked', { productId: viewed.id, engineId, verdict: viewed.fitment });
+  }, [viewed, engineId]);
 
   return (
     <>
@@ -531,18 +538,6 @@ function KeyValue({ label, value, mono = false }: { label: string; value: string
   );
 }
 
-function Line({ icon, text }: { icon: React.ComponentProps<typeof Feather>['name']; text: string }) {
-  const { rtl } = useI18n();
-  return (
-    <View style={[styles.line, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-      <Feather name={icon} size={IconSize.medium} color={C.textMuted} />
-      <Text variant="body" style={styles.flex}>
-        {text}
-      </Text>
-    </View>
-  );
-}
-
 /**
  * Send the part's page on the website — to a mechanic, to a brother-in-law
  * who knows cars. The link is the shop's public page, which opens in any
@@ -586,9 +581,11 @@ function HeartButton({ product }: { product: ProductDetail }) {
           imageUrl: product.imageUrl,
         });
         if (nowOn) {
-          scale.value = withSequence(
-            withSpring(1.28, { damping: 8, stiffness: 420, reduceMotion: ReduceMotion.System }),
-            withSpring(1, { damping: 14, stiffness: 260, reduceMotion: ReduceMotion.System }),
+          scale.set(
+            withSequence(
+              withSpring(1.28, { damping: 8, stiffness: 420, reduceMotion: ReduceMotion.System }),
+              withSpring(1, { damping: 14, stiffness: 260, reduceMotion: ReduceMotion.System }),
+            ),
           );
         }
       }}

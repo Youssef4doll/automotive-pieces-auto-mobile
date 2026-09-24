@@ -39,12 +39,12 @@ export function PressScale({
     <AnimatedPressable
       {...rest}
       onPressIn={(e) => {
-        scale.value = withSpring(scaleTo, spring);
+        scale.set(withSpring(scaleTo, spring));
         setPressed(true);
         rest.onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        scale.value = withSpring(1, spring);
+        scale.set(withSpring(1, spring));
         setPressed(false);
         rest.onPressOut?.(e);
       }}

@@ -6,10 +6,11 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Spacing, Tap } from '@/constants/theme';
+import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
+import { useAccount } from '@/store/account';
 import { useCheckout } from '@/store/checkout';
 import { useGarage } from '@/store/garage';
 import { useOrders } from '@/store/orders';
@@ -20,11 +21,13 @@ import { useToast } from '@/store/toast';
 /**
  * Mon compte — the reference's list, row for row.
  *
- * The profile at the top is whoever the customer told the checkout they are,
- * remembered on this phone; with nothing remembered it says "Invité". There
- * is no sign-in in the app yet, so there is no password and no "Se
- * déconnecter" from an account nobody opened: the red line at the foot is
- * what a guest can actually do — forget the details this phone keeps.
+ * Signed in, the profile at the top is the account, and the foot of the
+ * list holds "Se déconnecter" and "Supprimer mon compte" — one tap from the
+ * tab, as both stores require. As a guest, it is whoever the customer told
+ * the checkout they are, remembered on this phone ("Invité" with nothing
+ * remembered); a quiet row offers an account, optionally, and the red line
+ * at the foot is what a guest can actually do — forget the details this
+ * phone keeps.
  *
  * Every row opens something real: the orders placed or recovered here, the
  * active car, the garage, the saved delivery address, the shop's contact
@@ -44,13 +47,23 @@ export default function AccountScreen() {
   const staffSignedIn = useStaff((s) => s.status === 'signedIn');
   const favCount = useFavourites((s) => s.items.length);
   const restoreStaff = useStaff((s) => s.restore);
+  const accountStatus = useAccount((s) => s.status);
+  const account = useAccount((s) => s.account);
+  const signOut = useAccount((s) => s.signOut);
+  const syncOrders = useAccount((s) => s.syncOrders);
+  const signedIn = accountStatus === 'signedIn';
+  // Orders placed on another device show up here when the tab is opened.
+  useEffect(() => {
+    if (signedIn) void syncOrders();
+  }, [signedIn, syncOrders]);
   // Only asks the shop when a staff token is saved on this phone.
   useEffect(() => {
     restoreStaff();
   }, [restoreStaff]);
 
-  const name = details.customerName.trim();
-  const contactLine = details.email.trim() || details.phone.trim();
+  // Signed in, the account speaks; otherwise whatever the checkout remembers.
+  const name = signedIn && account ? account.name : details.customerName.trim();
+  const contactLine = signedIn && account ? account.email : details.email.trim() || details.phone.trim();
   const hasDetails = Boolean(name || details.phone || details.address);
   const initials = name
     ? name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
@@ -75,6 +88,22 @@ export default function AccountScreen() {
             </Text>
           </View>
         </View>
+
+        {accountStatus === 'guest' ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${t('auth.row')}, ${t('auth.rowHint')}`}
+            onPress={() => router.push('/compte/connexion')}
+            style={({ pressed }) => [styles.signIn, row, pressed && styles.pressed]}
+          >
+            <Feather name="log-in" size={IconSize.large} color={C.text} />
+            <View style={styles.flex}>
+              <Text variant="rowTitle">{t('auth.row')}</Text>
+              <Text variant="hint">{t('auth.rowHint')}</Text>
+            </View>
+            <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={C.textMuted} />
+          </Pressable>
+        ) : null}
 
         <View style={styles.list}>
           <Row icon="file-text" label={t('account.orders')} value={orders.length ? String(orders.length) : null} onPress={() => router.push('/compte/commandes')} />
@@ -105,7 +134,27 @@ export default function AccountScreen() {
           />
         </View>
 
-        {hasDetails ? (
+        {signedIn ? (
+          <View style={styles.accountActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={async () => {
+                await signOut();
+                toast({ message: t('auth.signedOut'), tone: 'neutral' });
+              }}
+              style={styles.danger}
+            >
+              <Text style={{ fontFamily: familyFor('bodySemi', rtl), fontSize: 15, color: C.text, textAlign: 'center' }}>
+                {t('auth.signOut')}
+              </Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/compte/supprimer')} style={styles.danger}>
+              <Text style={{ fontFamily: familyFor('bodySemi', rtl), fontSize: 15, color: C.danger, textAlign: 'center' }}>
+                {t('auth.delete')}
+              </Text>
+            </Pressable>
+          </View>
+        ) : hasDetails ? (
           <Pressable accessibilityRole="button" onPress={() => setConfirming(true)} style={styles.danger}>
             <Text style={{ fontFamily: familyFor('bodySemi', rtl), fontSize: 15, color: C.danger, textAlign: 'center' }}>
               {t('account.clearData')}
@@ -206,6 +255,19 @@ const styles = StyleSheet.create({
   pressed: { backgroundColor: C.surface },
   value: { maxWidth: '40%' },
   danger: { marginTop: Spacing.four, minHeight: Tap.min, justifyContent: 'center' },
+  accountActions: { marginTop: Spacing.two },
+  signIn: {
+    alignItems: 'center',
+    gap: Spacing.three,
+    minHeight: Tap.primary + Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    marginTop: Spacing.two,
+    borderRadius: Radius.card,
+    borderWidth: Border.hairline,
+    borderColor: C.border,
+    backgroundColor: C.surface,
+  },
   policies: { textAlign: 'center', paddingTop: Spacing.four },
   sheet: { gap: Spacing.three, paddingBottom: Spacing.two },
 });

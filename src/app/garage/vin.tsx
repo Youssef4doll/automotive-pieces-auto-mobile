@@ -13,6 +13,7 @@ import { Brand, C, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { CarteGrise } from '@/illustrations/carte-grise';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
+import { track } from '@/services/analytics';
 
 /** 17 characters; I, O and Q never appear in a VIN, so they are refused as typed. */
 const VIN_LENGTH = 17;
@@ -63,8 +64,10 @@ export default function VinScreen() {
     }
     setBusy(true);
     setMessage(null);
+    track('vin_started');
     try {
       const { make } = await vehiclesApi.vinMake(vin);
+      track('vin_completed', { identified: Boolean(make) });
       if (!make) {
         setMessage('vin.unknown');
         setBusy(false);

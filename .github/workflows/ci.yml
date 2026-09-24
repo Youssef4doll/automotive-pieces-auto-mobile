@@ -1,0 +1,44 @@
+# Every push and pull request: install, lint, typecheck, unit tests, and a
+# JavaScript bundle for each platform — the build that catches an import
+# that only breaks one of them.
+#
+# Native binaries are built by EAS (eas.json), not here. The e2e suites in
+# e2e/ drive the web build against a running local shop and are run by hand
+# before a release (see e2e/README.md).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_NO_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Bundle iOS, Android and web (production environment)
+        run: APP_ENV=production npx expo export --platform all --output-dir dist
+      - name: Refuse a preview build that points at the live shop
+        run: |
+          if APP_ENV=preview API_BASE_URL=https://automotive-pieces-auto.vercel.app npx expo config --json >/dev/null 2>&1; then
+            echo "app.config.ts let a preview build talk to production"; exit 1
+          fi

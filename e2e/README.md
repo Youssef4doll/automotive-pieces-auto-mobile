@@ -103,8 +103,27 @@ confirmation), the garage carousel and "Rendre principal", removing a car
 through its sheet, the VIN counter / disabled button / success state, and
 emptying the basket. It never places an order.
 
-`npm run e2e:sweep` loads all 26 shopper screens at 320, 360, 375, 390, 393,
+`npm run e2e:sweep` loads all 28 shopper screens at 320, 360, 375, 390, 393,
 414 and 430, in French and in Arabic, with a car in the garage and a part
 in the basket, and fails on sideways scroll, clipped text, anything past the
 edge, a control under 44pt, or a console error. `WIDTHS=` and `LOCALES=`
 narrow it.
+
+
+## Accounts (`e2e/account.mjs`) and the first launch (`e2e/welcome.mjs`)
+
+`npm run e2e:account` places a guest order, creates an account on the same
+phone (checking the form's own errors first), proves through the API that the
+order joined the account by its token, refuses the same address twice, signs
+out (the phone keeps the order it placed), then signs in on a second phone —
+a wrong password is one sentence — lists and opens the order through the
+account, and deletes the account: wrong password refused, then gone, then
+the order still recoverable by reference and phone. Local shop only; it
+spends one signup from the shop's hourly budget of twenty.
+
+`npm run e2e:welcome` opens the app as a phone that has never run it
+(`open({ firstLaunch: true })` — every other suite starts past the welcome):
+the three steps in order, guest before sign-in, "Plus tard" and "Passer"
+landing home, never again after, the car step opening the picker with the
+back arrow labelled "Retour", and a link on a first launch opening what it
+points at.
