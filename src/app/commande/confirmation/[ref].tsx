@@ -16,6 +16,7 @@ import { useResource } from '@/hooks/use-resource';
 import { formatDate, formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { useOrders } from '@/store/orders';
+import { OrderNotify } from '@/components/ui/order-notify';
 
 /**
  * Commande, step 4 of 4: it went through.
@@ -115,6 +116,8 @@ function Body({ order, refNumber }: { order: Order | null; refNumber?: string })
               {t('done.keep')}
             </Text>
           </View>
+
+          {ref ? <OrderNotify orderRef={ref} auto /> : null}
 
           <View style={styles.actions}>
             <Button

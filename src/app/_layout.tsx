@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -8,10 +9,17 @@ import { ToastHost } from '@/components/ui/toast';
 import { C, familyFor } from '@/constants/theme';
 import { useAppFonts } from '@/hooks/use-app-fonts';
 import { I18nProvider, useI18n } from '@/i18n/provider';
+import { NotificationRouter } from '@/components/notification-router';
 import { track } from '@/services/analytics';
+import { installCrashReporting } from '@/services/crash';
+import { installNotificationHandler } from '@/services/notifications';
+import { useRemoteUpdates } from '@/services/updates';
 import { useAccount } from '@/store/account';
 
 SplashScreen.preventAutoHideAsync();
+// Before anything renders: an error on the first frame is the one most worth knowing about.
+installCrashReporting();
+installNotificationHandler();
 
 /**
  * The app's root.
@@ -36,6 +44,7 @@ export default function RootLayout() {
 function App() {
   const fontsSettled = useAppFonts();
   const { rtl, t } = useI18n();
+  useRemoteUpdates();
 
   useEffect(() => {
     if (fontsSettled) SplashScreen.hideAsync();
@@ -78,6 +87,7 @@ function App() {
       {/* Above every screen, so "Ajouté au panier" survives the navigation
           that follows it. */}
       <ToastHost />
+      {Platform.OS !== 'web' ? <NotificationRouter /> : null}
     </>
   );
 }

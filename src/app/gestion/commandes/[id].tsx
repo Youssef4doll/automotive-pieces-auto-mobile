@@ -9,7 +9,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Failed, Loading } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
-import { C, Spacing } from '@/constants/theme';
+import { Brand, C, Spacing } from '@/constants/theme';
 import { useLive } from '@/hooks/use-live';
 import { useI18n } from '@/i18n/provider';
 import { formatDate, formatDT } from '@/lib/format';
@@ -188,6 +188,18 @@ function Detail({ order, onChange }: { order: OrderDetail; onChange: (o: OrderDe
         {t2.stampDuty > 0 ? <Line label={t('staff.order.stamp')} value={formatDT(t2.stampDuty)} /> : null}
         <Line label={t2.taxed ? t('staff.order.totalTTC') : t('staff.order.total')} value={formatDT(t2.total)} strong />
       </Card>
+
+      {order.review ? (
+        <Card>
+          <Text variant="label" tone={C.textMuted}>
+            {t('staff.order.review')}
+          </Text>
+          <Text variant="rowTitle" tone={Brand.gold500} accessibilityLabel={t('rating.star', { n: order.review.stars })}>
+            {'★'.repeat(order.review.stars) + '☆'.repeat(5 - order.review.stars)}
+          </Text>
+          {order.review.comment ? <Text variant="body">{`« ${order.review.comment} »`}</Text> : null}
+        </Card>
+      ) : null}
 
       <Card>
         <Text variant="label" tone={C.textMuted}>

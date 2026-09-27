@@ -1,17 +1,19 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { vehiclesApi } from '@/api/vehicles';
 import { Button } from '@/components/ui/button';
+import { dueText, isSoon } from '@/components/ui/care-due';
 import { FormField } from '@/components/ui/form-field';
 import { MakeLogo } from '@/components/ui/make-logo';
 import { Text } from '@/components/ui/text';
 import { Brand, C, familyFor, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
-import { careDue, parseDate, showDate, type CareDue } from '@/lib/care';
+import { careDue, parseDate, reminderMoments, showDate, type CareDue, type VehicleCare } from '@/lib/care';
+import { cancelReminders, mayNotify, remindersAvailable, scheduleReminder } from '@/services/notifications';
 import { useGarage } from '@/store/garage';
 import { useToast } from '@/store/toast';
 import { useVehicleCare } from '@/store/vehicle-care';
@@ -53,6 +55,7 @@ export default function VehicleScreen() {
   const [inspection, setInspection] = useState(showDate(stored?.inspectionDue));
   const [insurance, setInsurance] = useState(showDate(stored?.insuranceDue));
   const [touched, setTouched] = useState(false);
+  const [remind, setRemind] = useState(Boolean(stored?.remind));
 
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
   const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
@@ -74,19 +77,37 @@ export default function VehicleScreen() {
   const inspectionBad = inspection.trim() !== '' && !parseDate(inspection);
   const insuranceBad = insurance.trim() !== '' && !parseDate(insurance);
 
-  const save = () => {
+  const save = async () => {
     setTouched(true);
     if (inspectionBad || insuranceBad) return;
     const mileageKm = km(mileage);
-    saveCare(engine, {
+    const next: VehicleCare = {
       mileageKm,
       mileageAt: mileageKm !== stored?.mileageKm ? new Date().toISOString() : stored?.mileageAt,
       oilChangeKm: km(oilKm),
       oilIntervalKm: km(interval),
       inspectionDue: parseDate(inspection) ?? undefined,
       insuranceDue: parseDate(insurance) ?? undefined,
-    });
-    toast({ message: t('car.saved'), tone: 'success' });
+      remind,
+    };
+    // The phone's own reminders: the old ones out, the new dates in. Asked
+    // for permission here, when the owner has just said yes to reminders.
+    await cancelReminders(stored?.reminderIds ?? []);
+    let reminderIds: string[] = [];
+    let denied = false;
+    if (remind && remindersAvailable && reminderMoments(next).length) {
+      if (await mayNotify({ ask: true })) {
+        const car = `${vehicle.makeName} ${vehicle.modelName}`;
+        const ids = await Promise.all(
+          reminderMoments(next).map((m) =>
+            scheduleReminder(m.at, t(`car.remind.${m.kind}.${m.when}`), t(`car.remind.body.${m.kind}`, { car, date: showDate(m.date) }), { engine }),
+          ),
+        );
+        reminderIds = ids.filter((id): id is string => id !== null);
+      } else denied = true;
+    }
+    saveCare(engine, { ...next, reminderIds });
+    toast({ message: denied ? t('notify.denied') : reminderIds.length ? `${t('car.saved')} · ${t('car.remind.set')}` : t('car.saved'), tone: denied ? 'neutral' : 'success' });
   };
 
   const due = careDue(stored);
@@ -195,7 +216,20 @@ export default function VehicleScreen() {
             ltr
             error={touched && insuranceBad ? t('car.badDate') : null}
           />
-          <Button label={t('car.save')} onPress={save} />
+          {remindersAvailable ? (
+            <View style={[row, styles.remind]}>
+              <View style={styles.flex}>
+                <Text variant="body" tone={C.text} style={align}>
+                  {t('car.remind.label')}
+                </Text>
+                <Text variant="hint" style={align}>
+                  {t('car.remind.hint')}
+                </Text>
+              </View>
+              <Switch value={remind} onValueChange={setRemind} accessibilityLabel={t('car.remind.label')} />
+            </View>
+          ) : null}
+          <Button label={t('car.save')} onPress={() => void save()} />
 
           <View style={styles.actions}>
             {!isMain ? <Button label={t('car.makeMain')} variant="secondary" onPress={() => setActive(engine)} /> : null}
@@ -203,6 +237,7 @@ export default function VehicleScreen() {
               label={t('car.remove')}
               variant="danger"
               onPress={() => {
+                void cancelReminders(stored?.reminderIds ?? []);
                 remove(engine);
                 forgetCare(engine);
                 router.back();
@@ -217,13 +252,8 @@ export default function VehicleScreen() {
 
 function DueRow({ due }: { due: CareDue }) {
   const { t, rtl } = useI18n();
-  const text =
-    due.kind === 'oil'
-      ? t(due.overdue ? 'car.due.oilLate' : 'car.due.oil', { km: due.km.toLocaleString('fr-FR') })
-      : due.kind === 'inspection'
-        ? t(due.overdue ? 'car.due.inspectionLate' : 'car.due.inspection', { days: due.days })
-        : t(due.overdue ? 'car.due.insuranceLate' : 'car.due.insurance', { days: due.days });
-  const soon = due.overdue || (due.kind === 'oil' ? due.km <= 1000 : due.days <= 30);
+  const text = dueText(t, due);
+  const soon = isSoon(due);
   return (
     <View style={[styles.due, { flexDirection: rtl ? 'row-reverse' : 'row', backgroundColor: due.overdue ? C.dangerSurface : soon ? C.cautionSurface : C.surface }]}>
       <Feather name={due.kind === 'oil' ? 'droplet' : due.kind === 'inspection' ? 'clipboard' : 'shield'} size={18} color={due.overdue ? C.danger : C.text} />
@@ -250,5 +280,6 @@ const styles = StyleSheet.create({
   fact: { alignItems: 'center', minHeight: 44, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
   factLast: { borderBottomWidth: 0 },
   pair: { gap: Spacing.two },
+  remind: { alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.tile, backgroundColor: C.surface },
   actions: { gap: Spacing.two, marginTop: Spacing.three },
 });

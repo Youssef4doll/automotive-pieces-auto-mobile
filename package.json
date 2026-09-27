@@ -65,7 +65,8 @@
     "test": "node --import tsx --test 'src/**/*.test.ts'",
     "typecheck": "tsc --noEmit",
     "e2e:account": "node e2e/account.mjs",
-    "e2e:welcome": "node e2e/welcome.mjs"
+    "e2e:welcome": "node e2e/welcome.mjs",
+    "e2e:after-delivery": "node e2e/after-delivery.mjs"
   },
   "private": true
 }

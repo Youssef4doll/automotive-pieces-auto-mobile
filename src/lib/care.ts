@@ -18,6 +18,10 @@ export type VehicleCare = {
   oilIntervalKm?: number;
   inspectionDue?: string;
   insuranceDue?: string;
+  /** The owner asked for reminders of the two dates, on this phone. */
+  remind?: boolean;
+  /** The local notifications scheduled for them, so a new date replaces them. */
+  reminderIds?: string[];
 };
 
 export type CareDue =
@@ -57,4 +61,29 @@ export function showDate(iso: string | undefined): string {
   if (!iso) return '';
   const [y, m, d] = iso.slice(0, 10).split('-');
   return `${d}/${m}/${y}`;
+}
+
+export type ReminderMoment = { kind: 'inspection' | 'insurance'; when: 'soon' | 'today'; at: Date; date: string };
+
+/** Days before a date that the first reminder comes; the second is on the day. */
+export const REMIND_DAYS_BEFORE = 7;
+
+/**
+ * When to remind the owner of their own dates: a week before and on the day,
+ * at nine in the morning on the phone's clock. Moments already past are left
+ * out, so a date entered three days ahead still gets its "today" reminder.
+ */
+export function reminderMoments(care: VehicleCare | undefined, now = new Date()): ReminderMoment[] {
+  if (!care) return [];
+  const out: ReminderMoment[] = [];
+  for (const kind of ['inspection', 'insurance'] as const) {
+    const iso = kind === 'inspection' ? care.inspectionDue : care.insuranceDue;
+    if (!iso) continue;
+    const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+    for (const [when, back] of [['soon', REMIND_DAYS_BEFORE], ['today', 0]] as const) {
+      const at = new Date(y, m - 1, d - back, 9, 0, 0);
+      if (at.getTime() > now.getTime()) out.push({ kind, when, at, date: iso.slice(0, 10) });
+    }
+  }
+  return out.sort((a, b) => a.at.getTime() - b.at.getTime());
 }

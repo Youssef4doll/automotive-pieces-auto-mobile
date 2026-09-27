@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { BrandStrip } from '@/components/ui/brand-strip';
 import { CareBanner } from '@/components/ui/care-banner';
+import { CareDueStrip } from '@/components/ui/care-due';
 import { HomeRows } from '@/components/ui/home-rows';
 import { PartImage } from '@/components/ui/part-image';
 import { PressScale } from '@/components/ui/press-scale';
@@ -249,6 +250,8 @@ export default function HomeScreen() {
                   </PressScale>
                 ))}
           </Rail>
+          {/* What the owner's own dates say is coming up for the main car. */}
+          <CareDueStrip />
           {/* Personal rows: confirmed parts for the car, and the last orders again. */}
           <HomeRows />
 

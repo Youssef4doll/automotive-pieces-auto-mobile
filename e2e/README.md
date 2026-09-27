@@ -127,3 +127,13 @@ the three steps in order, guest before sign-in, "Plus tard" and "Passer"
 landing home, never again after, the car step opening the picker with the
 back arrow labelled "Retour", and a link on a first launch opening what it
 points at.
+
+## After delivery (`e2e/after-delivery.mjs`)
+
+Places an order over the API as the app would, moves it to DELIVERED with the
+staff API, then checks the tracking screen asks for a rating (and says it is
+not published), that the push switch is absent where push cannot work (the
+web), that the rating is sent, and that the staff side reads it on the
+order. It writes an order and moves it, so it refuses anything but a local
+shop. Push itself cannot be driven from a browser: it is covered by the
+website's `lib/push-copy` tests and, on a phone, by hand.

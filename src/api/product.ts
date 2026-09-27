@@ -1,5 +1,5 @@
 import type { Product } from './catalogue';
-import { get } from './client';
+import { get, send } from './client';
 import { categoryName } from '@/i18n/data-locale';
 
 export type CompatibleVehicle = {
@@ -43,6 +43,12 @@ export type ProductDetail = Product & {
 };
 
 export const productApi = {
+  /** One push the first time this part is back on the shelf. */
+  alertWhenBack: (slug: string, pushToken: string, locale: string) =>
+    send<{ subscribed: boolean }>(`/api/v1/products/${encodeURIComponent(slug)}/stock-alert`, { method: 'POST', body: { token: pushToken, locale } }),
+  stopAlert: (slug: string, pushToken: string) =>
+    send<{ subscribed: boolean }>(`/api/v1/products/${encodeURIComponent(slug)}/stock-alert`, { method: 'DELETE', body: { token: pushToken } }),
+
   /**
    * Always asked fresh. A product page is where the customer decides to buy,
    * and a price or a stock line from twenty minutes ago in this session's

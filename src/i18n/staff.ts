@@ -83,6 +83,7 @@ export const staff = {
     'staff.order.total': 'Total',
     'staff.order.totalTTC': 'Total TTC',
     'staff.order.history': 'Historique',
+    'staff.order.review': 'Avis du client',
 
     'staff.stock.search': 'Nom ou référence',
     'staff.f.all': 'Tous',
@@ -240,6 +241,7 @@ export const staff = {
     'staff.order.total': 'Total',
     'staff.order.totalTTC': 'Total incl. VAT',
     'staff.order.history': 'History',
+    'staff.order.review': 'Customer rating',
 
     'staff.stock.search': 'Name or reference',
     'staff.f.all': 'All',
@@ -397,6 +399,7 @@ export const staff = {
     'staff.order.total': 'المجموع',
     'staff.order.totalTTC': 'المجموع بكلّ الأداءات',
     'staff.order.history': 'السجلّ',
+    'staff.order.review': 'تقييم الحريف',
 
     'staff.stock.search': 'الاسم أو المرجع',
     'staff.f.all': 'الكلّ',

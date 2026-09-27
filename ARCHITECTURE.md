@@ -1168,3 +1168,104 @@ photos, specs and OE numbers are the shop's data to upload; the Phase 2/3
 growth items (typo-tolerant ranking by car, sort/filters, personalised home,
 bought-together, promo codes, notifications, reviews, phone-code login,
 online payment) are separate pieces of work — see docs/PLAN.md.
+
+## 21. Before the real data arrives (September 2026)
+
+The owner's list, built so the shop's real catalogue drops into finished
+screens. Everything below renders only what exists; each piece says what it
+does when the data is not there yet.
+
+**Foundations (website side, see its HANDOVER §5).** Fitment is judged on the
+exact engine (engine code + fuel): only VERIFIED rows fit, the fuel rules
+(no ignition parts on a diesel, no glow plugs on a petrol) overrule any row,
+and everything else is "À vérifier". The product carries a gallery, a specs
+table in the shop's own words, OE references grouped by carmaker and "bought
+together" links (the shop's own, then parts actually ordered together in 2+
+orders). New products start offline and pass publishing checks (photo, sane
+price, brand matching the name) with a preview before going on sale; makes
+and categories with nothing in them stay hidden.
+
+**Bugs from the audit.** All makes listed (no cap at 10); Arabic rails start
+at the first item (`components/ui/rail.tsx`); Arabic plurals
+(`i18n/plural.ts`); opening hours and fuel names translated at the API
+boundary (`i18n/data-locale.ts`); "Vehicle details" opens the car
+(`app/garage/vehicule/[engine].tsx`); a part that does not fit offers "See
+parts that fit my BMW"; the delivery tile reads the shop's own span.
+
+**Sprint 1.** WhatsApp on Aide, on each order and on "to check" parts, with
+the car and the part in the message (`components/ui/shop-contact.tsx`) —
+shown only once the shop publishes a number. Store pickup at checkout.
+Delegations as a list for Grand Tunis and Nabeul (`lib/delegations.ts`),
+free text elsewhere, with a gentle warning when the address names another
+governorate — no authoritative national list could be fetched, and a list
+typed from memory would be invented data. The order page: call / WhatsApp
+the shop, cancel while PENDING (`POST /orders/{ref}/cancel`, 409 after), and
+an arrival window counted from the real "shipped" time (`lib/arrival.ts`).
+
+**Sprint 2.**
+- Search: sound-alike respelling ("plakette" → plaquette) and names ranked
+  above descriptions (website); recent searches on the phone; popular
+  searches from real traffic (`GET /search/popular`: 3+ distinct sessions in
+  30 days, results found, nothing that looks like a phone or an e-mail).
+- Family pages: sort by price, "in stock" and brand chips built from the
+  page's own facets.
+- Home: "Pour votre <car>" (VERIFIED fits only), "Commander à nouveau" (this
+  phone's last orders, re-read at today's prices), "Packs entretien"
+  (`catalogue/products?packs=1` — products whose specs list their contents),
+  and a due-date strip for the main car (`components/ui/care-due.tsx`).
+- Product page: specs table, bought together, "Vous économisez X" only when
+  the shop set a reference price, photo zoom.
+- **Cart**: one suggestion that reaches free delivery — linked by the shop to
+  a part in the basket or VERIFIED for the car, on the shelf, never a misfit,
+  and only when the gap is at most half the threshold. **Promo codes**: the
+  phone keeps the code only (`store/cart.ts promoCode`); the quote says
+  whether it applies and for how much, and the order judges it again with
+  the code's row locked, so a limit cannot be overrun by two phones at once.
+  An unknown code is dropped from the basket at once (so quantity taps are
+  not counted as guesses against the shop's 10-misses-per-15-minutes limit).
+  The order sends only a code the last quote accepted; if the code stopped
+  applying in between, the order is refused with `field: "promoCode"`, the
+  basket is re-priced and the customer confirms the new total.
+
+**Sprint 3.**
+- **Push notifications** (`services/notifications.ts`, `expo-notifications`
+  57). Order moves (confirmed, ready for pickup, shipped, delivered,
+  cancelled) and "back in stock" for a part not on the shelf. Registered per
+  order with the order's own key (`POST /orders/{ref}/push`), per part with
+  `POST /products/{slug}/stock-alert`; the server sends through Expo in the
+  phone's language, names the order by what is in it, never promises a date.
+  **Push needs an EAS project**: until `eas init` has written
+  `extra.eas.projectId`, `pushAvailable` is false and no switch is shown.
+  Permission is asked when the customer turns it on, never at launch; a
+  customer who said yes once gets it for the next orders without being asked
+  again. A tapped notification opens the order, the part or the car
+  (`components/notification-router.tsx`).
+- **Garage reminders**: mileage, oil interval, inspection and insurance
+  dates are the owner's own; "Me rappeler ces dates" schedules local
+  notifications a week before and on the day at 9:00 (`reminderMoments` in
+  `lib/care.ts`, tested). Local, so no server or EAS project is needed — only
+  a phone.
+- **Favourites** stay removed, as the owner asked earlier; the useful half
+  of "favourites with alerts" — being told when a part is back — is the
+  stock alert above, on the product page, without a favourites list.
+- **Ratings after delivery** (`components/ui/order-rating.tsx`): stars and an
+  optional sentence on a DELIVERED order, for the shop only (Admin → Avis,
+  the order page, the staff order screen). Nothing is published; the card
+  says so.
+- **Crash reports** (`services/crash.ts`): uncaught errors and unhandled
+  rejections go to the shop's own analytics as `app_crash` (message, top of
+  the stack, fatal or not; five distinct per session), beside the error
+  screens' `app_error`. Read them in Admin → Analytics → Erreurs de l'app.
+- **Remote updates** (`services/updates.ts`, `expo-updates` 57,
+  `runtimeVersion: appVersion`): checks on launch and on return to the app,
+  downloads, applies on the next start — never mid-checkout. Off until
+  `eas update:configure` adds the update URL.
+
+**What the owner has to do for Sprint 3 to reach phones:** `eas init`
+(project id), `eas update:configure`, then an EAS build; push credentials
+(FCM for Android, APNs for iOS) are set in EAS. Optional on the website:
+`EXPO_ACCESS_TOKEN` (Expo's "enhanced security" for push).
+
+Tests: `e2e/after-delivery.mjs` (rating, staff reads it; refuses a non-local
+shop), the promo refusal in `e2e/interactions.mjs`, `reminderMoments` in
+`lib/__tests__/care.test.ts`.

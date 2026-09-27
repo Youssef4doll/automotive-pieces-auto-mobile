@@ -72,6 +72,8 @@ export type Order = {
   shippingFee: number;
   stampDuty: number;
   total: number;
+  /** The customer's rating, once given — DELIVERED orders only. */
+  review?: { stars: number; comment: string | null } | null;
 };
 
 export type OrderInput = {
@@ -120,6 +122,16 @@ export const ordersApi = {
   /** Cancel while still PENDING; `unavailable` (reason not_pending) after that. */
   cancel: (ref: string, token: string) =>
     send<Order>(`/api/v1/orders/${encodeURIComponent(ref)}/cancel`, { method: 'POST', token }),
+
+  /** Tell this phone (its Expo push token) when the order moves. */
+  subscribe: (ref: string, token: string, pushToken: string, locale: string) =>
+    send<{ subscribed: boolean }>(`/api/v1/orders/${encodeURIComponent(ref)}/push`, { method: 'POST', token, body: { token: pushToken, locale } }),
+  unsubscribe: (ref: string, token: string, pushToken: string) =>
+    send<{ subscribed: boolean }>(`/api/v1/orders/${encodeURIComponent(ref)}/push`, { method: 'DELETE', token, body: { token: pushToken } }),
+
+  /** Rate a delivered order; `unavailable` (not_delivered) before that. Answers the order. */
+  review: (ref: string, token: string, input: { stars: number; comment?: string }) =>
+    send<Order>(`/api/v1/orders/${encodeURIComponent(ref)}/review`, { method: 'POST', token, body: input }),
 
   /** Recover an order on this phone with its reference and the phone number on it. */
   lookup: (ref: string, phone: string) =>

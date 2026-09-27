@@ -77,6 +77,8 @@ export type OrderDetail = {
     total: number;
   };
   history: { status: OrderStatus; at: string; note: string | null }[];
+  /** The customer's rating once delivered; absent from an older server. */
+  review?: { stars: number; comment: string | null; at: string } | null;
 };
 
 export type StockFilter = '' | 'rupture' | 'bas' | 'sansphoto' | 'inactif';

@@ -23,6 +23,8 @@ import { useCart } from '@/store/cart';
 import { useOrders } from '@/store/orders';
 import { useToast } from '@/store/toast';
 import { track } from '@/services/analytics';
+import { OrderNotify } from '@/components/ui/order-notify';
+import { OrderRating } from '@/components/ui/order-rating';
 
 /** The shop's own status flow — see `ORDER_STATUS_FLOW` on the website. */
 const FLOW: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PREPARED', 'SHIPPED', 'DELIVERED'];
@@ -196,6 +198,11 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
             </Text>
           </View>
         ) : null}
+
+        {/* Delivered: the customer's word on it, for the shop. Before that:
+            the option to be told when it moves (phones with push only). */}
+        <OrderRating order={order} onRated={onRefresh} />
+        {!cancelled && order.status !== 'DELIVERED' ? <OrderNotify orderRef={order.ref} /> : null}
 
         {/* A question about this order: the shop's channels, with the
             reference written in; and, while nothing has started, a way out. */}

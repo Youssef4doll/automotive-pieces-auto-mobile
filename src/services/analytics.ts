@@ -53,7 +53,11 @@ export type EventName =
   | 'whatsapp_opened'
   | 'order_cancelled'
   | 'promo_entered'
-  | 'free_delivery_suggestion_added';
+  | 'free_delivery_suggestion_added'
+  | 'order_rated'
+  /** An uncaught error the error screens never saw (services/crash). */
+  | 'app_crash'
+  | 'update_downloaded';
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 type Queued = { name: EventName; at: string; props?: Props };
@@ -63,7 +67,7 @@ type Queued = { name: EventName; at: string; props?: Props };
  * losing a `purchase` because the app was swiped away four seconds later
  * would make the one number that matters the least reliable one.
  */
-const IMMEDIATE: ReadonlySet<EventName> = new Set(['app_error', 'expert_request', 'purchase', 'purchase_failed', 'sign_up', 'login', 'logout', 'account_deleted']);
+const IMMEDIATE: ReadonlySet<EventName> = new Set(['app_error', 'app_crash', 'expert_request', 'purchase', 'purchase_failed', 'sign_up', 'login', 'logout', 'account_deleted']);
 
 const ID_KEY = 'apa-analytics.id';
 const FLUSH_MS = 5_000;
@@ -125,6 +129,7 @@ export async function flush() {
   if (flushing || queue.length === 0) return;
   flushing = true;
   const batch = queue.slice(0, BATCH);
+  let sent = false;
   try {
     await send('/api/v1/events', {
       method: 'POST',
@@ -138,6 +143,7 @@ export async function flush() {
     });
     queue = queue.slice(batch.length);
     retried = false;
+    sent = true;
   } catch {
     // Once more with the next batch, then let it go.
     if (retried) {
@@ -146,7 +152,12 @@ export async function flush() {
     } else retried = true;
   } finally {
     flushing = false;
-    if (queue.length && !timer) timer = setTimeout(() => void flush(), FLUSH_MS);
+    // An urgent event that arrived while this batch was in flight (a crash
+    // right after another crash) goes as soon as it can, not five seconds
+    // later — the app may not live that long. Only after a send that worked,
+    // so an unreachable shop is not hammered in a loop.
+    const urgent = sent && queue.some((q) => IMMEDIATE.has(q.name));
+    if (queue.length && !timer) timer = setTimeout(() => void flush(), urgent ? 0 : FLUSH_MS);
   }
 }
 

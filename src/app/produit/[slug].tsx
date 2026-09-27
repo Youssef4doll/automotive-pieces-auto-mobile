@@ -32,6 +32,7 @@ import { useCart } from '@/store/cart';
 import { ProductTile } from '@/components/ui/product-tile';
 import { Rail } from '@/components/ui/rail';
 import { whatsappUrl } from '@/components/ui/shop-contact';
+import { StockAlert } from '@/components/ui/stock-alert';
 
 /**
  * Fiche produit.
@@ -341,6 +342,8 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
             {buyable && shipLine ? <Text variant="hint">{`·  ${shipLine}`}</Text> : null}
           </View>
           {stock.detail ? <Text variant="hint">{stock.detail}</Text> : null}
+          {/* Not on the shelf: one push the day it is (phones with push only). */}
+          {product.availability !== 'IN_STOCK' ? <StockAlert slug={product.slug} /> : null}
 
           {/* Quantity and the button, side by side, as in the reference. */}
           {/* Three facts, each the shop's own: its delay, its warranty, its

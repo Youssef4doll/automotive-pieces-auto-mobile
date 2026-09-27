@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { careDue, parseDate } from '../care';
+import { careDue, parseDate, reminderMoments } from '../care';
 
 test('the oil change is due from the owner\'s own interval, never an assumed one', () => {
   assert.deepEqual(careDue({ mileageKm: 120_000, oilChangeKm: 110_000 }), []);
@@ -21,4 +21,20 @@ test('dates are typed day first, and impossible ones are refused', () => {
   assert.equal(parseDate('07/10/2026'), '2026-10-07');
   assert.equal(parseDate('31/02/2026'), null);
   assert.equal(parseDate('2026-10-07'), null);
+});
+
+test('reminders: a week before and on the day, at nine, never in the past', () => {
+  const now = new Date(2026, 8, 27, 12, 0, 0);
+  const m = reminderMoments({ inspectionDue: '2026-10-10', insuranceDue: '2026-09-30' }, now);
+  // Insurance is three days out: its "week before" has passed, "today" remains.
+  assert.deepEqual(
+    m.map((x) => [x.kind, x.when, x.at.getDate(), x.at.getHours()]),
+    [
+      ['insurance', 'today', 30, 9],
+      ['inspection', 'soon', 3, 9],
+      ['inspection', 'today', 10, 9],
+    ],
+  );
+  assert.deepEqual(reminderMoments({}, now), []);
+  assert.deepEqual(reminderMoments({ inspectionDue: '2026-09-01' }, now), []);
 });
