@@ -27,7 +27,14 @@ const badge = (page) =>
 const engine = (await (await fetch(`${SHOP}/api/v1/vehicles/engines?make=bmw&model=serie-1-e87`)).json()).data[0].id;
 const fitting = (await (await fetch(`${SHOP}/api/v1/catalogue/products?engine=${engine}&fits=1`)).json()).data.products;
 const filtres = (await (await fetch(`${SHOP}/api/v1/catalogue/products?family=filtres&engine=${engine}`)).json()).data.products;
-const misfit = filtres.find((p) => p.fitment === 'DOES_NOT_FIT');
+// A part that cannot fit: a spark plug on the diesel BMW 320d (the fuel rule,
+// lib/fitment-rules on the website). "Not listed for my car" is "to check".
+const bmwModels = (await (await fetch(`${SHOP}/api/v1/vehicles/models?make=bmw`)).json()).data;
+const e90 = bmwModels.find((m) => m.slug === 'serie-3-e90');
+const d320 = (await (await fetch(`${SHOP}/api/v1/vehicles/engines?make=bmw&model=serie-3-e90`)).json()).data.find((e) => /diesel/i.test(e.fuel ?? ''));
+const plugs = d320 ? (await (await fetch(`${SHOP}/api/v1/search?q=${encodeURIComponent("bougie d'allumage")}&engine=${d320.id}`)).json()).data.products : [];
+const misfit = plugs.find((p) => p.fitment === 'DOES_NOT_FIT' && p.id !== fitting[0]?.id);
+void filtres;
 
 const s = await open({ width: 390 });
 const { page } = s;
@@ -74,10 +81,16 @@ try {
 
   // ---- incompatible part
   if (misfit) {
+    // Drive the 320d for this part, then give the garage back.
+    const saved = await page.evaluate(() => localStorage.getItem('apa-vehicle'));
+    const bmw = (await (await fetch(`${SHOP}/api/v1/vehicles/makes`)).json()).data.find((m) => m.slug === 'bmw');
+    await page.evaluate(
+      (v) => localStorage.setItem('apa-vehicle', JSON.stringify({ state: { vehicles: [v], active: v }, version: 0 })),
+      { makeId: bmw.id, makeName: 'BMW', makeSlug: 'bmw', modelId: e90.id, modelName: e90.name, modelSlug: e90.slug, engineId: d320.id, engineName: d320.name },
+    );
     await go(`/produit/${misfit.slug}`);
-    check(await says(page, 'Ne correspond pas à votre BMW Série 1'), 'misfit: the verdict');
+    check(await says(page, 'Ne correspond pas à votre BMW Série 3'), 'misfit: the verdict (a spark plug on a diesel)');
     check((await says(page, 'Listée pour')) || (await says(page, 'aucune motorisation')), 'misfit: the reason, from the shop table');
-    check((await says(page, 'Voir les véhicules compatibles')) || (await says(page, 'Choisir mon véhicule')), 'misfit: a way out');
     const before = await badge(page);
     await page.getByRole('button', { name: /Ajouter au panier/ }).first().click();
     await page.waitForTimeout(700);
@@ -85,6 +98,9 @@ try {
     await page.getByRole('button', { name: 'Ajouter quand même' }).click();
     await page.waitForTimeout(700);
     check((await badge(page)) === before + 1 || (await says(page, 'Dans le panier')), 'misfit: added after the confirmation', { before, after: await badge(page) });
+    check(await says(page, 'Voir les pièces qui vont sur ma BMW'), 'misfit: a way to the parts that do fit');
+    await page.evaluate((v) => (v ? localStorage.setItem('apa-vehicle', v) : localStorage.removeItem('apa-vehicle')), saved);
+    await go('/', 1500);
   } else check(false, 'misfit: an incompatible part exists in the data');
 
   // ---- photo request: a real photo into the shop's inbox
@@ -139,7 +155,7 @@ try {
   await go('/catalogue');
   await page.getByLabel('Rechercher une catégorie…', { exact: true }).fill('frein');
   await page.waitForTimeout(600);
-  const listed = await page.evaluate(() => [...document.querySelectorAll('[aria-label*="pièce(s)"]')].map((e) => e.getAttribute('aria-label')));
+  const listed = await page.evaluate(() => [...document.querySelectorAll('[aria-label]')].map((e) => e.getAttribute('aria-label')).filter((l) => /\d+ pièces?\b/.test(l ?? '')));
   check(listed.length > 0 && listed.every((l) => /frein/i.test(l)), 'catalogue: the filter narrows the families', listed);
 
   // ---- four ways

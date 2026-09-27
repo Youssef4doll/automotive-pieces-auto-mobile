@@ -66,6 +66,8 @@ export default function SearchScreen() {
   // "Only the ones that fit my car" — a narrowing of these results, offered
   // as the first suggestion whenever some of them are confirmed for it.
   const recents = useRecentSearches();
+  const loadPopular = useCallback((signal: AbortSignal) => searchApi.popular(signal), []);
+  const popular = useResource(loadPopular);
   const loadFamilies = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(loadFamilies);
 
@@ -411,6 +413,29 @@ export default function SearchScreen() {
                     </Text>
                   </Pressable>
                 ))}
+              </View>
+            </View>
+          ) : null}
+
+          {popular.status === 'loaded' && popular.data.filter((q) => !recents.queries.includes(q)).length ? (
+            <View style={styles.group}>
+              <Text variant="label">{t('search.popular')}</Text>
+              <View style={[styles.chipWrap, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+                {popular.data
+                  .filter((q) => !recents.queries.includes(q))
+                  .map((q) => (
+                    <Pressable
+                      key={q}
+                      accessibilityRole="button"
+                      onPress={() => submit(q)}
+                      style={({ pressed }) => [styles.idleChip, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.rowPressed]}
+                    >
+                      <Feather name="trending-up" size={14} color={C.textMuted} />
+                      <Text variant="hint" tone={C.text} numberOfLines={1}>
+                        {q}
+                      </Text>
+                    </Pressable>
+                  ))}
               </View>
             </View>
           ) : null}

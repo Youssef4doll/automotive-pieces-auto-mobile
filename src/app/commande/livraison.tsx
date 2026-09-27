@@ -19,6 +19,7 @@ import { useI18n } from '@/i18n/provider';
 import { useCart } from '@/store/cart';
 import { useCheckout } from '@/store/checkout';
 import { track } from '@/services/analytics';
+import { DELEGATIONS, otherGovernorateIn } from '@/lib/delegations';
 
 /**
  * Commande, step 2 of 4: who, and where.
@@ -62,7 +63,7 @@ function DeliveryForm({ settings }: { settings: ShopSettings }) {
   const update = useCheckout((s) => s.update);
   const itemCount = useCart((s) => s.items.length);
   const [errors, setErrors] = useState<Partial<Record<CheckoutField, string>>>({});
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useState<'governorate' | 'delegation' | null>(null);
   const phone = useRef<TextInput>(null);
   const email = useRef<TextInput>(null);
   const address = useRef<TextInput>(null);
@@ -92,6 +93,11 @@ function DeliveryForm({ settings }: { settings: ShopSettings }) {
   if (itemCount === 0) return <Redirect href="/panier" />;
 
   const delay = deliveryDelay(settings, details.governorate);
+  // Delegations where the list is certain (lib/delegations); elsewhere the
+  // free-text address carries it. An address naming another governorate is
+  // pointed out, not refused — "Route de Tunis" is a real address in Nabeul.
+  const delegations = details.governorate ? DELEGATIONS[details.governorate] : undefined;
+  const elsewhere = details.governorate && details.address ? otherGovernorateIn(details.address, details.governorate, settings.governorates) : null;
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -161,7 +167,7 @@ function DeliveryForm({ settings }: { settings: ShopSettings }) {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`${t('checkout.governorate')}: ${details.governorate || t('checkout.chooseGovernorate')}`}
-                onPress={() => setPicking(true)}
+                onPress={() => setPicking('governorate')}
                 style={({ pressed }) => [
                   styles.select,
                   row,
@@ -181,11 +187,35 @@ function DeliveryForm({ settings }: { settings: ShopSettings }) {
               ) : null}
             </View>
 
+            {method === 'DELIVERY' && delegations ? (
+              <View style={styles.field}>
+                <Text variant="hint" tone={C.text}>
+                  {t('checkout.delegation')}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t('checkout.delegation')}: ${details.delegation || t('checkout.chooseDelegation')}`}
+                  onPress={() => setPicking('delegation')}
+                  style={({ pressed }) => [styles.select, row, errors.delegation ? styles.selectError : null, pressed && styles.pressed]}
+                >
+                  <Text variant="body" tone={details.delegation ? C.text : C.textFaint} style={styles.flex}>
+                    {details.delegation || t('checkout.chooseDelegation')}
+                  </Text>
+                  <Feather name="chevron-down" size={IconSize.large} color={C.textMuted} />
+                </Pressable>
+                {errors.delegation ? (
+                  <Text variant="hint" tone={C.danger}>
+                    {errors.delegation}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+
             {method === 'DELIVERY' ? (
               <FormField
                 ref={address}
                 label={t('checkout.address')}
-                hint={t('checkout.addressHint')}
+                hint={elsewhere ? t('checkout.addressElsewhere', { chosen: details.governorate, named: elsewhere }) : delegations ? t('checkout.addressHintShort') : t('checkout.addressHint')}
                 value={details.address}
                 onChangeText={(v) => edit('address', v)}
                 error={errors.address}
@@ -235,7 +265,30 @@ function DeliveryForm({ settings }: { settings: ShopSettings }) {
         <Button label={t('common.continue')} onPress={next} />
       </StickyBar>
 
-      <BottomSheet visible={picking} onClose={() => setPicking(false)} title={t('checkout.chooseGovernorate')}>
+      <BottomSheet visible={picking === 'delegation'} onClose={() => setPicking(null)} title={t('checkout.chooseDelegation')}>
+        <ScrollView style={styles.sheetList}>
+          {(delegations ?? []).map((d) => (
+            <Pressable
+              key={d}
+              accessibilityRole="button"
+              accessibilityState={{ selected: d === details.delegation }}
+              onPress={() => {
+                update({ delegation: d });
+                setErrors((e) => ({ ...e, delegation: undefined }));
+                setPicking(null);
+              }}
+              style={({ pressed }) => [styles.option, row, pressed && styles.pressed]}
+            >
+              <Text variant="body" style={styles.flex}>
+                {d}
+              </Text>
+              {d === details.delegation ? <Feather name="check" size={IconSize.medium} color={C.text} /> : null}
+            </Pressable>
+          ))}
+        </ScrollView>
+      </BottomSheet>
+
+      <BottomSheet visible={picking === 'governorate'} onClose={() => setPicking(null)} title={t('checkout.chooseGovernorate')}>
         <ScrollView style={styles.sheetList}>
           {settings.governorates.map((g) => (
             <Pressable
@@ -243,9 +296,10 @@ function DeliveryForm({ settings }: { settings: ShopSettings }) {
               accessibilityRole="button"
               accessibilityState={{ selected: g === details.governorate }}
               onPress={() => {
-                update({ governorate: g });
+                // A delegation belongs to its governorate; changing one clears the other.
+                update({ governorate: g, ...(g !== details.governorate ? { delegation: '' } : {}) });
                 setErrors((e) => ({ ...e, governorate: undefined }));
-                setPicking(false);
+                setPicking(null);
               }}
               style={({ pressed }) => [styles.option, row, pressed && styles.pressed]}
             >

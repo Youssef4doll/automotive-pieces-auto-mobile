@@ -1,6 +1,7 @@
 import type { ShopSettings } from '@/api/shop';
 import type { DictKey } from '@/i18n/dictionaries';
 import type { CheckoutDetails } from '@/store/checkout';
+import { DELEGATIONS } from './delegations';
 
 /**
  * A Tunisian number's 8 digits, first digit 2–9, with +216 / 00216 and any
@@ -14,7 +15,7 @@ export function tunisianDigits(raw: string): string | null {
   return /^[2-9]\d{7}$/.test(d) ? d : null;
 }
 
-export type CheckoutField = 'customerName' | 'phone' | 'email' | 'governorate' | 'address';
+export type CheckoutField = 'customerName' | 'phone' | 'email' | 'governorate' | 'delegation' | 'address';
 
 /**
  * What is wrong with the delivery form, before it is sent.
@@ -41,6 +42,7 @@ export function checkoutProblems(d: CheckoutDetails): Partial<Record<CheckoutFie
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) out.email = 'checkout.err.email';
 
   if (!d.governorate) out.governorate = 'checkout.err.governorate';
+  else if (d.deliveryMethod === 'DELIVERY' && DELEGATIONS[d.governorate] && !d.delegation) out.delegation = 'checkout.err.delegation';
 
   if (d.deliveryMethod === 'DELIVERY' && d.address.trim().length < 5) out.address = 'checkout.err.address';
 

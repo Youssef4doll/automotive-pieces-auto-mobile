@@ -20,6 +20,7 @@ import { track } from '@/services/analytics';
 import { accountToken, useAccount } from '@/store/account';
 import { useCheckout } from '@/store/checkout';
 import { useGarage, vehicleLabel } from '@/store/garage';
+import { whatsappUrl } from '@/components/ui/shop-contact';
 
 const MAX = 3;
 
@@ -66,7 +67,7 @@ export default function PhotoRequestScreen() {
     .join('\n');
   const openWhatsapp = () => {
     track('whatsapp_opened', { from: 'photo_request', vehicle: Boolean(car) });
-    void Linking.openURL(`https://wa.me/${whatsapp?.replace(/\D/g, '')}?text=${encodeURIComponent(whatsappText)}`).catch(() => undefined);
+    void Linking.openURL(whatsappUrl(whatsapp!, whatsappText)).catch(() => undefined);
   };
 
   async function add(from: 'camera' | 'library') {

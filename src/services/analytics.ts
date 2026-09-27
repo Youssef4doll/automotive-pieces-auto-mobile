@@ -50,7 +50,8 @@ export type EventName =
   /** A screen threw and the error screen took its place. */
   | 'app_error'
   | 'expert_request'
-  | 'whatsapp_opened';
+  | 'whatsapp_opened'
+  | 'order_cancelled';
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 type Queued = { name: EventName; at: string; props?: Props };

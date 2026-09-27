@@ -13,6 +13,7 @@ import { useShopSettings } from '@/hooks/use-shop-settings';
 import { ArtPhoto } from '@/illustrations/paths';
 import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel } from '@/store/garage';
+import { whatsappUrl } from '@/components/ui/shop-contact';
 
 /**
  * "Je ne sais pas comment ça s'appelle" — a photo, and a person at the shop.
@@ -87,7 +88,7 @@ function Help({ settings }: { settings: ShopSettings }) {
                 label={t('help.whatsapp')}
                 icon="message-circle"
                 variant="secondary"
-                onPress={() => open(`https://wa.me/${c.whatsapp?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`)}
+                onPress={() => open(whatsappUrl(c.whatsapp!, message))}
               />
               <Text variant="hint">{t('help.whatsappWhy')}</Text>
             </>

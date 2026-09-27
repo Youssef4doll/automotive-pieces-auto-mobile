@@ -62,7 +62,8 @@ export default function PaymentStep() {
         phone: details.phone.trim(),
         email: details.email.trim() || undefined,
         governorate: details.governorate,
-        address: details.deliveryMethod === 'DELIVERY' ? details.address.trim() : undefined,
+        // The delegation leads the address the driver reads.
+        address: details.deliveryMethod === 'DELIVERY' ? [details.delegation, details.address.trim()].filter(Boolean).join(', ') : undefined,
         deliveryMethod: details.deliveryMethod,
         paymentMethod: 'COD',
         notes: details.notes.trim() || undefined,

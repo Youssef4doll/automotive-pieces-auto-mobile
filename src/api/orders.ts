@@ -102,6 +102,10 @@ export const ordersApi = {
   get: (ref: string, token: string, signal?: AbortSignal) =>
     send<Order>(`/api/v1/orders/${encodeURIComponent(ref)}`, { token, signal }),
 
+  /** Cancel while still PENDING; `unavailable` (reason not_pending) after that. */
+  cancel: (ref: string, token: string) =>
+    send<Order>(`/api/v1/orders/${encodeURIComponent(ref)}/cancel`, { method: 'POST', token }),
+
   /** Recover an order on this phone with its reference and the phone number on it. */
   lookup: (ref: string, phone: string) =>
     send<{ ref: string; token: string }>('/api/v1/orders/lookup', { method: 'POST', body: { ref, phone } }),

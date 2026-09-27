@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { catalogueApi, productsApi, type Family } from '@/api/catalogue';
+import { catalogueApi, type ProductSort, productsApi, type Family } from '@/api/catalogue';
 import { PartImage } from '@/components/ui/part-image';
 import { ProductGrid } from '@/components/ui/product-grid';
 import { ProductListSkeleton } from '@/components/ui/skeleton';
@@ -19,6 +19,7 @@ import { useGarage } from '@/store/garage';
 import { track } from '@/services/analytics';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { Rail } from '@/components/ui/rail';
+import { Button } from '@/components/ui/button';
 
 /**
  * One family of parts — the reference's "Freinage" screen.
@@ -51,14 +52,29 @@ export default function FamilyScreen() {
 
   const engineId = useGarage((s) => s.active?.engineId);
   const [subcategory, setSubcategory] = useState<string | null>(initialSubcategory ?? null);
+  // Sort and filters: price order, on the shelf only, one brand.
+  const [sort, setSort] = useState<ProductSort | null>(null);
+  const [inStock, setInStock] = useState(false);
+  const [brand, setBrand] = useState<string | null>(null);
+  const filtered = Boolean(sort || inStock || brand);
 
   const loadFamilies = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(loadFamilies);
   const loadProducts = useCallback(
-    (signal: AbortSignal) => productsApi.inFamily(family, { engineId, subcategorySlug: subcategory ?? undefined }, signal),
-    [family, engineId, subcategory],
+    (signal: AbortSignal) =>
+      productsApi.inFamily(
+        family,
+        { engineId, subcategorySlug: subcategory ?? undefined, sort: sort ?? undefined, inStock, brand: brand ?? undefined },
+        signal,
+      ),
+    [family, engineId, subcategory, sort, inStock, brand],
   );
   const products = useResource(loadProducts);
+  // The brand chips stay put while a filtered page loads (adjusted during
+  // render, not in an effect).
+  const [brands, setBrands] = useState<{ name: string; slug: string; count: number }[]>([]);
+  const loadedBrands = products.status === 'loaded' ? (products.data.facets?.brands ?? []) : null;
+  if (loadedBrands && loadedBrands !== brands && JSON.stringify(loadedBrands) !== JSON.stringify(brands)) setBrands(loadedBrands);
   const refreshControl = usePullRefresh();
   useEffect(() => {
     track('category_viewed', { family, subcategory, vehicle: Boolean(engineId) });
@@ -105,6 +121,19 @@ export default function FamilyScreen() {
             ))}
           </Rail>
         ) : null}
+        <Rail style={styles.chipBar} contentContainerStyle={[styles.chips, row]}>
+          <Chip
+            label={sort === 'price_asc' ? t('catalog.sortPriceUp') : sort === 'price_desc' ? t('catalog.sortPriceDown') : t('catalog.sortDefault')}
+            selected={sort !== null}
+            onPress={() => setSort((s) => (s === null ? 'price_asc' : s === 'price_asc' ? 'price_desc' : null))}
+          />
+          <Chip label={t('catalog.inStock')} selected={inStock} onPress={() => setInStock((v) => !v)} />
+          {brands.length > 1
+            ? brands.map((b) => (
+                <Chip key={b.slug} label={b.name} selected={brand === b.slug} onPress={() => setBrand((cur) => (cur === b.slug ? null : b.slug))} />
+              ))
+            : null}
+        </Rail>
         <View style={[row, styles.sectionHead]}>
           <Text style={[styles.section, { fontFamily: familyFor('heading', rtl) }]}>{t('look.ourProducts')}</Text>
           {products.status === 'loaded' ? (
@@ -132,7 +161,22 @@ export default function FamilyScreen() {
             ) : products.status === 'failed' ? (
               <Failed failure={products.failure} onRetry={products.retry} />
             ) : (
-              <Empty title={t('catalog.empty')} body={t('catalog.emptyWhy')} />
+              filtered ? (
+                <View style={styles.noMatch}>
+                  <Empty title={t('catalog.noMatch')} body={null} />
+                  <Button
+                    label={t('catalog.clearFilters')}
+                    variant="secondary"
+                    onPress={() => {
+                      setSort(null);
+                      setInStock(false);
+                      setBrand(null);
+                    }}
+                  />
+                </View>
+              ) : (
+                <Empty title={t('catalog.empty')} body={t('catalog.emptyWhy')} />
+              )
             )}
           </View>
         </ScrollView>
@@ -157,6 +201,7 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
 }
 
 const styles = StyleSheet.create({
+  noMatch: { gap: Spacing.three },
   root: { flex: 1, backgroundColor: C.background },
   fill: { flexGrow: 1 },
   // The grid pads its content by 16; the head runs edge to edge.

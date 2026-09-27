@@ -19,6 +19,8 @@ export type CheckoutDetails = {
   phone: string;
   email: string;
   governorate: string;
+  /** Where the governorate has a delegation list (lib/delegations); '' otherwise. Optional: older saved details have none. */
+  delegation?: string;
   address: string;
   notes: string;
   deliveryMethod: DeliveryMethod;

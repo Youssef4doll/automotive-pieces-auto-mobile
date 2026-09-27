@@ -1,11 +1,16 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
 import { ordersApi, type Order, type OrderStatus } from '@/api/orders';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
+import { ShopContact } from '@/components/ui/shop-contact';
+import { useShopSettings } from '@/hooks/use-shop-settings';
+import { arrivalWindow, sameDay } from '@/lib/arrival';
+import { deliveryDelay } from '@/lib/checkout';
 import { OrderSummary } from '@/components/ui/order-summary';
 import { Failed, Loading } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
@@ -107,6 +112,43 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
   };
   const canBuyAgain = order.items.some((i) => i.slug);
 
+  // Cancel, while the shop has not confirmed it yet (POST …/cancel).
+  const tokenFor = useOrders((s) => s.tokenFor);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const cancel = async () => {
+    setCancelling(true);
+    try {
+      const token = await tokenFor(order.ref);
+      if (token) await ordersApi.cancel(order.ref, token);
+      track('order_cancelled', { ref: order.ref });
+      toast({ message: t('track.cancelled'), tone: 'neutral' });
+    } catch (err) {
+      // 409 "unavailable / not_pending": the shop confirmed it in the meantime.
+      const notPending = err instanceof ApiError && err.failure.kind === 'server' && err.failure.status === 409;
+      toast({ message: t(notPending ? 'track.cancelTooLate' : 'track.cancelFailed'), tone: 'neutral' });
+    } finally {
+      setCancelling(false);
+      setConfirmCancel(false);
+      onRefresh();
+    }
+  };
+
+  // When it should arrive: the shop's delay for this governorate, counted
+  // from the moment it was really marked shipped (lib/arrival). Before
+  // shipping, the delay itself; for pickup, nothing.
+  const settings = useShopSettings();
+  const delay = settings.status === 'loaded' && order.deliveryMethod === 'DELIVERY' ? deliveryDelay(settings.data, order.governorate) : null;
+  const shippedAt = when('SHIPPED');
+  const window = order.status === 'SHIPPED' && shippedAt ? arrivalWindow(shippedAt, delay) : null;
+  const arrivalLine = window
+    ? sameDay(window.from, window.to)
+      ? t('track.arrivesOn', { date: formatDate(window.from.toISOString(), locale) })
+      : t('track.arrivesBetween', { from: formatDate(window.from.toISOString(), locale), to: formatDate(window.to.toISOString(), locale) })
+    : delay && (order.status === 'PENDING' || order.status === 'CONFIRMED' || order.status === 'PREPARED')
+      ? t('track.deliversIn', { delay })
+      : null;
+
   return (
     <ScrollView
       contentContainerStyle={styles.scroll}
@@ -143,6 +185,27 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
                 </View>
               );
             })}
+          </View>
+        ) : null}
+
+        {arrivalLine ? (
+          <View style={[styles.arrival, row]}>
+            <Feather name="truck" size={IconSize.medium} color={C.text} />
+            <Text variant="body" tone={C.text} style={styles.flexText}>
+              {arrivalLine}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* A question about this order: the shop's channels, with the
+            reference written in; and, while nothing has started, a way out. */}
+        {!cancelled ? (
+          <View style={styles.help}>
+            <Text variant="rowTitle">{t('track.help')}</Text>
+            <ShopContact message={t('track.whatsappMsg', { ref: order.ref })} from="order" />
+            {order.status === 'PENDING' ? (
+              <Button label={t('track.cancel')} variant="danger" onPress={() => setConfirmCancel(true)} />
+            ) : null}
           </View>
         ) : null}
 
@@ -205,6 +268,14 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
           </View>
         ) : null}
       </View>
+
+      <BottomSheet visible={confirmCancel} onClose={() => setConfirmCancel(false)} title={t('track.cancelTitle')}>
+        <View style={styles.sheet}>
+          <Text variant="body">{t('track.cancelBody', { ref: order.ref })}</Text>
+          <Button label={t('track.cancelConfirm')} variant="danger" loading={cancelling} onPress={() => void cancel()} />
+          <Button label={t('track.cancelKeep')} variant="secondary" onPress={() => setConfirmCancel(false)} />
+        </View>
+      </BottomSheet>
     </ScrollView>
   );
 }
@@ -213,6 +284,10 @@ const NODE = 22;
 
 const styles = StyleSheet.create({
   scroll: { paddingBottom: Spacing.six },
+  arrival: { alignItems: 'center', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.tile, backgroundColor: C.surface, marginTop: Spacing.three },
+  flexText: { flex: 1 },
+  help: { gap: Spacing.two, marginTop: Spacing.four },
+  sheet: { gap: Spacing.three, padding: Spacing.three },
   column: {
     width: '100%',
     maxWidth: MaxContentWidth,

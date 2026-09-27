@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { BrandStrip } from '@/components/ui/brand-strip';
 import { CareBanner } from '@/components/ui/care-banner';
+import { HomeRows } from '@/components/ui/home-rows';
 import { PartImage } from '@/components/ui/part-image';
 import { PressScale } from '@/components/ui/press-scale';
 import { PromoBanner } from '@/components/ui/promo-banner';
@@ -248,6 +249,9 @@ export default function HomeScreen() {
                   </PressScale>
                 ))}
           </Rail>
+          {/* Personal rows: confirmed parts for the car, and the last orders again. */}
+          <HomeRows />
+
           <View style={styles.column}>
             {families.status === 'loaded' ? (
               <View style={styles.care}>

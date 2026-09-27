@@ -20,6 +20,7 @@ const details = (patch: Partial<CheckoutDetails> = {}): CheckoutDetails => ({
   phone: '22 334 455',
   email: '',
   governorate: 'Ariana',
+  delegation: 'La Soukra',
   address: '3 rue de la Liberté',
   notes: '',
   deliveryMethod: 'DELIVERY',
@@ -47,6 +48,11 @@ describe('checkout form', () => {
   it('treats the e-mail as optional but checks it when given', () => {
     assert.equal(checkoutProblems(details({ email: 'nope' })).email, 'checkout.err.email');
     assert.equal(checkoutProblems(details({ email: 'a@b.tn' })).email, undefined);
+  });
+  it('needs the delegation where the governorate has a list, for delivery only', () => {
+    assert.equal(checkoutProblems(details({ delegation: '' })).delegation, 'checkout.err.delegation');
+    assert.equal(checkoutProblems(details({ delegation: '', deliveryMethod: 'PICKUP' })).delegation, undefined);
+    assert.equal(checkoutProblems(details({ governorate: 'Sfax', delegation: '' })).delegation, undefined);
   });
   it('needs an address for delivery, not for pickup', () => {
     assert.equal(checkoutProblems(details({ address: '' })).address, 'checkout.err.address');

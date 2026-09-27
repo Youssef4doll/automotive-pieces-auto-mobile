@@ -19,6 +19,9 @@ export type SearchResult = {
 };
 
 export const searchApi = {
+  /** What other people searched and found this month; [] for a young shop (see the route). */
+  popular: (signal?: AbortSignal) => get<string[]>('/api/v1/search/popular', { signal }),
+
   /**
    * One ranking for the type-ahead and the results page — see the route
    * handler for why that matters. `submitted` marks a search the customer

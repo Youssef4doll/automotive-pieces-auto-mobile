@@ -79,6 +79,8 @@ export type Product = {
   /** A real photograph, or null — which is most of the catalogue. */
   imageUrl: string | null;
   fitment: FitmentVerdict | null;
+  /** Why it is not a plain yes: the wrong fuel, the model listed without this engine, the same engine code elsewhere, or a lead. */
+  fitmentReason?: 'WRONG_FUEL' | 'OTHER_ENGINES_OF_MODEL' | 'SAME_ENGINE_CODE' | 'DERIVED' | null;
 };
 
 export type ProductPage = {
@@ -87,7 +89,11 @@ export type ProductPage = {
   page: number;
   perPage: number;
   hasMore: boolean;
+  /** The brands the family holds (counted without the brand filter), for the filter chips. */
+  facets?: { brands: { name: string; slug: string; count: number }[] };
 };
+
+export type ProductSort = 'price_asc' | 'price_desc';
 
 export const productsApi = {
   /**
@@ -111,6 +117,12 @@ export const productsApi = {
     return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
   },
 
+  /** These parts, on sale only, at today's prices — for "Commander à nouveau". */
+  byIds: (ids: string[], engineId: string | undefined, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ ids: ids.slice(0, 20).join(',') });
+    if (engineId) params.set('engine', engineId);
+    return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
+  },
   ofBrand: (brandSlug: string, options: { engineId?: string; page?: number } = {}, signal?: AbortSignal) => {
     const params = new URLSearchParams({ brand: brandSlug });
     if (options.engineId) params.set('engine', options.engineId);
@@ -120,11 +132,14 @@ export const productsApi = {
 
   inFamily: (
     familySlug: string,
-    options: { engineId?: string; subcategorySlug?: string; page?: number } = {},
+    options: { engineId?: string; subcategorySlug?: string; page?: number; brand?: string; sort?: ProductSort; inStock?: boolean } = {},
     signal?: AbortSignal,
   ) => {
     const params = new URLSearchParams({ family: familySlug });
     if (options.subcategorySlug) params.set('subcategory', options.subcategorySlug);
+    if (options.brand) params.set('brand', options.brand);
+    if (options.sort) params.set('sort', options.sort);
+    if (options.inStock) params.set('inStock', '1');
     if (options.engineId) params.set('engine', options.engineId);
     if (options.page && options.page > 1) params.set('page', String(options.page));
     return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });

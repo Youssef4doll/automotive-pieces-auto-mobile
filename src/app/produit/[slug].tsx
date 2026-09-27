@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Linking, Modal, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,6 +31,7 @@ import { delaySpan, deliveryDelay } from '@/lib/checkout';
 import { useCart } from '@/store/cart';
 import { ProductTile } from '@/components/ui/product-tile';
 import { Rail } from '@/components/ui/rail';
+import { whatsappUrl } from '@/components/ui/shop-contact';
 
 /**
  * Fiche produit.
@@ -174,10 +175,18 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
             titleTone: C.text,
             bg: C.surface,
             text: t('product.notYour', { car: carName }),
-            why: product.compatibility.total > 0 ? t('look.whyNot', { n: product.compatibility.total, car: carName }) : t('look.whyNotNone'),
+            why:
+              product.fitmentReason === 'WRONG_FUEL'
+                ? t('look.whyFuel', { car: carName })
+                : product.compatibility.total > 0
+                  ? t('look.whyNot', { n: product.compatibility.total, car: carName })
+                  : t('look.whyNotNone'),
           }
         : product.fitment === 'UNKNOWN'
-          ? { icon: 'help-circle' as const, fg: C.caution, titleTone: C.text, bg: C.cautionSurface, text: t('fit.unknown'), why: `${t('look.unknownWhy', { car: carName })} ${t('product.unknownNote')}` }
+          ? { icon: 'help-circle' as const, fg: C.caution, titleTone: C.text, bg: C.cautionSurface, text: t('fit.unknown'), why:
+                product.fitmentReason === 'SAME_ENGINE_CODE'
+                  ? t('look.unknownSameEngine', { car: carName })
+                  : `${t('look.unknownWhy', { car: carName })} ${t('product.unknownNote')}` }
           : { icon: 'info' as const, fg: C.text, titleTone: C.text, bg: C.surface, text: t('look.chooseToCheck'), why: null };
   const openCompat = () => {
     setCompatKey((k) => k + 1);
@@ -271,6 +280,22 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                   >
                     <Text variant="hint" tone={C.text} style={styles.underline}>
                       {t('expert.askShop')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {product.fitment === 'UNKNOWN' && settings?.contact.whatsapp ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      track('whatsapp_opened', { from: 'to_check', sku: product.sku });
+                      const text = t('product.whatsappCheck', { name: product.name, sku: product.sku, car: vehicleLabel(active) ?? '' });
+                      void Linking.openURL(whatsappUrl(settings.contact.whatsapp!, text)).catch(() => undefined);
+                    }}
+                    hitSlop={6}
+                    style={styles.fitLink}
+                  >
+                    <Text variant="hint" tone={C.text} style={styles.underline}>
+                      {t('help.whatsapp')}
                     </Text>
                   </Pressable>
                 ) : null}
