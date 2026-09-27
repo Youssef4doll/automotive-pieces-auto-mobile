@@ -63,7 +63,19 @@ export type OrderDetail = {
     backorder: boolean;
     fit: 'VERIFIED' | 'DERIVED' | 'UNLISTED' | null;
   }[];
-  totals: { taxed: boolean; goods: number; shipping: number; vatRate: number; vat: number; stampDuty: number; total: number };
+  totals: {
+    taxed: boolean;
+    /** The parts after any promo code. */
+    goods: number;
+    /** Already out of `goods`; absent from an older server. */
+    discount?: number;
+    promoCode?: string | null;
+    shipping: number;
+    vatRate: number;
+    vat: number;
+    stampDuty: number;
+    total: number;
+  };
   history: { status: OrderStatus; at: string; note: string | null }[];
 };
 

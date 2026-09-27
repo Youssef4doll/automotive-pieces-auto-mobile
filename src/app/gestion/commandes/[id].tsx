@@ -174,6 +174,12 @@ function Detail({ order, onChange }: { order: OrderDetail; onChange: (o: OrderDe
         ))}
         <View style={styles.rule} />
         <Line label={t2.taxed ? t('staff.order.subtotalHT') : t('staff.order.subtotal')} value={formatDT(t2.goods)} />
+        {/* Already out of the figure above; said beside it, with the code. */}
+        {t2.discount ? (
+          <Text variant="hint" tone={C.success}>
+            {t('staff.order.discount', { code: t2.promoCode ?? '', amount: formatDT(t2.discount) })}
+          </Text>
+        ) : null}
         <Line
           label={t2.taxed ? t('staff.order.shippingHT') : t('staff.order.shipping')}
           value={t2.shipping === 0 ? t('staff.order.free') : formatDT(t2.shipping)}

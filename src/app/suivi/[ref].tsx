@@ -256,6 +256,8 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
         </Text>
         <OrderSummary
           subtotal={order.subtotal}
+          discount={order.discount ?? 0}
+          promoCode={order.promoCode}
           deliveryFee={order.shippingFee}
           stampDuty={order.stampDuty}
           total={order.total}

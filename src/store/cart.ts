@@ -38,6 +38,15 @@ export type CartItem = {
 type CartState = {
   items: CartItem[];
   hydrated: boolean;
+  /**
+   * The promo code the customer typed — a code, never an amount. Every quote
+   * sends it and the shop answers whether it applies and for how much.
+   */
+  promoCode: string | null;
+  /** A code just dropped because the shop does not know it, to say so once. */
+  promoDropped: { code: string; reason: 'unknown' | 'too_many' } | null;
+  setPromoCode: (code: string | null) => void;
+  dropPromo: (reason: 'unknown' | 'too_many') => void;
   /** Add a part, or add to the quantity already there. Returns false when full. */
   add: (product: Pick<Product, 'id' | 'slug' | 'name' | 'sku' | 'brand' | 'familySlug' | 'imageUrl'>, qty?: number) => boolean;
   setQty: (productId: string, qty: number) => void;
@@ -50,6 +59,20 @@ export const useCart = create<CartState>()(
     (set, get) => ({
       items: [],
       hydrated: false,
+      promoCode: null,
+      promoDropped: null,
+
+      setPromoCode: (code) => {
+        const clean = code ? code.normalize('NFKC').toUpperCase().replace(/[\s_]+/g, '').slice(0, 40) : '';
+        set({ promoCode: clean || null, promoDropped: null });
+      },
+      // A code the shop does not know is taken out at once rather than sent
+      // again with every quantity tap — each of those would count as another
+      // guess against the shop's limit on wrong codes.
+      dropPromo: (reason) => {
+        const code = get().promoCode;
+        if (code) set({ promoCode: null, promoDropped: { code, reason } });
+      },
 
       add: (product, qty = 1) => {
         const items = get().items;
@@ -94,12 +117,12 @@ export const useCart = create<CartState>()(
         set({ items: get().items.filter((i) => i.productId !== productId) });
       },
 
-      clear: () => set({ items: [] }),
+      clear: () => set({ items: [], promoCode: null, promoDropped: null }),
     }),
     {
       name: 'apa-cart',
       storage: createJSONStorage(() => deviceStorage),
-      partialize: (state) => ({ items: state.items }),
+      partialize: (state) => ({ items: state.items, promoCode: state.promoCode }),
       onRehydrateStorage: () => (_state, error) => {
         if (error) console.warn('cart: could not be read back', error);
         useCart.setState({ hydrated: true });

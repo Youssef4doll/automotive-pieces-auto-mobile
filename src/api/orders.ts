@@ -14,9 +14,19 @@ export type CartQuoteLine = {
 
 export type DeliveryMethod = 'DELIVERY' | 'PICKUP';
 
+/** Why a promo code did not apply — worded by the app, per language. */
+export type PromoProblem = 'unknown' | 'inactive' | 'not_started' | 'expired' | 'used_up' | 'min_subtotal' | 'too_many';
+
 export type CartQuote = {
   lines: CartQuoteLine[];
+  /** The parts, before any code. */
   subtotal: number;
+  /** Off the parts by the promo code, worked out by the shop; 0 without one. */
+  discount: number;
+  promo: { code: string; kind: 'PERCENT' | 'AMOUNT'; value: number } | null;
+  promoError: { reason: PromoProblem; minSubtotal?: number } | null;
+  /** One in-stock part that reaches free delivery — linked by the shop or confirmed for the car. */
+  suggestion: Product | null;
   deliveryMethod: DeliveryMethod;
   deliveryFee: number;
   stampDuty: number;
@@ -56,6 +66,9 @@ export type Order = {
     fit: 'VERIFIED' | 'DERIVED' | 'UNLISTED' | null;
   }[];
   subtotal: number;
+  /** 0 without a code; absent from an order view served before codes existed. */
+  discount?: number;
+  promoCode?: string | null;
   shippingFee: number;
   stampDuty: number;
   total: number;
@@ -71,6 +84,8 @@ export type OrderInput = {
   paymentMethod: 'COD';
   notes?: string;
   vehicleEngineId?: string;
+  /** Only a code the last quote accepted; the shop judges it again. */
+  promoCode?: string;
   items: { productId: string; qty: number }[];
 };
 
@@ -87,7 +102,7 @@ export const justPlaced = new Map<string, Order>();
 export const ordersApi = {
   /** Price a basket the way checkout will. Ids and quantities only — never a price. */
   quote: (
-    input: { items: { productId: string; qty: number }[]; engineId?: string; deliveryMethod?: DeliveryMethod },
+    input: { items: { productId: string; qty: number }[]; engineId?: string; deliveryMethod?: DeliveryMethod; promoCode?: string },
     signal?: AbortSignal,
   ) => send<CartQuote>('/api/v1/cart/quote', { method: 'POST', body: input, signal }),
 

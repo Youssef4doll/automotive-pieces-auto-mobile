@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
+import type { Product } from '@/api/catalogue';
 import type { CartQuoteLine } from '@/api/orders';
 import { Button } from '@/components/ui/button';
 import { CompatibilityBadge } from '@/components/ui/compatibility';
@@ -16,6 +17,7 @@ import { API_BASE_URL } from '@/constants/config';
 import { Border, C, IconSize, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { quoteOf, useCartQuote } from '@/hooks/use-cart-quote';
 import { PartImage } from '@/components/ui/part-image';
+import { PromoField } from '@/components/ui/promo-field';
 import { formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { MAX_QTY, useCart, type CartItem } from '@/store/cart';
@@ -46,6 +48,7 @@ export default function CartScreen() {
   const items = useCart((s) => s.items);
   const setQty = useCart((s) => s.setQty);
   const remove = useCart((s) => s.remove);
+  const add = useCart((s) => s.add);
   const { state, retry, hydrated } = useCartQuote();
   const quote = quoteOf(state);
   const lines = items.length;
@@ -98,7 +101,17 @@ export default function CartScreen() {
         ListFooterComponent={
           <View style={styles.footer}>
             {quote && quote.remainingForFree > 0 ? (
-              <FreeDelivery remaining={quote.remainingForFree} threshold={quote.freeShippingThreshold} subtotal={quote.subtotal} />
+              <FreeDelivery
+                remaining={quote.remainingForFree}
+                threshold={quote.freeShippingThreshold}
+                subtotal={quote.subtotal - quote.discount}
+                suggestion={stale ? null : quote.suggestion}
+                onAdd={(p) => {
+                  track('free_delivery_suggestion_added', { productId: p.id, gap: quote.remainingForFree });
+                  add(p);
+                }}
+                onOpen={(p) => router.push({ pathname: '/produit/[slug]', params: { slug: p.slug } })}
+              />
             ) : quote ? (
               <View style={[styles.freeDone, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
                 <Feather name="gift" size={IconSize.medium} color={C.success} />
@@ -108,9 +121,13 @@ export default function CartScreen() {
               </View>
             ) : null}
 
+            <PromoField quote={quote} stale={stale} />
+
             {quote ? (
               <OrderSummary
                 subtotal={quote.subtotal}
+                discount={quote.discount}
+                promoCode={quote.promo?.code}
                 deliveryFee={quote.deliveryFee}
                 stampDuty={quote.stampDuty}
                 total={quote.total}
@@ -228,10 +245,30 @@ function Line({
 /**
  * How far off free delivery is — a bar and a sentence, both from the shop's
  * own threshold. Shown only while there is a difference to make up.
+ *
+ * Under it, when the shop has one, a single part that closes the gap: one
+ * the shop links to something in the basket, or one confirmed for the
+ * customer's car, and on the shelf (see quoteAppCart). Never a random part to
+ * make a number go up.
  */
-function FreeDelivery({ remaining, threshold, subtotal }: { remaining: number; threshold: number; subtotal: number }) {
+function FreeDelivery({
+  remaining,
+  threshold,
+  subtotal,
+  suggestion,
+  onAdd,
+  onOpen,
+}: {
+  remaining: number;
+  threshold: number;
+  subtotal: number;
+  suggestion: Product | null;
+  onAdd: (p: Product) => void;
+  onOpen: (p: Product) => void;
+}) {
   const { t, rtl } = useI18n();
   const share = Math.max(0, Math.min(1, subtotal / threshold));
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
   return (
     <View style={styles.free}>
       <View style={[styles.freeHead, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
@@ -244,6 +281,38 @@ function FreeDelivery({ remaining, threshold, subtotal }: { remaining: number; t
         <View style={[styles.fill, { flex: share }]} />
         <View style={{ flex: 1 - share }} />
       </View>
+      {suggestion ? (
+        <View style={styles.suggest}>
+          <Text variant="hint" tone={C.text} style={{ textAlign: rtl ? 'right' : 'left' }}>
+            {t('cart.suggest.title')}
+          </Text>
+          <View style={[row, styles.suggestRow]}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => onOpen(suggestion)}
+              style={({ pressed }) => [row, styles.suggestOpen, pressed && styles.pressed]}
+            >
+              <View style={styles.suggestArt}>
+                {suggestion.imageUrl ? (
+                  <Image source={{ uri: `${API_BASE_URL}${suggestion.imageUrl}` }} style={styles.photo} contentFit="contain" />
+                ) : (
+                  <PartImage slug={suggestion.familySlug} size={32} />
+                )}
+              </View>
+              <View style={styles.lineText}>
+                <Text variant="body" tone={C.text} numberOfLines={2} style={{ textAlign: rtl ? 'right' : 'left' }}>
+                  {suggestion.name}
+                </Text>
+                <Text variant="rowTitle" style={{ textAlign: rtl ? 'right' : 'left' }}>
+                  {formatDT(suggestion.price)}
+                </Text>
+              </View>
+            </Pressable>
+            <Button label={t('cart.suggest.add')} icon="plus" variant="secondary" onPress={() => onAdd(suggestion)} />
+          </View>
+          {suggestion.fitment ? <CompatibilityBadge verdict={suggestion.fitment} /> : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -320,6 +389,22 @@ const styles = StyleSheet.create({
   fill: {
     backgroundColor: C.accent,
     borderRadius: 3,
+  },
+  suggest: {
+    gap: Spacing.two,
+    paddingTop: Spacing.two,
+    borderTopWidth: Border.hairline,
+    borderTopColor: C.border,
+  },
+  suggestRow: { alignItems: 'center', gap: Spacing.two },
+  suggestOpen: { flex: 1, alignItems: 'center', gap: Spacing.two, borderRadius: Radius.tile },
+  suggestArt: {
+    width: 44,
+    height: 44,
+    borderRadius: Radius.tile,
+    backgroundColor: C.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   freeDone: {
     alignItems: 'center',

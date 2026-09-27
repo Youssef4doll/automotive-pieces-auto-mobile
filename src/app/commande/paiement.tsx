@@ -68,6 +68,9 @@ export default function PaymentStep() {
         paymentMethod: 'COD',
         notes: details.notes.trim() || undefined,
         vehicleEngineId: active?.engineId,
+        // Only a code the shop's last quote accepted — the total on the
+        // button already has its discount in it. The shop judges it again.
+        promoCode: quote?.promo?.code,
         items: items.map((i) => ({ productId: i.productId, qty: i.qty })),
       }, accountToken());
       // The key first, then everything that depends on the order existing.
@@ -99,7 +102,11 @@ export default function PaymentStep() {
       router.push({ pathname: '/commande/confirmation/[ref]', params: { ref: result.ref } });
     } catch (err) {
       track('purchase_failed', { reason: err instanceof ApiError ? err.failure.kind : 'offline' });
-      setError(messageFor(err instanceof ApiError ? err.failure : { kind: 'offline' }));
+      const failure: ApiFailure = err instanceof ApiError ? err.failure : { kind: 'offline' };
+      setError(messageFor(failure));
+      // The code stopped applying between the quote and the order: price the
+      // basket again so the total on the button is the one that will be charged.
+      if (failure.kind === 'invalid' && failure.field === 'promoCode') retry();
       setPlacing(false);
     }
   };
@@ -180,6 +187,8 @@ export default function PaymentStep() {
           {quote ? (
             <OrderSummary
               subtotal={quote.subtotal}
+              discount={quote.discount}
+              promoCode={quote.promo?.code}
               deliveryFee={quote.deliveryFee}
               stampDuty={quote.stampDuty}
               total={quote.total}
@@ -220,6 +229,7 @@ export default function PaymentStep() {
 function messageFor(failure: ApiFailure): DictKey {
   switch (failure.kind) {
     case 'invalid':
+      if (failure.field === 'promoCode') return 'checkout.err.promo';
       return failure.field === 'customerName'
         ? 'checkout.err.customerName'
         : failure.field === 'phone'

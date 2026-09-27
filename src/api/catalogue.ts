@@ -117,6 +117,13 @@ export const productsApi = {
     return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
   },
 
+  /** The shop's packs — products whose specs list the parts they bundle. */
+  packs: (engineId: string | undefined, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ packs: '1' });
+    if (engineId) params.set('engine', engineId);
+    return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
+  },
+
   /** These parts, on sale only, at today's prices — for "Commander à nouveau". */
   byIds: (ids: string[], engineId: string | undefined, signal?: AbortSignal) => {
     const params = new URLSearchParams({ ids: ids.slice(0, 20).join(',') });

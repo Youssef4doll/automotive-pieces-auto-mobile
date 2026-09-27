@@ -79,6 +79,13 @@ try {
     check(t1 !== null && t2 !== null && t2 > t1, 'basket: one more raises the total (priced by the shop)', { t1, t2 });
   } else check(false, 'basket: a quantity control exists');
 
+  // ---- basket: a promo code is the shop's to judge; one it does not know is said, and taken out
+  await page.getByText('Vous avez un code promo ?').click();
+  await page.getByLabel('Code promo').fill('pas un code');
+  await page.getByRole('button', { name: 'Appliquer' }).click();
+  await page.waitForTimeout(2500);
+  check(await says(page, 'Le code PASUNCODE n’existe pas'), 'basket: an unknown promo code is refused by the shop');
+
   // ---- incompatible part
   if (misfit) {
     // Drive the 320d for this part, then give the garage back.

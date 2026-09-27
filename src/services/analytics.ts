@@ -51,7 +51,9 @@ export type EventName =
   | 'app_error'
   | 'expert_request'
   | 'whatsapp_opened'
-  | 'order_cancelled';
+  | 'order_cancelled'
+  | 'promo_entered'
+  | 'free_delivery_suggestion_added';
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 type Queued = { name: EventName; at: string; props?: Props };

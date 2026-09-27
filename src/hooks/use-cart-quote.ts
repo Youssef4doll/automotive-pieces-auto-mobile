@@ -27,12 +27,13 @@ export function useCartQuote(deliveryMethod?: DeliveryMethod) {
   const items = useCart((s) => s.items);
   const hydrated = useCart((s) => s.hydrated);
   const engineId = useGarage((s) => s.active?.engineId);
+  const promoCode = useCart((s) => s.promoCode) ?? undefined;
   const [attempt, setAttempt] = useState(0);
 
   // What the shop is asked about, and nothing else: ids and quantities.
   const request = useMemo(
-    () => ({ items: items.map((i) => ({ productId: i.productId, qty: i.qty })), engineId, deliveryMethod }),
-    [items, engineId, deliveryMethod],
+    () => ({ items: items.map((i) => ({ productId: i.productId, qty: i.qty })), engineId, deliveryMethod, promoCode }),
+    [items, engineId, deliveryMethod, promoCode],
   );
   // One question per basket and attempt; the answer is filed under it, so a
   // changed basket reads "loading" from its first render with the previous
@@ -55,6 +56,8 @@ export function useCartQuote(deliveryMethod?: DeliveryMethod) {
           if (controller.signal.aborted) return;
           setAnswer({ for: question, value: { status: 'loaded', data } });
           setLast(data);
+          const reason = data.promoError?.reason;
+          if (reason === 'unknown' || reason === 'too_many') useCart.getState().dropPromo(reason);
         })
         .catch((err: unknown) => {
           if (controller.signal.aborted) return;

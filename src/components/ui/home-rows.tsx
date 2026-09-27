@@ -15,13 +15,15 @@ import { Rail } from './rail';
 import { Text } from './text';
 
 /**
- * The home screen's two personal rows, each shown only when it has
+ * The home screen's rows beyond the families, each shown only when it has
  * something real in it:
  *
  *   "Pour votre BMW Série 1" — parts CONFIRMED for the car in the garage
  *   (fits=1, VERIFIED rows only), with prices and quick add.
  *   "Commander à nouveau" — the parts of this phone's last orders that are
  *   still on sale, read again from the shop so the price is today's.
+ *   "Packs entretien" — the shop's own bundles (a product whose specs list
+ *   what is inside it), at the shop's prices. No pack, no row.
  */
 export function HomeRows() {
   const active = useGarage((s) => s.active);
@@ -59,6 +61,9 @@ export function HomeRows() {
   );
   const again = useResource(loadAgain);
 
+  const loadPacks = useCallback((signal: AbortSignal) => productsApi.packs(engineId, signal).then((p) => p.products.slice(0, 10)), [engineId]);
+  const packs = useResource(loadPacks);
+
   return (
     <>
       {active && fits.status === 'loaded' && fits.data.length > 0 ? (
@@ -71,11 +76,12 @@ export function HomeRows() {
       {again.status === 'loaded' && again.data.length > 0 ? (
         <Row title={t('home.orderAgain')} products={again.data} onAll={() => router.push('/compte/commandes')} />
       ) : null}
+      {packs.status === 'loaded' && packs.data.length > 0 ? <Row title={t('home.packs')} products={packs.data} /> : null}
     </>
   );
 }
 
-function Row({ title, products, onAll }: { title: string; products: Product[]; onAll: () => void }) {
+function Row({ title, products, onAll }: { title: string; products: Product[]; onAll?: () => void }) {
   const { t, rtl } = useI18n();
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
   return (
@@ -84,12 +90,14 @@ function Row({ title, products, onAll }: { title: string; products: Product[]; o
         <Text numberOfLines={1} style={[styles.title, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
           {title}
         </Text>
-        <Pressable accessibilityRole="button" onPress={onAll} hitSlop={8} style={[styles.all, row]}>
-          <Text variant="hint" tone={C.text}>
-            {t('catalog.seeAll')}
-          </Text>
-          <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={C.text} />
-        </Pressable>
+        {onAll ? (
+          <Pressable accessibilityRole="button" onPress={onAll} hitSlop={8} style={[styles.all, row]}>
+            <Text variant="hint" tone={C.text}>
+              {t('catalog.seeAll')}
+            </Text>
+            <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={C.text} />
+          </Pressable>
+        ) : null}
       </View>
       <Rail contentContainerStyle={[styles.rail, row]}>
         {products.map((p) => (

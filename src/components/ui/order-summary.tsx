@@ -6,9 +6,10 @@ import { useI18n } from '@/i18n/provider';
 import { Text } from './text';
 
 /**
- * Subtotal, delivery, stamp duty, total — the same four rows on the basket,
- * on the payment step and on a tracked order, so the figure a customer
- * agreed to reads the same way wherever they meet it again.
+ * Subtotal, the promo code when one applied, delivery, stamp duty, total —
+ * the same rows on the basket, on the payment step and on a tracked order, so
+ * the figure a customer agreed to reads the same way wherever they meet it
+ * again.
  *
  * The stamp duty row appears only when the shop charges one. It is a real
  * dinar when it applies and it is inside the total; a row showing "0,00 DT"
@@ -17,6 +18,8 @@ import { Text } from './text';
  */
 export function OrderSummary({
   subtotal,
+  discount = 0,
+  promoCode = null,
   deliveryFee,
   stampDuty,
   total,
@@ -24,6 +27,9 @@ export function OrderSummary({
   stale = false,
 }: {
   subtotal: number;
+  /** Off the parts by a promo code, as the shop worked it out. */
+  discount?: number;
+  promoCode?: string | null;
   deliveryFee: number;
   stampDuty: number;
   total: number;
@@ -41,6 +47,14 @@ export function OrderSummary({
         <Text variant="body">{t('cart.subtotal')}</Text>
         <Text variant="body">{formatDT(subtotal)}</Text>
       </View>
+      {discount > 0 ? (
+        <View style={[styles.row, row]}>
+          <Text variant="body" tone={C.success}>
+            {t('cart.promo.applied', { code: promoCode ?? '' })}
+          </Text>
+          <Text variant="body" tone={C.success}>{`−${formatDT(discount)}`}</Text>
+        </View>
+      ) : null}
       <View style={[styles.row, row]}>
         <Text variant="body">{deliveryLabel ?? t('cart.delivery')}</Text>
         <Text variant="body" tone={deliveryFee === 0 ? C.success : C.text}>
