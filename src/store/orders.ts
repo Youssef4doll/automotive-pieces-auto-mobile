@@ -22,6 +22,12 @@ export type PlacedOrder = {
   total: number;
   itemCount: number;
   /**
+   * What was bought, for the list to lead with before the shop has been
+   * asked: the first part's name and the families of up to three parts.
+   * Missing on orders recorded before it existed; the list reads it live.
+   */
+  lead?: { name: string; families: (string | null)[] };
+  /**
    * Listed because the signed-in account owns it, not because this phone
    * holds its token. Opened with the account session; removed on sign-out.
    */

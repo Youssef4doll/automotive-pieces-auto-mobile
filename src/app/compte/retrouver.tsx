@@ -41,7 +41,7 @@ export default function FindOrderScreen() {
       const found = await ordersApi.lookup(ref.trim(), phone.trim());
       const order = await ordersApi.get(found.ref, found.token);
       await remember(
-        { ref: order.ref, placedAt: order.createdAt, total: order.total, itemCount: order.items.reduce((n, i) => n + i.qty, 0) },
+        { ref: order.ref, placedAt: order.createdAt, total: order.total, itemCount: order.items.reduce((n, i) => n + i.qty, 0), lead: { name: order.items[0]?.name ?? '', families: order.items.slice(0, 3).map((i) => i.familySlug) } },
         found.token,
       );
       router.replace({ pathname: '/suivi/[ref]', params: { ref: order.ref } });

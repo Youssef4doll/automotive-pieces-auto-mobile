@@ -833,7 +833,7 @@ counterpart, built on the shop's data:
 | Mes véhicules (select, then act) | `garage/vehicules.tsx` |
 | Ajouter un véhicule (four ways, Continuer) | `trouver.tsx`, linked under the arc |
 | Carte grise / VIN | `garage/vin.tsx` — info box moved under the button, as drawn |
-| Product (heart, share, compat pill, facts, accordions) | `produit/[slug].tsx`; favourites in `store/favourites.ts`, listed at `compte/favoris.tsx` |
+| Product (share, compat pill, facts, accordions) | `produit/[slug].tsx` (favourites removed September 2026, §19) |
 | Search (chips, Suggestions, Récents) | `recherche.tsx` |
 | Tab bar (gold pill on the active tab, "Garage") | `(tabs)/_layout.tsx` |
 
@@ -904,8 +904,6 @@ Motion:**
 - "Mes véhicules" is a list of rows; each row's "…" opens its actions in a
   sheet (pièces compatibles, rendre principal, supprimer — which asks).
   Tapping a row makes it the car the app answers for.
-- Favourites are shown as ordinary product tiles, each read fresh from the
-  shop — the phone keeps which parts, never their price.
 - Home follows the brief's order: hero, search, vehicle ("Changer →" on the
   card), the arc, popular families, the shop's campaigns, then its brands.
 
@@ -1089,3 +1087,34 @@ real images if needed". The full account is `docs/imagery.md`; the decisions:
   ways in are the key, the disc, the magnifier and the phone.
 - **Compte** shows the customer's own photo if they choose one — cropped
   square, 320 px, kept on the phone, never uploaded.
+
+## 19. Orders by what was bought; the shop's own drawings (September 2026)
+
+Asked for by the owner: "the user shouldn't see his order number like this",
+"the cart is generic", the maintenance banner "doesn't match", and "remove
+the favourites".
+
+- **Mes commandes** leads each card with what was bought: the parts'
+  pictures (up to three, stacked), the first part's name, "+ n more", the
+  order's live state as a pill, the date and the total. The reference stays,
+  small (`N° CMD-1066`), because it is what a customer quotes on the phone.
+  States are read from the shop with each order's key on open and on pull
+  (`useLive`); a card that cannot be read shows what the phone remembers and
+  no state. New orders also store `lead` (first name, families) so the card
+  is right before the shop answers. The tracking screen is titled "Suivi de
+  commande", with the reference as a hint in its status card.
+- **Empty screens** use `EmptyState` with drawings in the shop's navy and
+  gold (`illustrations/empty-art.tsx`: a trolley on tyres, a taped parcel)
+  or a studio render (search, help). The basket tab uses `NavCart`, drawn in
+  NavCar's grammar so the bar reads as one set.
+- **Entretien auto** (`components/ui/care-banner.tsx`) is built from the
+  family pictures of the rail above it — lubrifiant, filtres, allumage — in
+  the same white discs, over a navy gradient with a gold arc. Upload a new
+  family picture and the banner follows; a family with no parts is not shown,
+  and the eyebrow names only the families shown.
+- **Favourites are gone**: the heart, `store/favourites.ts`, `compte/favoris`
+  and the `favorite_added` event. Old installs keep an unread
+  `apa-favourites` entry in storage; nothing reads it.
+- **Home**: the greeting, title and bubble arc were removed earlier the same
+  week; "Comment trouver votre pièce ?" opens `/trouver`, which holds every
+  way in.

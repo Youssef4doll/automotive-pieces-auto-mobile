@@ -110,11 +110,11 @@ src/app/            Expo Router screens (routes = files)
   garage/           ajouter (make → model → engine), vin, vehicules
   commande/         livraison → paiement → confirmation
   suivi/            order timeline
-  compte/           connexion · supprimer · commandes · favoris · adresses · parametres · retrouver
+  compte/           connexion · supprimer · commandes · adresses · parametres · retrouver
   gestion/          staff area (bearer admin session)
 src/api/            one module per domain, all through api/client.ts
 src/services/       analytics (new)
-src/store/          Zustand: garage, cart, orders, favourites, account, staff…
+src/store/          Zustand: garage, cart, orders, account, staff…
 src/components/ui/  the component kit (Button, ProductCard, VehicleCard,
                     CompatibilityBadge, QuantityStepper, BottomSheet, Toast,
                     Skeleton, EmptyState/ErrorState, StepIndicator…)
@@ -172,7 +172,7 @@ Garage → garage/ajouter → [make] → [model] (engine)   garage/vin   garage/
 Panier → commande/livraison → commande/paiement → commande/confirmation/[ref] → suivi/[ref]
 Compte → compte/connexion (sign in / create / forgot) → back
        → compte/commandes → suivi/[ref]      compte/retrouver
-       → compte/favoris · adresses · parametres · compte/supprimer
+       → adresses · parametres · compte/supprimer
        → gestion (staff only)
 ```
 
@@ -224,7 +224,7 @@ Events wired in Phase 1: `app_open`, `vehicle_selected`, `vehicle_added`,
 `vin_started`, `vin_completed`, `search_query`, `search_result_clicked`,
 `category_viewed`, `product_viewed`, `compatibility_checked`, `add_to_cart`,
 `remove_from_cart`, `view_cart`, `begin_checkout`, `purchase`,
-`order_viewed`, `favorite_added`, `sign_up`, `login`, `logout`,
+`order_viewed`, `sign_up`, `login`, `logout`,
 `account_deleted`.
 
 ## 12. Phases

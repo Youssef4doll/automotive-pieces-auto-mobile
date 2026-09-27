@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { hasContactChannel } from '@/api/shop';
 import { BrandStrip } from '@/components/ui/brand-strip';
+import { CareBanner } from '@/components/ui/care-banner';
 import { PartImage } from '@/components/ui/part-image';
 import { PressScale } from '@/components/ui/press-scale';
 import { PromoBanner } from '@/components/ui/promo-banner';
@@ -21,7 +22,7 @@ import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap }
 import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
-import { familyRender, RENDERS } from '@/illustrations/renders';
+import { RENDERS } from '@/illustrations/renders';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
@@ -84,7 +85,6 @@ export default function HomeScreen() {
     () => (families.status === 'loaded' ? [...families.data].sort((a, b) => b.productCount - a.productCount) : []),
     [families],
   );
-  const careFamily = families.status === 'loaded' ? families.data.find((f) => f.slug === 'filtres') : undefined;
 
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
   const openFamily = (f: Family) =>
@@ -252,27 +252,10 @@ export default function HomeScreen() {
                 ))}
           </ScrollView>
           <View style={styles.column}>
-            {careFamily ? (
-              <PressScale
-                accessibilityRole="button"
-                accessibilityLabel={`${t('home.care')}. ${t('home.careWhy')}`}
-                onPress={() => openFamily(careFamily)}
-                style={[styles.care, row]}
-                pressedStyle={styles.carePressed}
-                scaleTo={0.985}
-              >
-                <View style={styles.careText}>
-                  <Text style={[styles.careTitle, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('home.care')}</Text>
-                  <Text style={[styles.careWhy, { fontFamily: familyFor('body', rtl) }]}>{t('home.careWhy')}</Text>
-                  <View style={[styles.careCta, row, { alignSelf: rtl ? 'flex-end' : 'flex-start' }]}>
-                    <Text style={[styles.careCtaText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('home.careCta')}</Text>
-                    <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={Brand.navy900} />
-                  </View>
-                </View>
-                <View style={[styles.careArt, rtl ? { left: -6 } : { right: -6 }]} pointerEvents="none">
-                  <Image source={familyRender('lubrifiant') ?? RENDERS.key} style={{ width: 132, height: 132 }} contentFit="contain" />
-                </View>
-              </PressScale>
+            {families.status === 'loaded' ? (
+              <View style={styles.care}>
+                <CareBanner families={families.data} onOpen={openFamily} />
+              </View>
             ) : null}
 
           </View>
@@ -415,29 +398,9 @@ const styles = StyleSheet.create({
   },
   catSkeleton: { width: 72, height: 72, borderRadius: 36 },
   catName: { textAlign: 'center' },
-  care: {
-    marginTop: Spacing.four,
-    minHeight: 150,
-    borderRadius: Radius.card,
-    backgroundColor: Brand.navy900,
-    overflow: 'hidden',
-    padding: Spacing.four,
-  },
-  carePressed: { backgroundColor: Brand.navy800 },
-  careText: { flex: 1, gap: 6, zIndex: 1, maxWidth: '62%' },
+  care: { marginTop: Spacing.four },
   careTitle: { fontSize: 20, lineHeight: 26, color: Brand.white },
   careWhy: { fontSize: 14, lineHeight: 19, color: '#c7d1e3' },
-  careCta: {
-    alignItems: 'center',
-    gap: 6,
-    marginTop: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    minHeight: 36,
-    borderRadius: Radius.pill,
-    backgroundColor: Brand.gold500,
-  },
-  careCtaText: { fontSize: 14, lineHeight: 18, color: Brand.navy900 },
-  careArt: { position: 'absolute', bottom: 8 },
   block: { paddingTop: Spacing.four },
   promo: { paddingTop: Spacing.four },
   advice: {

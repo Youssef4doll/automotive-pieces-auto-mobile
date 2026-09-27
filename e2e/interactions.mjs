@@ -2,7 +2,7 @@ import { APP_URL, addBmw, open, scrollTo, tap } from './lib/drive.mjs';
 
 /**
  * The redesign's interactions, driven as a customer drives them: the
- * product page's pinned purchase bar, an incompatible part, favourites,
+ * product page's pinned purchase bar, an incompatible part,
  * "only what fits", compatible-first lists, quick add, the garage carousel
  * and its sheets, the VIN flow, the four ways in, the catalogue filter, the
  * guided picker, and the basket. Local shop only — it adds to baskets on
@@ -85,19 +85,6 @@ try {
     await page.waitForTimeout(700);
     check((await badge(page)) === before + 1 || (await says(page, 'Ajouté au panier')), 'misfit: added after the confirmation', { before, after: await badge(page) });
   } else check(false, 'misfit: an incompatible part exists in the data');
-
-  // ---- favourites
-  await go(`/produit/${fitting[0].slug}`);
-  await page.getByRole('button', { name: 'Ajouter aux favoris' }).click();
-  await page.waitForTimeout(400);
-  check((await page.getByRole('button', { name: 'Retirer des favoris' }).count()) === 1, 'favourites: the heart holds');
-  await go('/compte/favoris', 3500);
-  check((await says(page, fitting[0].name)) && (await says(page, 'DT')), 'favourites: shown as a tile, price read fresh');
-  await go(`/produit/${fitting[0].slug}`);
-  await page.getByRole('button', { name: 'Retirer des favoris' }).click();
-  await page.waitForTimeout(300);
-  await go('/compte/favoris');
-  check((await says(page, 'Aucun favori')) && (await says(page, 'Parcourir le catalogue')), 'favourites: empty state with a way on');
 
   // ---- search: what fits first, and only what fits
   await go('/recherche?q=filtre', 3500);

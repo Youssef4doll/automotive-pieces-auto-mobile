@@ -95,7 +95,7 @@ which is gone before a two-second wait ends.
 `npm run e2e:interactions` drives what the redesign added: the product
 page's pinned bar confirming an add without a toast over the part, the
 basket re-priced by the shop when a quantity changes, an incompatible part
-explaining itself and asking before it is added, favourites as live tiles
+explaining itself and asking before it is added
 and their empty state, search ranking what fits first and the "only what
 fits" switch, compatible-first family pages and quick add, the catalogue
 filter, the four ways in, the guided picker ("Étape n sur 3", the saved-car

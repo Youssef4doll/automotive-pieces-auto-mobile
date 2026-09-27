@@ -20,6 +20,8 @@ import { formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { MAX_QTY, useCart, type CartItem } from '@/store/cart';
 import { track } from '@/services/analytics';
+import { EmptyState } from '@/components/ui/empty-state';
+import { CartArt } from '@/illustrations/empty-art';
 
 /**
  * Panier.
@@ -58,19 +60,10 @@ export default function CartScreen() {
   if (items.length === 0) {
     return (
       <View style={styles.empty}>
-        <View style={styles.emptyArt}>
-          <Feather name="shopping-bag" size={40} color={C.textMuted} />
-        </View>
-        <Text variant="sectionTitle" style={styles.centred}>
-          {t('cart.empty')}
-        </Text>
-        <Text variant="hint" style={styles.centred}>
-          {t('cart.emptyWhy')}
-        </Text>
-        <View style={styles.emptyActions}>
+        <EmptyState art={<CartArt size={112} />} title={t('cart.empty')} body={t('cart.emptyWhy')}>
           <Button label={t('cart.browse')} onPress={() => router.navigate('/catalogue')} />
           <Button label={t('search.placeholder')} variant="secondary" icon="search" onPress={() => router.push('/recherche')} />
-        </View>
+        </EmptyState>
       </View>
     );
   }
@@ -269,31 +262,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.five,
   },
   count: { paddingBottom: Spacing.two },
-  empty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.two,
-    padding: Spacing.four,
-    backgroundColor: C.background,
-  },
-  emptyArt: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: C.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.two,
-  },
-  emptyActions: {
-    alignSelf: 'stretch',
-    maxWidth: 360,
-    width: '100%',
-    marginTop: Spacing.three,
-    gap: Spacing.two,
-    alignItems: 'stretch',
-  },
+  empty: { flex: 1, justifyContent: 'center', backgroundColor: C.background },
   centred: { textAlign: 'center' },
   line: {
     gap: Spacing.two,

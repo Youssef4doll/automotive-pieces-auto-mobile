@@ -121,7 +121,6 @@ for (const width of SCREEN_VIEWPORTS) {
       ['garage', `${APP_URL}/garage`],
       ['vehicles', `${APP_URL}/garage/vehicules`],
       ['find', `${APP_URL}/trouver`],
-      ['favourites', `${APP_URL}/compte/favoris`],
     ]) {
       await page.goto(url, { waitUntil: 'networkidle' });
       await page.waitForTimeout(2800);

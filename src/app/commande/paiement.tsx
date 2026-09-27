@@ -76,6 +76,7 @@ export default function PaymentStep() {
           placedAt: result.order.createdAt,
           total: result.order.total,
           itemCount: result.order.items.reduce((n, i) => n + i.qty, 0),
+          lead: { name: result.order.items[0]?.name ?? '', families: result.order.items.slice(0, 3).map((i) => i.familySlug) },
         },
         result.token,
       );

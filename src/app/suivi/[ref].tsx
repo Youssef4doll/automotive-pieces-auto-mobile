@@ -57,7 +57,7 @@ export default function TrackingScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: t('track.title', { ref }) }} />
+      <Stack.Screen options={{ title: t('track.title') }} />
       {order.status === 'loading' ? (
         <Loading />
       ) : order.status === 'failed' ? (
@@ -117,6 +117,7 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
           <Text variant="label">{t('track.placedOn', { date: formatDate(order.createdAt, locale) })}</Text>
           <Text variant="sectionTitle">{t(`status.${order.status}`)}</Text>
           <Text variant="body">{t(`next.${order.status}`)}</Text>
+          <Text variant="hint">{t('orders.ref', { ref: order.ref })}</Text>
         </View>
 
         {!cancelled ? (

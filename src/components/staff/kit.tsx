@@ -2,7 +2,6 @@ import { Feather } from '@expo/vector-icons';
 import { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, View, type ViewStyle } from 'react-native';
 
-import type { OrderStatus } from '@/api/staff';
 import { Text } from '@/components/ui/text';
 import { Border, Brand, C, familyFor, IconSize, Radius, Spacing, Tap } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
@@ -14,26 +13,7 @@ import { useI18n } from '@/i18n/provider';
  * counter tool, used standing up, not a shop window.
  */
 
-const STATUS_TONE: Record<OrderStatus, { bg: string; fg: string }> = {
-  PENDING: { bg: C.cautionSurface, fg: '#92400e' },
-  CONFIRMED: { bg: Brand.navy50, fg: Brand.navy700 },
-  PREPARED: { bg: Brand.navy50, fg: Brand.navy700 },
-  SHIPPED: { bg: Brand.navy50, fg: Brand.navy700 },
-  DELIVERED: { bg: C.successSurface, fg: C.success },
-  CANCELLED: { bg: C.dangerSurface, fg: C.danger },
-};
-
-export function StatusPill({ status }: { status: OrderStatus }) {
-  const { t, rtl } = useI18n();
-  const tone = STATUS_TONE[status];
-  return (
-    <View style={[styles.pill, { backgroundColor: tone.bg }]}>
-      <Text style={{ fontFamily: familyFor('bodySemi', rtl), fontSize: 12, lineHeight: 16, color: tone.fg }}>
-        {t(`status.${status}`)}
-      </Text>
-    </View>
-  );
-}
+export { StatusPill } from '@/components/ui/status-pill';
 
 /** A small tag: "À commander", "Hors ligne". */
 export function Tag({ label, tone = 'caution' }: { label: string; tone?: 'caution' | 'danger' | 'muted' }) {
@@ -189,8 +169,8 @@ export const staffStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, minWidth: 0 },
   pill: { alignSelf: 'flex-start', borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 3 },
+  flex: { flex: 1, minWidth: 0 },
   chips: { gap: Spacing.two, paddingVertical: Spacing.one },
   chip: {
     // The 44pt floor, not the compact 40: these are thumbed at a counter.

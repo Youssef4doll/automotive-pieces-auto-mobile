@@ -1,9 +1,12 @@
+import { Image } from 'expo-image';
 import { Stack } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
 import { hasContactChannel, type ShopSettings } from '@/api/shop';
 import { Button } from '@/components/ui/button';
-import { Empty, Failed, Loading } from '@/components/ui/states';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Failed, Loading } from '@/components/ui/states';
+import { RENDERS } from '@/illustrations/renders';
 import { Text } from '@/components/ui/text';
 import { C, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useShopSettings } from '@/hooks/use-shop-settings';
@@ -42,10 +45,13 @@ export default function HelpScreen() {
       ) : hasContactChannel(settings.data) ? (
         <Help settings={settings.data} />
       ) : (
-        <Empty
-          title={t('account.noContact')}
-          body={settings.data.contact.hours ? t('help.hours', { h: settings.data.contact.hours }) : null}
-        />
+        <View style={{ flex: 1, justifyContent: 'center', backgroundColor: C.background }}>
+          <EmptyState
+            art={<Image source={RENDERS.phone} style={{ width: 116, height: 116 }} contentFit="contain" />}
+            title={t('account.noContact')}
+            body={settings.data.contact.hours ? t('help.hours', { h: settings.data.contact.hours }) : null}
+          />
+        </View>
       )}
     </>
   );

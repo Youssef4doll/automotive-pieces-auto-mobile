@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeIn, ReduceMotion, useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
+import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { productApi, type ProductDetail } from '@/api/product';
@@ -23,8 +23,6 @@ import { useShopSettings } from '@/hooks/use-shop-settings';
 import { PartImage } from '@/components/ui/part-image';
 import { formatDT, yearSpan } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
-import { HeartIcon } from '@/illustrations/heart';
-import { useFavourites } from '@/store/favourites';
 import { useGarage, vehicleLabel } from '@/store/garage';
 import { track } from '@/services/analytics';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
@@ -73,7 +71,6 @@ export default function ProductScreen() {
           headerRight: () =>
             product.status === 'loaded' ? (
               <View style={styles.headerActions}>
-                <HeartButton product={product.data} />
                 <ShareButton product={product.data} />
               </View>
             ) : null,
@@ -557,46 +554,6 @@ function ShareButton({ product }: { product: ProductDetail }) {
       style={styles.share}
     >
       <Feather name="share" size={IconSize.large} color={C.text} />
-    </Pressable>
-  );
-}
-
-/** Keep this part on the phone — identity only, never its price (see store/favourites). */
-function HeartButton({ product }: { product: ProductDetail }) {
-  const { t } = useI18n();
-  const on = useFavourites((s) => s.items.some((f) => f.slug === product.slug));
-  const toggle = useFavourites((s) => s.toggle);
-  // A small pop when a part is kept — felt, not watched. Nothing on removal.
-  const scale = useSharedValue(1);
-  const pop = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={on ? t('look.favRemove') : t('look.favAdd')}
-      accessibilityState={{ selected: on }}
-      hitSlop={8}
-      onPress={() => {
-        const nowOn = toggle({
-          slug: product.slug,
-          name: product.name,
-          brand: product.brand,
-          familySlug: product.familySlug,
-          imageUrl: product.imageUrl,
-        });
-        if (nowOn) {
-          scale.set(
-            withSequence(
-              withSpring(1.28, { damping: 8, stiffness: 420, reduceMotion: ReduceMotion.System }),
-              withSpring(1, { damping: 14, stiffness: 260, reduceMotion: ReduceMotion.System }),
-            ),
-          );
-        }
-      }}
-      style={styles.share}
-    >
-      <Animated.View style={pop}>
-        <HeartIcon filled={on} />
-      </Animated.View>
     </Pressable>
   );
 }

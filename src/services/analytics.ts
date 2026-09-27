@@ -41,7 +41,6 @@ export type EventName =
   | 'purchase'
   | 'purchase_failed'
   | 'order_viewed'
-  | 'favorite_added'
   | 'sign_up'
   | 'login'
   | 'logout'

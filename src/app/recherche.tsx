@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -20,6 +21,8 @@ import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 import { useRecentSearches } from '@/store/recent-searches';
 import { track } from '@/services/analytics';
+import { EmptyState } from '@/components/ui/empty-state';
+import { RENDERS } from '@/illustrations/renders';
 
 /** Long enough that a steady typist does not fire a request per letter. */
 const DEBOUNCE_MS = 180;
@@ -446,10 +449,11 @@ export default function SearchScreen() {
       ) : nothing ? (
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.column, styles.idle]}>
           {header}
-          <View style={styles.none}>
-            <Text variant="sectionTitle">{t('search.none', { q: trimmed })}</Text>
-            <Text variant="hint">{t('search.noneWhy')}</Text>
-          </View>
+          <EmptyState
+            art={<Image source={RENDERS.magnifier} style={{ width: 112, height: 112 }} contentFit="contain" />}
+            title={t('search.none', { q: trimmed })}
+            body={t('search.noneWhy')}
+          />
         </ScrollView>
       ) : !result ? (
         <View style={[styles.column, styles.idle]}>

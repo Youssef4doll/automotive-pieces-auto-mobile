@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { C, familyFor, Spacing, TabBarHeight } from '@/constants/theme';
+import { NavCart } from '@/illustrations/nav-cart';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useCartCount } from '@/store/cart';
@@ -154,7 +155,7 @@ export default function TabsLayout() {
           tabBarAccessibilityLabel: cartCount > 0 ? `${t('tab.cart')}, ${t('a11y.cartCount', { n: cartCount })}` : t('tab.cart'),
           tabBarIcon: ({ color, focused }) => (
             <NavIcon focused={focused}>
-              <Feather name="shopping-cart" size={22} color={color} />
+              <NavCart size={22} color={color} />
             </NavIcon>
           ),
         }}

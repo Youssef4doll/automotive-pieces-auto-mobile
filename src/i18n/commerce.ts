@@ -211,7 +211,7 @@ export const commerce = {
     'next.DELIVERED': 'Livrée. Un souci avec une pièce ? Écrivez-nous, on s’en occupe.',
     'next.CANCELLED': 'Cette commande a été annulée.',
 
-    'track.title': 'Commande {ref}',
+    'track.title': 'Suivi de commande',
     'track.placedOn': 'Passée le {date}',
     'track.items': 'Articles',
     'track.delivery': 'Livraison',
@@ -483,7 +483,7 @@ export const commerce = {
     'next.DELIVERED': 'Delivered. A problem with a part? Write to us and we will sort it out.',
     'next.CANCELLED': 'This order was cancelled.',
 
-    'track.title': 'Order {ref}',
+    'track.title': 'Order tracking',
     'track.placedOn': 'Placed on {date}',
     'track.items': 'Items',
     'track.delivery': 'Delivery',
@@ -753,7 +753,7 @@ export const commerce = {
     'next.DELIVERED': 'تم التسليم. مشكلة في قطعة؟ راسلنا ونتكفّل بها.',
     'next.CANCELLED': 'أُلغي هذا الطلب.',
 
-    'track.title': 'الطلب {ref}',
+    'track.title': 'تتبّع الطلب',
     'track.placedOn': 'بتاريخ {date}',
     'track.items': 'القطع',
     'track.delivery': 'التوصيل',
