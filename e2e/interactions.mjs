@@ -44,14 +44,15 @@ try {
   check(await says(page, 'Compatible avec votre BMW Série 1'), 'product: the verdict names the car');
   await page.getByRole('button', { name: /Ajouter au panier/ }).first().click();
   await page.waitForTimeout(500);
-  check((await says(page, 'Ajouté au panier')) && (await says(page, 'Voir le panier')), 'product: the bar confirms the add itself');
+  check((await says(page, 'Dans le panier')) && (await says(page, 'Voir le panier (1)')), 'product: the bar becomes the cart counter for this part');
   const toastOver = await page.evaluate(() => [...document.querySelectorAll('[aria-live]')].some((e) => e.textContent?.includes('Voir le panier') && e.getBoundingClientRect().top < window.innerHeight - 140));
   check(!toastOver, 'product: no toast floating over the part');
   await page.waitForTimeout(3300);
-  check(await says(page, 'Ajouter au panier'), 'product: the bar returns to the button');
-  await page.getByRole('button', { name: /Ajouter au panier/ }).first().click();
+  check(await says(page, 'Voir le panier (1)'), 'product: the in-cart state stays (no vanishing message)');
+  await page.getByRole('button', { name: 'Un de plus' }).last().click();
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: 'Voir le panier' }).click();
+  check(await says(page, 'Voir le panier (2)'), 'product: + on the bar adds one to the cart');
+  await page.getByRole('button', { name: 'Voir le panier (2)' }).click();
   await page.waitForTimeout(2500);
   check(page.url().endsWith('/panier') && (await says(page, fitting[0].name)), 'product: "Voir le panier" opens the basket with the part', page.url());
 
@@ -83,8 +84,25 @@ try {
     check(await says(page, 'Ajouter quand même'), 'misfit: adding asks first');
     await page.getByRole('button', { name: 'Ajouter quand même' }).click();
     await page.waitForTimeout(700);
-    check((await badge(page)) === before + 1 || (await says(page, 'Ajouté au panier')), 'misfit: added after the confirmation', { before, after: await badge(page) });
+    check((await badge(page)) === before + 1 || (await says(page, 'Dans le panier')), 'misfit: added after the confirmation', { before, after: await badge(page) });
   } else check(false, 'misfit: an incompatible part exists in the data');
+
+  // ---- photo request: a real photo into the shop's inbox
+  await go('/demande-photo', 2000);
+  const chooser = page.waitForEvent('filechooser', { timeout: 8000 });
+  await page.getByRole('button', { name: 'Choisir une photo' }).click();
+  await (await chooser).setFiles(new URL('./fixtures/part.png', import.meta.url).pathname);
+  await page.waitForTimeout(1500);
+  check((await page.getByRole('button', { name: 'Retirer cette photo' }).count()) === 1, 'photo: the picture is shown with a way to remove it');
+  await page.getByLabel('Votre nom', { exact: true }).fill('Client Photo');
+  await page.getByLabel('Votre téléphone', { exact: true }).fill('204455661');
+  await page.getByRole('button', { name: 'Envoyer à la boutique' }).click();
+  await page.waitForTimeout(600);
+  check(await says(page, 'Un numéro tunisien compte 8 chiffres'), 'photo: a nine-digit number is refused');
+  await page.getByLabel('Votre téléphone', { exact: true }).fill('20 445 566');
+  await page.getByRole('button', { name: 'Envoyer à la boutique' }).click();
+  await page.waitForTimeout(3000);
+  check((await says(page, 'Photo envoyée')) && (await says(page, '20 445 566')), 'photo: sent, and the call-back number is repeated');
 
   // ---- search: what fits first, and only what fits
   await go('/recherche?q=filtre', 3500);

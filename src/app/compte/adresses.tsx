@@ -43,7 +43,7 @@ export default function AddressScreen() {
         <View style={styles.column}>
           {empty ? <Text variant="hint">{t('account.noAddress')}</Text> : null}
           <FormField label={t('checkout.name')} value={draft.customerName} onChangeText={(v) => setDraft({ ...draft, customerName: v })} autoComplete="name" />
-          <FormField label={t('checkout.phone')} value={draft.phone} onChangeText={(v) => setDraft({ ...draft, phone: v })} keyboardType="phone-pad" ltr />
+          <FormField label={t('checkout.phone')} value={draft.phone} onChangeText={(v) => setDraft({ ...draft, phone: v })} keyboardType="phone-pad" prefix="+216" ltr />
           <View style={styles.field}>
             <Text variant="hint" tone={C.text}>
               {t('checkout.governorate')}

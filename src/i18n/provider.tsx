@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { I18nManager, Platform } from 'react-native';
 
+import { refreshAll } from '@/api/refresh';
+import { setDataLocale } from './data-locale';
 import { dictionary, type DictKey } from './dictionaries';
 import { DEFAULT_LOCALE, isRTL, pickLocale, type Locale } from './locales';
 
@@ -56,6 +58,19 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     pickLocale(Localization.getLocales().map((l) => l.languageTag)),
   );
   const [restored, setRestored] = useState(false);
+
+  // The shop's data follows the language too (category names, i18n/
+  // data-locale): set before children render, and on a change every mounted
+  // screen re-reads — from the cache, so a language switch costs no request.
+  setDataLocale(locale);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    void refreshAll({ hard: false });
+  }, [locale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,6 +147,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 function needsRestart(rtl: boolean): boolean {
   if (Platform.OS === 'web') return false;
   return rtl !== I18nManager.getConstants().isRTL;
+}
+
+/** The same, or null outside the provider — for the error screen, which may replace it. */
+export function useMaybeI18n(): I18n | null {
+  return useContext(Ctx);
 }
 
 export function useI18n(): I18n {

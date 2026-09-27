@@ -1,5 +1,6 @@
 import type { Product } from './catalogue';
 import { get } from './client';
+import { categoryName } from '@/i18n/data-locale';
 
 /**
  * How a result was found — the shop's search ranks in three tiers and the
@@ -37,6 +38,13 @@ export const searchApi = {
       // A submitted search is always asked again: it is the one that writes
       // to the demand log, and a cached answer would not.
       fresh: options.submitted,
-    });
+    }).then((r) => ({
+      ...r,
+      families: r.families.map((f) => ({
+        ...f,
+        name: categoryName(f.slug, f.name),
+        parentName: f.parentName ? categoryName(f.familySlug, f.parentName) : null,
+      })),
+    }));
   },
 };

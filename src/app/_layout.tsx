@@ -81,3 +81,5 @@ function App() {
     </>
   );
 }
+
+export { RouteError as ErrorBoundary } from '@/components/ui/route-error';

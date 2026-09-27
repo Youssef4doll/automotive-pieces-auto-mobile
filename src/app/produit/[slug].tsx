@@ -26,6 +26,9 @@ import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel } from '@/store/garage';
 import { track } from '@/services/analytics';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { useCheckout } from '@/store/checkout';
+import { deliveryDelay } from '@/lib/checkout';
+import { useCart } from '@/store/cart';
 
 /**
  * Fiche produit.
@@ -92,6 +95,23 @@ export default function ProductScreen() {
 }
 
 function ProductBody({ product, settings }: { product: ProductDetail; settings: ShopSettings | null }) {
+  // One delivery promise across the app: the delay the checkout will show,
+  // for the governorate the customer last delivered to (lib/checkout). With
+  // none known yet, both of the shop's delays, each with its area — never
+  // the fast one alone, which the checkout would then contradict.
+  const governorate = useCheckout((s) => s.details.governorate);
+  const { t: tr } = useI18n();
+  const delay = settings && governorate ? deliveryDelay(settings, governorate) : null;
+  const shipLine = !settings
+    ? null
+    : delay
+      ? tr('product.shipTo', { t: delay, g: governorate })
+      : settings.delivery.grandTunis && settings.delivery.regions
+        ? tr('product.shipBoth', { a: settings.delivery.grandTunis, b: settings.delivery.regions })
+        : (settings.delivery.grandTunis ?? settings.delivery.regions)
+          ? tr('product.shipIn', { t: (settings.delivery.grandTunis ?? settings.delivery.regions)! })
+          : null;
+  const shipShort = delay ?? (settings?.delivery.grandTunis && settings.delivery.regions ? `${settings.delivery.grandTunis}–${settings.delivery.regions}` : (settings?.delivery.grandTunis ?? settings?.delivery.regions ?? null));
   const refreshControl = usePullRefresh();
   const { t, rtl } = useI18n();
   const router = useRouter();
@@ -105,18 +125,16 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   const insets = useSafeAreaInsets();
 
   // The purchase bar is pinned to the foot of the screen, always within
-  // reach. After an add it says so itself — "Ajouté au panier · Voir le
-  // panier" — for a few seconds, instead of a toast floating over the part.
-  const [justAdded, setJustAdded] = useState(false);
-  const addedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (addedTimer.current) clearTimeout(addedTimer.current);
-  }, []);
+  // reach. Once the part is in the cart the bar becomes the cart's own
+  // counter for it (− n +, down to zero to take it out) beside "Voir le
+  // panier (n)" — the state stays on screen instead of a message that
+  // vanished before it was read.
+  const inCart = useCart((s) => s.items.find((i) => i.productId === product.id)?.qty ?? 0);
+  const setCartQty = useCart((s) => s.setQty);
+  const cartCount = useCart((s) => s.items.reduce((n, i) => n + i.qty, 0));
   const commit = () => {
     if (!addToCart(product, qty, { silent: true })) return;
-    setJustAdded(true);
-    if (addedTimer.current) clearTimeout(addedTimer.current);
-    addedTimer.current = setTimeout(() => setJustAdded(false), 2800);
+    setQty(1);
   };
 
   const buyable = product.availability !== 'UNAVAILABLE';
@@ -242,6 +260,18 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                     </Text>
                   </Pressable>
                 ) : null}
+                {product.fitment === 'UNKNOWN' ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push({ pathname: '/demande-photo', params: { sku: product.sku } })}
+                    hitSlop={6}
+                    style={styles.fitLink}
+                  >
+                    <Text variant="hint" tone={C.text} style={styles.underline}>
+                      {t('expert.askShop')}
+                    </Text>
+                  </Pressable>
+                ) : null}
                 {product.fitment === 'DOES_NOT_FIT' ? (
                   <Pressable accessibilityRole="button" onPress={() => router.push('/garage/ajouter')} hitSlop={6} style={styles.fitLink}>
                     <Text variant="hint" tone={C.text} style={styles.underline}>
@@ -266,9 +296,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
             <Text variant="hint" tone={stock.tone}>
               {stock.label}
             </Text>
-            {buyable && settings?.delivery.grandTunis ? (
-              <Text variant="hint">{`·  ${t('product.shipIn', { t: settings.delivery.grandTunis })}`}</Text>
-            ) : null}
+            {buyable && shipLine ? <Text variant="hint">{`·  ${shipLine}`}</Text> : null}
           </View>
           {stock.detail ? <Text variant="hint">{stock.detail}</Text> : null}
 
@@ -277,7 +305,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
               return window. */}
           {settings ? (
             <View style={[styles.facts, row]}>
-              <Fact icon="truck" title={t('product.deliveryShort')} value={settings.delivery.grandTunis ?? settings.delivery.regions ?? t('product.cod')} />
+              <Fact icon="truck" title={t('product.deliveryShort')} value={shipShort ?? t('product.cod')} />
               <View style={styles.factRule} />
               <Fact icon="shield" title={t('product.warrantyShort')} value={t('product.months', { n: settings.warrantyMonths })} />
               <View style={styles.factRule} />
@@ -377,17 +405,15 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
         <View style={[styles.barInner, row]}>
           {!buyable ? (
             <Button label={t('stock.unavailable')} onPress={() => undefined} disabled style={styles.flex} />
-          ) : justAdded ? (
+          ) : inCart > 0 ? (
             <Animated.View entering={FadeIn.duration(160).reduceMotion(ReduceMotion.System)} style={[styles.flex, row, styles.addedRow]}>
-              <View style={[row, styles.addedLabel]}>
-                <View style={styles.addedTick}>
-                  <Feather name="check" size={16} color={Brand.white} />
-                </View>
-                <Text accessibilityLiveRegion="polite" style={[styles.addedText, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={1}>
-                  {t('look.added')}
+              <View style={styles.inCart}>
+                <Text accessibilityLiveRegion="polite" variant="hint" tone={C.success} style={{ fontFamily: familyFor('bodySemi', rtl) }}>
+                  {t('look.inCart')}
                 </Text>
+                <QuantityStepper value={inCart} onChange={(q) => setCartQty(product.id, q)} min={0} size="compact" />
               </View>
-              <Button label={t('look.viewCart')} variant="secondary" onPress={() => router.navigate('/panier')} style={styles.viewCart} />
+              <Button label={t('look.viewCartN', { n: cartCount })} icon="shopping-cart" onPress={() => router.navigate('/panier')} style={styles.flex} />
             </Animated.View>
           ) : (
             <>
@@ -451,7 +477,9 @@ function Gallery({ product }: { product: ProductDetail }) {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / slide))}
-        style={[styles.gallery, { width: slide }]}
+        // A ScrollView's own style must not carry alignItems/justifyContent —
+        // React Native throws on it (that crashed every product with photos).
+        style={[styles.galleryScroll, { width: slide }]}
       >
         {product.gallery.map((src) => (
           <Image
@@ -594,6 +622,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
+  galleryScroll: {
+    height: GALLERY_HEIGHT,
+    marginTop: Spacing.two,
+    borderRadius: Radius.card,
+    backgroundColor: C.background,
+    overflow: 'hidden',
+  },
   galleryDrawing: {
     height: 176,
   },
@@ -717,9 +752,7 @@ const styles = StyleSheet.create({
   },
   barInner: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', alignItems: 'center', gap: Spacing.two, minHeight: Tap.primary },
   addedRow: { alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
-  addedLabel: { alignItems: 'center', gap: Spacing.two, flexShrink: 1 },
-  addedTick: { width: 28, height: 28, borderRadius: 14, backgroundColor: C.success, alignItems: 'center', justifyContent: 'center' },
-  addedText: { fontSize: 15, color: C.text, flexShrink: 1 },
+  inCart: { alignItems: 'center', gap: 2 },
   viewCart: { paddingHorizontal: Spacing.three },
   fitBlock: { marginTop: Spacing.three, borderRadius: Radius.tile, padding: Spacing.three, gap: Spacing.two },
   fitHead: { alignItems: 'flex-start', gap: Spacing.three },
@@ -747,3 +780,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.card,
   },
 });
+
+export { RouteError as ErrorBoundary } from '@/components/ui/route-error';

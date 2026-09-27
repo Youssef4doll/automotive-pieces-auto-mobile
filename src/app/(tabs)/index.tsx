@@ -8,7 +8,6 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { catalogueApi, type Family } from '@/api/catalogue';
-import { hasContactChannel } from '@/api/shop';
 import { BrandStrip } from '@/components/ui/brand-strip';
 import { CareBanner } from '@/components/ui/care-banner';
 import { PartImage } from '@/components/ui/part-image';
@@ -20,7 +19,6 @@ import { MakeLogo } from '@/components/ui/make-logo';
 import { useVehicleLine } from '@/components/ui/vehicle-card';
 import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
-import { useShopSettings } from '@/hooks/use-shop-settings';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { RENDERS } from '@/illustrations/renders';
 import { NavCar } from '@/illustrations/vehicle';
@@ -76,9 +74,7 @@ export default function HomeScreen() {
 
   const load = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(load);
-  const settings = useShopSettings();
   const refreshControl = usePullRefresh();
-  const canAskShop = settings.status === 'loaded' && hasContactChannel(settings.data);
 
   // Every family, most parts first — a rail to browse, not four fixed tiles.
   const rail = useMemo<Family[]>(
@@ -270,8 +266,8 @@ export default function HomeScreen() {
           </View>
 
 
-          {canAskShop ? (
-            <View style={styles.column}>
+          {/* Always there: the photo goes to the shop's inbox (/demande-photo). */}
+          <View style={styles.column}>
               <View style={[styles.advice, row]}>
                 <View style={styles.adviceArt}>
                   <Image source={RENDERS.phone} style={{ width: 92, height: 92 }} contentFit="contain" />
@@ -281,7 +277,7 @@ export default function HomeScreen() {
                   <Text style={[styles.careWhy, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.adviceWhy')}</Text>
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => router.push('/aide')}
+                    onPress={() => router.push('/demande-photo')}
                     style={({ pressed }) => [styles.adviceCta, row, pressed && { backgroundColor: Brand.gold600 }]}
                   >
                     <Feather name="camera" size={16} color={C.onAccent} />
@@ -290,7 +286,6 @@ export default function HomeScreen() {
                 </View>
               </View>
             </View>
-          ) : null}
         </View>
       </ScrollView>
     </View>

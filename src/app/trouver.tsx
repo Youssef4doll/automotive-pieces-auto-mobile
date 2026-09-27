@@ -2,11 +2,9 @@ import { Feather } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { hasContactChannel } from '@/api/shop';
 import { PressScale } from '@/components/ui/press-scale';
 import { Text } from '@/components/ui/text';
 import { Brand, C, Elevation, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
-import { useShopSettings } from '@/hooks/use-shop-settings';
 import { Image } from 'expo-image';
 
 import { familyRender, RENDERS } from '@/illustrations/renders';
@@ -17,9 +15,8 @@ import { useGarage } from '@/store/garage';
 /**
  * "Comment trouver votre pièce ?" — the four ways in, as a list where each
  * row goes straight down its path, for anybody who would rather read than swipe the
- * home screen's arc. The fourth ("je ne sais pas comment ça s'appelle") is
- * offered only when the shop has published a way to be reached, like its
- * bubble: a promise of advice nobody can answer is worse than no promise.
+ * home screen's arc. The fourth ("je ne sais pas comment ça s'appelle") sends
+ * a photo to the shop's inbox (/demande-photo).
  */
 type Way = 'car' | 'part' | 'ref' | 'photo';
 
@@ -27,14 +24,14 @@ export default function FindScreen() {
   const { t, rtl } = useI18n();
   const router = useRouter();
   const active = useGarage((s) => s.active);
-  const settings = useShopSettings();
-  const canAsk = settings.status === 'loaded' && hasContactChannel(settings.data);
 
   const ways: { key: Way; title: DictKey; why: DictKey; icon: React.ReactNode }[] = [
     { key: 'car', title: 'look.find.car', why: 'look.find.carWhy', icon: <WayArt source={RENDERS.key} /> },
     { key: 'part', title: 'look.find.part', why: 'look.find.partWhy', icon: <WayArt source={familyRender('freinage') ?? RENDERS.magnifier} /> },
     { key: 'ref', title: 'look.find.ref', why: 'look.find.refWhy', icon: <WayArt source={RENDERS.magnifier} /> },
-    ...(canAsk ? [{ key: 'photo' as Way, title: 'look.find.photo' as DictKey, why: 'look.find.photoWhy' as DictKey, icon: <WayArt source={RENDERS.phone} /> }] : []),
+    // Always offered now: the photo goes to the shop's own inbox with the
+    // photo attached, so there is always somebody to answer it.
+    { key: 'photo', title: 'look.find.photo', why: 'look.find.photoWhy', icon: <WayArt source={RENDERS.phone} /> },
   ];
 
   // One tap, straight to the path: choosing and then confirming the choice
@@ -43,7 +40,7 @@ export default function FindScreen() {
     if (way === 'car') return active ? router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } }) : router.push('/garage/ajouter');
     if (way === 'part') return router.navigate('/catalogue');
     if (way === 'ref') return router.push({ pathname: '/recherche', params: { mode: 'reference' } });
-    router.push('/aide');
+    router.push('/demande-photo');
   };
 
   return (

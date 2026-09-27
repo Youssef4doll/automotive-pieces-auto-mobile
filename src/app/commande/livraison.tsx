@@ -127,6 +127,7 @@ function DeliveryForm({ settings }: { settings: ShopSettings }) {
               onChangeText={(v) => edit('phone', v)}
               error={errors.phone}
               keyboardType="phone-pad"
+              prefix="+216"
               autoComplete="tel"
               textContentType="telephoneNumber"
               placeholder="22 334 455"

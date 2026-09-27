@@ -1118,3 +1118,53 @@ the favourites".
 - **Home**: the greeting, title and bubble arc were removed earlier the same
   week; "Comment trouver votre pièce ?" opens `/trouver`, which holds every
   way in.
+
+## 20. The audit of September 27: the right part, and nothing breaking
+
+An outside audit scored the app 54/100: it looked good but broke "the right
+part", and one product page crashed. What was fixed, in its order:
+
+- **Crash.** `produit/[slug].tsx`'s photo gallery gave its horizontal
+  ScrollView `alignItems`/`justifyContent` in `style`, which React Native
+  throws on (web does not, so every local test passed). Only products with
+  real photos have a gallery — hence "only some pages". Every route now has
+  an error screen instead of a white page: `components/ui/route-error.tsx`,
+  exported as `ErrorBoundary` from the root, tabs, staff and product routes;
+  it offers "Réessayer" and reports `app_error` (name, message) to analytics.
+- **Fitment** is decided on the website (see its HANDOVER §5.ff): VERIFIED
+  rows only, and fuel rules no row can overrule. The app shows the website's
+  verdict; a "to check" part now offers **Demander à la boutique**, which
+  opens the photo request with the part's reference.
+- **One delivery promise.** The product page shows the delay the checkout
+  will show, for the governorate the customer last delivered to
+  (`deliveryDelay` in lib/checkout); with none known, both of the shop's
+  delays, each with its area. No computed date: the shop publishes delays,
+  not a dispatch cut-off, so a date would be a promise nobody made.
+- **Send a photo** (`app/demande-photo.tsx`, `api/expert.ts`): up to three
+  photos, the garage's car, name and phone (+216, 8 digits) into the shop's
+  inbox with the photos attached. Reachable from "Comment trouver votre
+  pièce ?", the home screen's advice card, Aide & contact (now always its
+  first action) and "to check" parts. WhatsApp is offered beside it, with the
+  car in the message, once the shop publishes a real number.
+- **Phone numbers**: `tunisianDigits` (same rule as the website) in the
+  checkout, addresses and photo request; phone fields show a fixed "+216".
+- **Add to cart** turns the bar into the cart's own − n + for that part and
+  "Voir le panier (n)"; it stays until the part leaves the cart. English says
+  "cart" everywhere.
+- **Account menu**: one "Mes véhicules" row (active car · count); the staff
+  door moved to Paramètres and appears in the menu only while a member of
+  staff is signed in on the phone.
+- **Category names in English and Arabic** (`i18n/categories.ts`, keyed by
+  slug; `i18n/data-locale.ts` translates on the way in from the API, so a
+  language switch re-reads from the cache with no request). A category the
+  shop adds later shows as the shop wrote it until it is added there.
+- **Store pickup** was already built: it appears at checkout as soon as the
+  shop's address is filled in /admin/parametres (today a placeholder, so it
+  is hidden rather than offered with no address).
+
+Not done yet, and why: governorate → delegation lists need an authoritative
+list of Tunisia's 264 delegations (not typed from memory); real product
+photos, specs and OE numbers are the shop's data to upload; the Phase 2/3
+growth items (typo-tolerant ranking by car, sort/filters, personalised home,
+bought-together, promo codes, notifications, reviews, phone-code login,
+online payment) are separate pieces of work — see docs/PLAN.md.

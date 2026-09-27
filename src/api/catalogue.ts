@@ -1,4 +1,5 @@
 import { get } from './client';
+import { categoryName } from '@/i18n/data-locale';
 
 /**
  * The catalogue's top level, as `/api/v1/catalogue/families` returns it.
@@ -32,7 +33,14 @@ export type Family = {
 export type PartsBrand = { id: string; name: string; slug: string; logoUrl: string | null; productCount: number };
 
 export const catalogueApi = {
-  families: (signal?: AbortSignal) => get<Family[]>('/api/v1/catalogue/families', { signal }),
+  families: (signal?: AbortSignal) =>
+    get<Family[]>('/api/v1/catalogue/families', { signal }).then((list) =>
+      list.map((f) => ({
+        ...f,
+        name: categoryName(f.slug, f.name),
+        subcategories: f.subcategories.map((c) => ({ ...c, name: categoryName(c.slug, c.name) })),
+      })),
+    ),
   /** The parts makers with something on sale, most parts first. */
   brands: (signal?: AbortSignal) => get<PartsBrand[]>('/api/v1/catalogue/brands', { signal }),
 };

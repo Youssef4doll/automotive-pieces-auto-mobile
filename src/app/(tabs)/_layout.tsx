@@ -199,3 +199,5 @@ const styles = StyleSheet.create({
   bar: { width: 14, height: 3, borderRadius: 2, backgroundColor: 'transparent' },
   barActive: { backgroundColor: C.accent },
 });
+
+export { RouteError as ErrorBoundary } from '@/components/ui/route-error';

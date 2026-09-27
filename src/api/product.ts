@@ -1,5 +1,6 @@
 import type { Product } from './catalogue';
 import { get } from './client';
+import { categoryName } from '@/i18n/data-locale';
 
 export type CompatibleVehicle = {
   make: string;
@@ -47,6 +48,10 @@ export const productApi = {
    */
   bySlug: (slug: string, engineId: string | undefined, signal?: AbortSignal) => {
     const params = engineId ? `?engine=${encodeURIComponent(engineId)}` : '';
-    return get<ProductDetail>(`/api/v1/products/${encodeURIComponent(slug)}${params}`, { signal, fresh: true });
+    return get<ProductDetail>(`/api/v1/products/${encodeURIComponent(slug)}${params}`, { signal, fresh: true }).then((p) => ({
+      ...p,
+      category: { ...p.category, name: categoryName(p.category.slug, p.category.name) },
+      family: { ...p.family, name: categoryName(p.family.slug, p.family.name) },
+    }));
   },
 };

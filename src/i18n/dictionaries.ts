@@ -1,5 +1,6 @@
 import { account } from './account';
 import { commerce } from './commerce';
+import { expert } from './expert';
 import { look } from './look';
 import { staff } from './staff';
 import type { Locale } from './locales';
@@ -144,6 +145,8 @@ const base = {
     'state.serverBody': 'Réessayez dans un instant.',
     'state.notFoundTitle': 'Introuvable',
     'state.retry': 'Réessayer',
+    'error.title': 'Un problème est survenu sur cet écran',
+    'error.body': 'C’est de notre côté, pas du vôtre. Réessayez ; votre panier et votre véhicule sont conservés.',
 
     'a11y.back': 'Retour',
     'a11y.clearFilter': 'Effacer le filtre',
@@ -275,6 +278,8 @@ const base = {
     'state.serverBody': 'Try again in a moment.',
     'state.notFoundTitle': 'Not found',
     'state.retry': 'Try again',
+    'error.title': 'Something went wrong on this screen',
+    'error.body': 'That is on our side, not yours. Try again; your cart and your car are kept.',
 
     'a11y.back': 'Back',
     'a11y.clearFilter': 'Clear the filter',
@@ -405,6 +410,8 @@ const base = {
     'state.serverBody': 'أعد المحاولة بعد لحظة.',
     'state.notFoundTitle': 'غير موجود',
     'state.retry': 'إعادة المحاولة',
+    'error.title': 'حدث خطأ في هذه الشاشة',
+    'error.body': 'الخطأ من جهتنا وليس منك. أعد المحاولة؛ سلّتك وسيارتك محفوظتان.',
 
     'a11y.back': 'رجوع',
     'a11y.clearFilter': 'مسح التصفية',
@@ -416,9 +423,9 @@ const base = {
 
 /** The first dictionary, the buying one (commerce.ts) and the shop's own (staff.ts), as one. */
 const dict = {
-  fr: { ...base.fr, ...commerce.fr, ...staff.fr, ...look.fr, ...account.fr },
-  en: { ...base.en, ...commerce.en, ...staff.en, ...look.en, ...account.en },
-  ar: { ...base.ar, ...commerce.ar, ...staff.ar, ...look.ar, ...account.ar },
+  fr: { ...base.fr, ...commerce.fr, ...staff.fr, ...look.fr, ...account.fr, ...expert.fr },
+  en: { ...base.en, ...commerce.en, ...staff.en, ...look.en, ...account.en, ...expert.en },
+  ar: { ...base.ar, ...commerce.ar, ...staff.ar, ...look.ar, ...account.ar, ...expert.ar },
 } as const;
 
 export type DictKey = keyof (typeof dict)['fr'];

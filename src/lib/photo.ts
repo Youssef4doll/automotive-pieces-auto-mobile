@@ -42,6 +42,17 @@ async function shrink(uri: string, width: number, height: number): Promise<Picke
   return { uri: saved.uri, width: saved.width, height: saved.height };
 }
 
+/** Add one photo to a multipart body under `field` (repeatable). */
+export async function appendPhoto(form: FormData, field: string, photo: PickedPhoto) {
+  const name = `photo-${Date.now()}-${Math.round(Math.random() * 1e6)}.jpg`;
+  if (Platform.OS === 'web') {
+    const blob = await (await fetch(photo.uri)).blob();
+    form.append(field, blob, name);
+  } else {
+    form.append(field, { uri: photo.uri, name, type: 'image/jpeg' } as unknown as Blob);
+  }
+}
+
 /** A multipart body with the photo under `field`. */
 export async function photoForm(field: 'files' | 'file', photo: PickedPhoto): Promise<FormData> {
   const form = new FormData();

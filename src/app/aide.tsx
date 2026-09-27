@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
 import { hasContactChannel, type ShopSettings } from '@/api/shop';
@@ -24,14 +24,14 @@ import { useGarage, vehicleLabel } from '@/store/garage';
  * question the counter would otherwise ask. The photo is attached in
  * WhatsApp itself, which already does that well.
  *
- * It exists only when the shop has published a way to reach a person. The
- * home screen does not offer this route otherwise, and a customer who lands
- * here by a stale link is told the details are not published — never shown
- * a placeholder number. In production today every channel is a placeholder,
- * so today this screen is unreachable from the app, which is correct.
+ * The first action is always the photo request (/demande-photo), which lands
+ * in the shop's own inbox, so there is always a real way to ask. WhatsApp,
+ * the phone and e-mail follow only when the shop has published them — never
+ * a placeholder number.
  */
 export default function HelpScreen() {
   const { t } = useI18n();
+  const router = useRouter();
   const settings = useShopSettings();
 
   return (
@@ -46,11 +46,15 @@ export default function HelpScreen() {
         <Help settings={settings.data} />
       ) : (
         <View style={{ flex: 1, justifyContent: 'center', backgroundColor: C.background }}>
+          {/* No phone, WhatsApp or e-mail published yet — the photo request
+              still reaches the shop, in its own inbox. */}
           <EmptyState
             art={<Image source={RENDERS.phone} style={{ width: 116, height: 116 }} contentFit="contain" />}
-            title={t('account.noContact')}
-            body={settings.data.contact.hours ? t('help.hours', { h: settings.data.contact.hours }) : null}
-          />
+            title={t('help.title')}
+            body={t('help.lead')}
+          >
+            <Button label={t('look.adviceCta')} icon="camera" onPress={() => router.push('/demande-photo')} />
+          </EmptyState>
         </View>
       )}
     </>
@@ -59,6 +63,7 @@ export default function HelpScreen() {
 
 function Help({ settings }: { settings: ShopSettings }) {
   const { t } = useI18n();
+  const router = useRouter();
   const active = useGarage((s) => s.active);
   const c = settings.contact;
   const vehicle = vehicleLabel(active);
@@ -75,11 +80,13 @@ function Help({ settings }: { settings: ShopSettings }) {
         <Text variant="body">{t('help.lead')}</Text>
 
         <View style={styles.actions}>
+          <Button label={t('look.adviceCta')} icon="camera" onPress={() => router.push('/demande-photo')} />
           {c.whatsapp ? (
             <>
               <Button
                 label={t('help.whatsapp')}
                 icon="message-circle"
+                variant="secondary"
                 onPress={() => open(`https://wa.me/${c.whatsapp?.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`)}
               />
               <Text variant="hint">{t('help.whatsappWhy')}</Text>
@@ -89,7 +96,7 @@ function Help({ settings }: { settings: ShopSettings }) {
             <Button
               label={t('help.call')}
               icon="phone"
-              variant={c.whatsapp ? 'secondary' : 'primary'}
+              variant="secondary"
               onPress={() => open(`tel:${c.phone?.replace(/[^\d+]/g, '')}`)}
             />
           ) : null}

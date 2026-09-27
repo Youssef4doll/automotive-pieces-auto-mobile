@@ -63,7 +63,7 @@ const session = await open({ width: 390 });
 const { page } = session;
 try {
   // ---- the door
-  await page.goto(`${APP_URL}/compte`, { waitUntil: 'networkidle' });
+  await page.goto(`${APP_URL}/compte/parametres`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(2500);
   await tapLabel(page, 'Espace boutique');
   await page.waitForTimeout(1500);

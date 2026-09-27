@@ -46,7 +46,11 @@ export type EventName =
   | 'logout'
   | 'account_deleted'
   | 'onboarding_started'
-  | 'onboarding_completed';
+  | 'onboarding_completed'
+  /** A screen threw and the error screen took its place. */
+  | 'app_error'
+  | 'expert_request'
+  | 'whatsapp_opened';
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 type Queued = { name: EventName; at: string; props?: Props };
@@ -56,7 +60,7 @@ type Queued = { name: EventName; at: string; props?: Props };
  * losing a `purchase` because the app was swiped away four seconds later
  * would make the one number that matters the least reliable one.
  */
-const IMMEDIATE: ReadonlySet<EventName> = new Set(['purchase', 'purchase_failed', 'sign_up', 'login', 'logout', 'account_deleted']);
+const IMMEDIATE: ReadonlySet<EventName> = new Set(['app_error', 'expert_request', 'purchase', 'purchase_failed', 'sign_up', 'login', 'logout', 'account_deleted']);
 
 const ID_KEY = 'apa-analytics.id';
 const FLUSH_MS = 5_000;

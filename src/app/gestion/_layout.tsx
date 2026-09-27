@@ -47,3 +47,5 @@ export default function StaffLayout() {
     </Stack>
   );
 }
+
+export { RouteError as ErrorBoundary } from '@/components/ui/route-error';

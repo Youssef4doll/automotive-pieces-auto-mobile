@@ -128,22 +128,23 @@ export default function AccountScreen() {
 
         <View style={styles.list}>
           <Row icon="file-text" label={t('account.orders')} value={orders.length ? String(orders.length) : null} onPress={() => router.push('/compte/commandes')} />
+          {/* One row for the cars: the one the app answers for, and how many
+              are saved. Two rows opening the same garage read as a bug. */}
           <Row
             icon="car"
-            label={t('account.myVehicle')}
-            value={active ? `${active.makeName} ${active.modelName}` : t('account.noVehicle')}
+            label={t('account.vehicles')}
+            value={active ? `${active.makeName} ${active.modelName}${vehicles.length > 1 ? ` · ${vehicles.length}` : ''}` : t('account.noVehicle')}
             onPress={() => router.navigate('/garage')}
           />
-          <Row icon="layers" label={t('account.vehicles')} value={vehicles.length ? String(vehicles.length) : null} onPress={() => router.navigate('/garage')} />
           <Row icon="map-pin" label={t('account.addresses')} onPress={() => router.push('/compte/adresses')} />
           <Row icon="help-circle" label={t('account.helpContact')} onPress={() => router.push('/aide')} />
           <Row icon="settings" label={t('account.settings')} onPress={() => router.push('/compte/parametres')} last />
         </View>
 
-        {/* The shop's own door, kept apart from the customer's rows and
-            quiet: most people holding this app will never use it, and the
-            ones who do know it is here. Behind it is a real sign-in, checked
-            by the shop on every request — the row itself grants nothing. */}
+        {/* The shop's own door lives in Paramètres, out of the customer's
+            menu. Once a member of staff is signed in on this phone it is
+            shown here too, as their way back. */}
+        {staffSignedIn ? (
         <View style={styles.staff}>
           <Row
             icon="briefcase"
@@ -153,6 +154,7 @@ export default function AccountScreen() {
             last
           />
         </View>
+        ) : null}
 
         {signedIn ? (
           <View style={styles.accountActions}>

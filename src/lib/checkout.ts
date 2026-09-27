@@ -2,6 +2,18 @@ import type { ShopSettings } from '@/api/shop';
 import type { DictKey } from '@/i18n/dictionaries';
 import type { CheckoutDetails } from '@/store/checkout';
 
+/**
+ * A Tunisian number's 8 digits, first digit 2–9, with +216 / 00216 and any
+ * separators taken off — or null. The website's rule (lib/validation), so the
+ * app refuses a nine-digit number before the shop has to.
+ */
+export function tunisianDigits(raw: string): string | null {
+  let d = raw.replace(/\D/g, '');
+  if (d.startsWith('00216')) d = d.slice(5);
+  else if (d.length === 11 && d.startsWith('216')) d = d.slice(3);
+  return /^[2-9]\d{7}$/.test(d) ? d : null;
+}
+
 export type CheckoutField = 'customerName' | 'phone' | 'email' | 'governorate' | 'address';
 
 /**
@@ -23,7 +35,7 @@ export function checkoutProblems(d: CheckoutDetails): Partial<Record<CheckoutFie
   if (name.includes('@')) out.customerName = 'checkout.err.customerNameEmail';
   else if (name.length < 2 || letters < 2) out.customerName = 'checkout.err.customerName';
 
-  if (d.phone.replace(/\D/g, '').length < 8) out.phone = 'checkout.err.phone';
+  if (!tunisianDigits(d.phone)) out.phone = 'checkout.err.phone';
 
   const email = d.email.trim();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) out.email = 'checkout.err.email';

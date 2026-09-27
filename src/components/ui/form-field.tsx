@@ -28,8 +28,10 @@ export const FormField = forwardRef<
     counter?: string | null;
     /** Keep numbers and references left-to-right even in Arabic. */
     ltr?: boolean;
+    /** Fixed text before the value, such as "+216" — shown, never typed or sent. */
+    prefix?: string;
   }
->(function FormField({ label, hint, error, counter, ltr = false, style, ...input }, ref) {
+>(function FormField({ label, hint, error, counter, ltr = false, prefix, style, ...input }, ref) {
   const { rtl } = useI18n();
   const [focused, setFocused] = useState(false);
   const direction = ltr ? 'ltr' : rtl ? 'rtl' : 'ltr';
@@ -46,6 +48,12 @@ export const FormField = forwardRef<
           </Text>
         ) : null}
       </View>
+      <View style={prefix ? [styles.prefixed, focused && styles.inputFocused, error ? styles.inputError : null] : undefined}>
+      {prefix ? (
+        <Text style={[styles.prefix, { fontFamily: familyFor('bodySemi', false) }]} accessibilityElementsHidden importantForAccessibility="no">
+          {prefix}
+        </Text>
+      ) : null}
       <TextInput
         ref={ref}
         placeholderTextColor={C.textFaint}
@@ -68,11 +76,13 @@ export const FormField = forwardRef<
             textAlign: direction === 'rtl' ? 'right' : 'left',
           },
           input.multiline && styles.multiline,
-          focused && styles.inputFocused,
-          error ? styles.inputError : null,
+          !prefix && focused && styles.inputFocused,
+          !prefix && error ? styles.inputError : null,
+          prefix ? styles.inputBare : null,
           style,
         ]}
       />
+      </View>
       {error ? (
         <Text variant="hint" tone={C.danger} accessibilityLiveRegion="polite">
           {error}
@@ -120,4 +130,16 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: C.danger,
   },
+  prefixed: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: Tap.primary,
+    borderRadius: Radius.tile,
+    borderWidth: Border.thin,
+    borderColor: C.border,
+    backgroundColor: C.background,
+    paddingStart: Spacing.three,
+  },
+  prefix: { fontSize: 16, color: C.textMuted, paddingEnd: Spacing.two, borderEndWidth: Border.thin, borderEndColor: C.border },
+  inputBare: { flex: 1, borderWidth: 0, minHeight: Tap.primary - 2 },
 });
