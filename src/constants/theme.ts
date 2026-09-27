@@ -137,6 +137,16 @@ export const Colors = {
  */
 export const C = Colors.light;
 
+/**
+ * The launch screen's night — the dark of the app icon's artwork, sampled
+ * from it, not a website token (the website has no launch screen). The same
+ * value is written in app.json (the native splash, the Android icon
+ * background) and in scripts/make-icons.mjs, which cannot import this file:
+ * change all three together, or the hand-over from the native splash to the
+ * preloader shows a seam.
+ */
+export const LaunchBackground = '#051022';
+
 export type ThemeColor = keyof typeof Colors.light;
 
 /**

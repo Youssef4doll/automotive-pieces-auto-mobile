@@ -40,9 +40,10 @@ src/
     parts.tsx             the sixteen part families, drawn
     paths.tsx             the ways into the catalogue, drawn
 assets/images/
-  logo-lockup.webp        the file the owner supplied — the only brand source
+  app-icon-art.webp       the app icon the owner supplied — icon, splash, favicon
+  logo-lockup.webp        the logo the owner supplied — what the screens draw
 scripts/
-  make-icons.mjs          cuts every square icon out of that file
+  make-icons.mjs          cuts every icon and logo file out of those two
   constants/
     theme.ts              the brand — colours, faces, type sizes, tap sizes
     config.ts             where the shop is, and how long to wait for it
@@ -426,10 +427,10 @@ are outlined and inert.
 
 **The logo is the shop's file, not a drawing of it.**
 `assets/images/logo-lockup.webp` is the artwork the owner supplied, and it is
-the only source of brand imagery in the repo. `scripts/make-icons.mjs` cuts
-everything square out of those same pixels — the launcher icon, the Android
-foreground and monochrome layers, the splash mark, the favicon — so nothing
-can drift from it.
+the source of the logo the screens draw. `scripts/make-icons.mjs` cuts the
+trimmed lockup, the hexagon on its own and the notification icon out of those
+same pixels, so nothing can drift from it. (The launcher icon and the splash
+have their own supplied artwork since September 27 — see §22.)
 
 An earlier pass rebuilt the mark as SVG paths so it could take any colour and
 scale for free. That was the wrong trade and it is gone: a reconstruction
@@ -1269,3 +1270,64 @@ an arrival window counted from the real "shipped" time (`lib/arrival.ts`).
 Tests: `e2e/after-delivery.mjs` (rating, staff reads it; refuses a non-local
 shop), the promo refusal in `e2e/interactions.mjs`, `reminderMoments` in
 `lib/__tests__/care.test.ts`.
+
+
+## 22. The app icon and the launch screen (September 27, 2026)
+
+**The icon is the owner's picture.** `assets/images/app-icon-art.webp` — the
+glass square with the car, the wordmark, the red swoosh and the gold road —
+is the second supplied artwork, beside the logo. `scripts/make-icons.mjs`
+cuts from it, and from nothing else:
+
+- `icon.png`: the picture inside the glass rim, square and full bleed. iOS
+  and the older Android launchers round the corners themselves; a rim drawn
+  in would be rounded twice.
+- `android-icon-foreground.png` / `-background.png`: the picture at 700 of
+  1024, so the strictest launcher mask (a circle over the middle 683) loses
+  only its outer edge, on the launch night `#051022`.
+- `android-icon-monochrome.png` (Android 13 themed icons): the wordmark band
+  only, white on transparent. The car and the road are shading, which one
+  colour turns to mud.
+- `splash-icon.png`: the whole glass square — rim, corners, glow — at about
+  55% of its box, so Android 12's circular splash mask never reaches it.
+- `favicon.png`.
+
+The crops are measured on the supplied 1254 × 1254 file and written at the
+top of the script; a replacement of another size stops the script rather than
+cutting an off-centre icon. The notification icon stays the hexagon from the
+logo: Android draws it as a one-colour silhouette at 24 dp, where the glass
+square would be a white blob.
+
+**The launch screen** (`components/preloader.tsx`) is what people know from
+every app: the icon on a dark screen, a light passing across the glass, a
+gold line running under it, then the app. It is in two halves:
+
+1. The native splash (`expo-splash-screen` in `app.json`: `splash-icon.png`,
+   240 wide, on `#051022`) is up from the moment the phone starts the app,
+   before any JavaScript.
+2. The preloader draws the same picture, at the same size and place, on the
+   same colour, and hides the native splash on its first frame — so the
+   hand-over cannot be seen — then animates.
+
+It leaves when the fonts are in and the home's first data has been asked for
+(families, shop settings, promotions — they land in the API cache, so the
+home opens filled, not on skeletons), and never before 0.9 s (a flash of the
+logo reads as a glitch) or after 2.6 s whatever the network does (a launch
+screen that waits on a slow connection is a hang with a logo on it). With
+reduced motion on there is no light and no running line; it simply fades.
+The clock is light while it is up.
+
+`LaunchBackground` in `constants/theme.ts` is the launch night and is written
+twice more in `app.json` (the splash and the Android icon background) — a
+config file cannot import a constant, so change all three together.
+
+What to know when checking it:
+
+- **Expo Go shows its own icon and splash.** The native half — the icon on the
+  home screen, the splash before JavaScript — exists only in a development or
+  store build (`eas build`). In Expo Go, the preloader still runs.
+- On the web, a browser driven by a test (`navigator.webdriver`) skips the
+  launch screen so the suites can get on with the app. `e2e/launch.mjs`
+  turns the flag off and checks it: up on the first frames, on the right
+  colour, the picture where the native splash leaves it, gone between its
+  minimum and its cap, the home underneath, and the reduced-motion version.

@@ -66,7 +66,8 @@
     "typecheck": "tsc --noEmit",
     "e2e:account": "node e2e/account.mjs",
     "e2e:welcome": "node e2e/welcome.mjs",
-    "e2e:after-delivery": "node e2e/after-delivery.mjs"
+    "e2e:after-delivery": "node e2e/after-delivery.mjs",
+    "e2e:launch": "node e2e/launch.mjs"
   },
   "private": true
 }

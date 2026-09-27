@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ordersApi } from '@/api/orders';
 import { productsApi, type Product } from '@/api/catalogue';
-import { C, familyFor, MaxContentWidth, Spacing } from '@/constants/theme';
+import { C, familyFor, MaxContentWidth, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   column: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', paddingHorizontal: Spacing.three },
   head: { alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   title: { flex: 1, fontSize: 20, lineHeight: 26, color: C.text },
-  all: { alignItems: 'center', gap: 4 },
+  all: { alignItems: 'center', gap: 4, minHeight: Tap.min },
   rail: { gap: Spacing.two, paddingHorizontal: Spacing.three, paddingBottom: Spacing.two },
   tile: { width: 172 },
 });

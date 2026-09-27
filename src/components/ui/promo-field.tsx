@@ -108,7 +108,7 @@ export function PromoField({ quote, stale }: { quote: CartQuote | null; stale: b
 
 const styles = StyleSheet.create({
   flex: { flex: 1, gap: 2 },
-  ask: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one, alignSelf: 'flex-start' },
+  ask: { alignItems: 'center', gap: Spacing.two, minHeight: Tap.min, alignSelf: 'flex-start' },
   link: { textDecorationLine: 'underline' },
   form: { gap: Spacing.one },
   entry: { gap: Spacing.two, alignItems: 'center' },
