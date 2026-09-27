@@ -26,6 +26,7 @@ import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 import { useOnboarding } from '@/store/onboarding';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { Rail } from '@/components/ui/rail';
 
 const LOGO = require('../../../assets/images/logo-lockup.png');
 
@@ -222,7 +223,7 @@ export default function HomeScreen() {
             </View>
 
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.rail, row]}>
+          <Rail contentContainerStyle={[styles.rail, row]}>
             {families.status === 'loading'
               ? [0, 1, 2, 3, 4].map((i) => (
                   <View key={i} style={styles.cat}>
@@ -246,7 +247,7 @@ export default function HomeScreen() {
                     </Text>
                   </PressScale>
                 ))}
-          </ScrollView>
+          </Rail>
           <View style={styles.column}>
             {families.status === 'loaded' ? (
               <View style={styles.care}>

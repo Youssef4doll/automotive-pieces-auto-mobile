@@ -1,4 +1,5 @@
 import { get } from './client';
+import { fuelName } from '@/i18n/data-locale';
 
 /**
  * The vehicle tables, as `/api/v1/vehicles/*` returns them.
@@ -59,7 +60,7 @@ export const vehiclesApi = {
     get<Engine[]>(
       `/api/v1/vehicles/engines?make=${encodeURIComponent(makeSlug)}&model=${encodeURIComponent(modelSlug)}`,
       { signal },
-    ),
+    ).then((list) => list.map((e) => ({ ...e, fuel: fuelName(e.fuel) }))),
 
   /**
    * The make a VIN belongs to, from its first three characters — or null.

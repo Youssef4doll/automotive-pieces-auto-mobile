@@ -18,6 +18,7 @@ import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 import { track } from '@/services/analytics';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { Rail } from '@/components/ui/rail';
 
 /**
  * One family of parts — the reference's "Freinage" screen.
@@ -94,9 +95,7 @@ export default function FamilyScreen() {
 
       <View style={styles.sheet}>
         {subcategories.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
+          <Rail
             style={styles.chipBar}
             contentContainerStyle={[styles.chips, row]}
           >
@@ -104,7 +103,7 @@ export default function FamilyScreen() {
             {subcategories.map((sub) => (
               <Chip key={sub.id} label={sub.name} selected={subcategory === sub.slug} onPress={() => setSubcategory(sub.slug)} />
             ))}
-          </ScrollView>
+          </Rail>
         ) : null}
         <View style={[row, styles.sectionHead]}>
           <Text style={[styles.section, { fontFamily: familyFor('heading', rtl) }]}>{t('look.ourProducts')}</Text>

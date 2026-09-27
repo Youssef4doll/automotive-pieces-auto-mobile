@@ -1,5 +1,6 @@
 import { account } from './account';
 import { commerce } from './commerce';
+import { care } from './care';
 import { expert } from './expert';
 import { look } from './look';
 import { staff } from './staff';
@@ -325,7 +326,7 @@ const base = {
 
     'fits.title': 'القطع المتوافقة',
     'fits.for': 'مؤكَّدة لسيارتك {vehicle}',
-    'fits.count': '{n} قطعة مؤكَّدة',
+    'fits.count': '{n:one=قطعة واحدة مؤكَّدة;two=قطعتان مؤكَّدتان;few=# قطع مؤكَّدة;many=# قطعة مؤكَّدة;other=# قطعة مؤكَّدة}',
     'fits.empty': 'لا توجد بعد قطعة مؤكَّدة لهذه السيارة.',
     'fits.emptyWhy':
       'التوافق يُسجَّل قطعة بقطعة وهو لا يزال جزئيًا. تصفّح الكتالوج: كل قطعة تبيّن إن كانت تناسب سيارتك أو إن كان الأمر يحتاج إلى تحقّق.',
@@ -333,7 +334,7 @@ const base = {
 
     'garage.yourCar': 'سيارتك',
     'garage.primary': 'السيارة الأساسية',
-    'garage.count': '{n} سيارة',
+    'garage.count': '{n:one=سيارة واحدة;two=سيارتان;few=# سيارات;many=# سيارة;other=# سيارة}',
     'garage.quickActions': 'إجراءات سريعة',
     'garage.others': 'سيارات أخرى',
     'garage.options': 'خيارات السيارة',
@@ -348,8 +349,8 @@ const base = {
     'catalog.allFamilies': 'كل عائلات القطع',
     'catalog.families': 'عائلات القطع',
     'catalog.seeAll': 'عرض الكل',
-    'catalog.partCount': '{n} قطعة',
-    'catalog.resultCount': '{n} نتيجة',
+    'catalog.partCount': '{n:one=قطعة واحدة;two=قطعتان;few=# قطع;many=# قطعة;other=# قطعة}',
+    'catalog.resultCount': '{n:one=نتيجة واحدة;two=نتيجتان;few=# نتائج;many=# نتيجة;other=# نتيجة}',
     'catalog.refine': 'تصفية',
     'catalog.allOf': 'الكل',
     'catalog.empty': 'لا قطع في هذه الفئة.',
@@ -395,9 +396,9 @@ const base = {
     'picker.noEngines': 'لا محرّكات مسجّلة لهذا الطراز.',
     'picker.missingData': 'إن لم تكن سيارتك في القائمة، راسلنا ونضيفها.',
     'picker.since': 'منذ',
-    'picker.engineCount': '{n} محرّك',
-    'picker.modelCount': '{n} طراز',
-    'picker.partCount': '{n} قطعة مُدرجة',
+    'picker.engineCount': '{n:one=محرّك واحد;two=محرّكان;few=# محرّكات;many=# محرّكًا;other=# محرّك}',
+    'picker.modelCount': '{n:one=طراز واحد;two=طرازان;few=# طرازات;many=# طرازًا;other=# طراز}',
+    'picker.partCount': '{n:one=قطعة واحدة;two=قطعتان;few=# قطع;many=# قطعة;other=# قطعة} مُدرجة',
     'picker.noPartsYet': 'لا قطع مُدرجة لهذه السيارة بعد',
     'picker.alreadySaved': 'موجودة في مرآبك',
 
@@ -423,9 +424,9 @@ const base = {
 
 /** The first dictionary, the buying one (commerce.ts) and the shop's own (staff.ts), as one. */
 const dict = {
-  fr: { ...base.fr, ...commerce.fr, ...staff.fr, ...look.fr, ...account.fr, ...expert.fr },
-  en: { ...base.en, ...commerce.en, ...staff.en, ...look.en, ...account.en, ...expert.en },
-  ar: { ...base.ar, ...commerce.ar, ...staff.ar, ...look.ar, ...account.ar, ...expert.ar },
+  fr: { ...base.fr, ...commerce.fr, ...staff.fr, ...look.fr, ...account.fr, ...expert.fr, ...care.fr },
+  en: { ...base.en, ...commerce.en, ...staff.en, ...look.en, ...account.en, ...expert.en, ...care.en },
+  ar: { ...base.ar, ...commerce.ar, ...staff.ar, ...look.ar, ...account.ar, ...expert.ar, ...care.ar },
 } as const;
 
 export type DictKey = keyof (typeof dict)['fr'];

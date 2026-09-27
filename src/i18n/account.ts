@@ -183,7 +183,7 @@ export const account = {
     'auth.deleteDone': 'تم حذف حسابك.',
     'auth.err.wrongPassword': 'كلمة المرور غير صحيحة.',
     'auth.err.admin': 'لا يمكن حذف حساب المتجر من التطبيق.',
-    'orders.more': '+ {n} قطعة أخرى',
+    'orders.more': '{n:one=+ قطعة أخرى;two=+ قطعتان أخريان;few=+ # قطع أخرى;many=+ # قطعة أخرى;other=+ # قطعة أخرى}',
     'orders.ref': 'رقم {ref}',
     'orders.placed': 'بتاريخ {date}',
     'orders.emptyTitle': 'لا توجد طلبات بعد',

@@ -1,8 +1,9 @@
 import { Feather } from '@expo/vector-icons';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { C, familyFor, Radius, Spacing, Tap, Type } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
+import { Rail } from '@/components/ui/rail';
 import { Text } from './text';
 
 /**
@@ -30,9 +31,7 @@ export function Trail({ steps }: { steps: TrailStep[] }) {
   const { rtl } = useI18n();
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
+    <Rail
       // Under RTL the row runs the other way, and the scroll view has to
       // start at the other end or the first step begins off-screen.
       contentContainerStyle={[
@@ -82,7 +81,7 @@ export function Trail({ steps }: { steps: TrailStep[] }) {
           </Pressable>
         </View>
       ))}
-    </ScrollView>
+    </Rail>
   );
 }
 

@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -27,8 +27,10 @@ import { useGarage, vehicleLabel } from '@/store/garage';
 import { track } from '@/services/analytics';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { useCheckout } from '@/store/checkout';
-import { deliveryDelay } from '@/lib/checkout';
+import { delaySpan, deliveryDelay } from '@/lib/checkout';
 import { useCart } from '@/store/cart';
+import { ProductTile } from '@/components/ui/product-tile';
+import { Rail } from '@/components/ui/rail';
 
 /**
  * Fiche produit.
@@ -111,7 +113,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
         : (settings.delivery.grandTunis ?? settings.delivery.regions)
           ? tr('product.shipIn', { t: (settings.delivery.grandTunis ?? settings.delivery.regions)! })
           : null;
-  const shipShort = delay ?? (settings?.delivery.grandTunis && settings.delivery.regions ? `${settings.delivery.grandTunis}–${settings.delivery.regions}` : (settings?.delivery.grandTunis ?? settings?.delivery.regions ?? null));
+  const shipShort = delay ?? (settings ? delaySpan(settings.delivery.grandTunis, settings.delivery.regions) : null);
   const refreshControl = usePullRefresh();
   const { t, rtl } = useI18n();
   const router = useRouter();
@@ -272,10 +274,17 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                     </Text>
                   </Pressable>
                 ) : null}
-                {product.fitment === 'DOES_NOT_FIT' ? (
-                  <Pressable accessibilityRole="button" onPress={() => router.push('/garage/ajouter')} hitSlop={6} style={styles.fitLink}>
+                {product.fitment === 'DOES_NOT_FIT' && active ? (
+                  // The way out of a part that does not fit is the parts of
+                  // the same kind that do — for this car, compatible first.
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push({ pathname: '/famille/[family]', params: { family: product.familySlug } })}
+                    hitSlop={6}
+                    style={styles.fitLink}
+                  >
                     <Text variant="hint" tone={C.text} style={styles.underline}>
-                      {t('look.changeVehicle')}
+                      {t('look.seeFitsMine', { make: active.makeName })}
                     </Text>
                   </Pressable>
                 ) : null}
@@ -286,9 +295,17 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
           <View style={[styles.priceRow, row]}>
             <Text style={[styles.price, { fontFamily: familyFor('headingStrong', rtl) }]}>{formatDT(product.price)}</Text>
             {product.compareAtPrice !== null && product.compareAtPrice > product.price ? (
-              <Text variant="hint" tone={C.textFaint} style={styles.struck}>
-                {formatDT(product.compareAtPrice)}
-              </Text>
+              <>
+                <Text variant="hint" tone={C.textFaint} style={styles.struck}>
+                  {formatDT(product.compareAtPrice)}
+                </Text>
+                {/* The shop's own reference price, never an invented "was". */}
+                <View style={styles.save}>
+                  <Text style={[styles.saveText, { fontFamily: familyFor('bodySemi', rtl) }]}>
+                    {t('product.save', { amount: formatDT(product.compareAtPrice - product.price) })}
+                  </Text>
+                </View>
+              </>
             ) : null}
           </View>
           <View style={[styles.stock, row]}>
@@ -398,6 +415,21 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
               </Accordion>
             ) : null}
           </View>
+
+          {product.boughtTogether.length > 0 ? (
+            <View style={styles.together}>
+              <Text style={[styles.togetherTitle, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+                {t('product.boughtTogether')}
+              </Text>
+              <Rail contentContainerStyle={[styles.togetherRow, row]}>
+                {product.boughtTogether.map((p) => (
+                  <View key={p.id} style={styles.togetherTile}>
+                    <ProductTile product={p} />
+                  </View>
+                ))}
+              </Rail>
+            </View>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -451,6 +483,7 @@ function Gallery({ product }: { product: ProductDetail }) {
   const { t } = useI18n();
   const { width } = useWindowDimensions();
   const [index, setIndex] = useState(0);
+  const [zoomed, setZoomed] = useState<string | null>(null);
   const slide = Math.min(width, MaxContentWidth) - Spacing.three * 2;
 
   if (product.gallery.length === 0) {
@@ -482,16 +515,29 @@ function Gallery({ product }: { product: ProductDetail }) {
         style={[styles.galleryScroll, { width: slide }]}
       >
         {product.gallery.map((src) => (
-          <Image
-            key={src}
-            source={{ uri: `${API_BASE_URL}${src}` }}
-            style={{ width: slide, height: GALLERY_HEIGHT }}
-            contentFit="contain"
-            transition={150}
-            accessibilityLabel={product.name}
-          />
+          // Tap for the photo full screen — a part is chosen by its details.
+          <Pressable key={src} accessibilityRole="imagebutton" accessibilityLabel={product.name} onPress={() => setZoomed(src)}>
+            <Image source={{ uri: `${API_BASE_URL}${src}` }} style={{ width: slide, height: GALLERY_HEIGHT }} contentFit="contain" transition={150} />
+          </Pressable>
         ))}
       </ScrollView>
+      <Modal visible={zoomed !== null} transparent animationType="fade" onRequestClose={() => setZoomed(null)}>
+        <View style={styles.zoom}>
+          <ScrollView
+            maximumZoomScale={4}
+            minimumZoomScale={1}
+            centerContent
+            contentContainerStyle={styles.zoomContent}
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+          >
+            {zoomed ? <Image source={{ uri: `${API_BASE_URL}${zoomed}` }} style={{ width, height: width }} contentFit="contain" /> : null}
+          </ScrollView>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('product.zoomClose')} onPress={() => setZoomed(null)} hitSlop={12} style={styles.zoomClose}>
+            <Feather name="x" size={26} color={Brand.white} />
+          </Pressable>
+        </View>
+      </Modal>
       {product.gallery.length > 1 ? (
         <Text variant="hint" style={styles.counter}>
           {`${index + 1} / ${product.gallery.length}`}
@@ -753,6 +799,15 @@ const styles = StyleSheet.create({
   barInner: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', alignItems: 'center', gap: Spacing.two, minHeight: Tap.primary },
   addedRow: { alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   inCart: { alignItems: 'center', gap: 2 },
+  zoom: { flex: 1, backgroundColor: 'rgba(3,10,26,0.96)' },
+  zoomContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
+  zoomClose: { position: 'absolute', top: 48, right: 20, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.12)' },
+  save: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.pill, backgroundColor: C.successSurface },
+  saveText: { fontSize: 13, lineHeight: 18, color: C.success },
+  together: { gap: Spacing.two, paddingTop: Spacing.four },
+  togetherTitle: { fontSize: 18, lineHeight: 24, color: C.text },
+  togetherRow: { gap: Spacing.two, paddingBottom: Spacing.two },
+  togetherTile: { width: 172 },
   viewCart: { paddingHorizontal: Spacing.three },
   fitBlock: { marginTop: Spacing.three, borderRadius: Radius.tile, padding: Spacing.three, gap: Spacing.two },
   fitHead: { alignItems: 'flex-start', gap: Spacing.three },

@@ -6,6 +6,7 @@ import { I18nManager, Platform } from 'react-native';
 import { refreshAll } from '@/api/refresh';
 import { setDataLocale } from './data-locale';
 import { dictionary, type DictKey } from './dictionaries';
+import { pluralize } from './plural';
 import { DEFAULT_LOCALE, isRTL, pickLocale, type Locale } from './locales';
 
 const STORAGE_KEY = 'apa-locale';
@@ -109,8 +110,10 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       setLocale,
       needsRestartForRTL: needsRestart(rtl),
       t: (key, vars) => {
-        const raw = strings[key];
-        if (!vars) return raw;
+        const base = strings[key];
+        if (!vars) return base;
+        // Plural forms first (i18n/plural): Arabic's six, French/English "(s)".
+        const raw = pluralize(base, locale, vars);
         // `{n}` and friends. A variable with no value is left as it was
         // written rather than rendered as "undefined" — a visible `{n}` is a
         // bug report, and "undefined pièces" is a lie about the catalogue.

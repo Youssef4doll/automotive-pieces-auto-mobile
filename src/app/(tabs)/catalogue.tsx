@@ -16,6 +16,7 @@ import { useResource } from '@/hooks/use-resource';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { useI18n } from '@/i18n/provider';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { Rail } from '@/components/ui/rail';
 
 /**
  * The catalogue's top level, as discovery rather than a directory: the
@@ -95,7 +96,7 @@ export default function CatalogueScreen() {
               <Text style={[styles.title, styles.column, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
                 {t('look.mostStocked')}
               </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.rail, row]}>
+              <Rail contentContainerStyle={[styles.rail, row]}>
                 {families.status === 'loading'
                   ? [0, 1, 2, 3].map((i) => <Skeleton key={i} style={styles.bigSkeleton} />)
                   : byStock.slice(0, 6).map((f) => (
@@ -118,7 +119,7 @@ export default function CatalogueScreen() {
                         </Text>
                       </PressScale>
                     ))}
-              </ScrollView>
+              </Rail>
             </>
           ) : null}
 

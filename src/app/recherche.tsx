@@ -23,6 +23,7 @@ import { useRecentSearches } from '@/store/recent-searches';
 import { track } from '@/services/analytics';
 import { EmptyState } from '@/components/ui/empty-state';
 import { RENDERS } from '@/illustrations/renders';
+import { Rail } from '@/components/ui/rail';
 
 /** Long enough that a steady typist does not fire a request per letter. */
 const DEBOUNCE_MS = 180;
@@ -176,9 +177,7 @@ export default function SearchScreen() {
   const header = (
     <View style={styles.headerBlock}>
       {scopes.length ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
+        <Rail
           keyboardShouldPersistTaps="handled"
           style={styles.chipBar}
           contentContainerStyle={[styles.chips, { flexDirection: rtl ? 'row-reverse' : 'row' }]}
@@ -193,7 +192,7 @@ export default function SearchScreen() {
               onPress={() => setScope(s)}
             />
           ))}
-        </ScrollView>
+        </Rail>
       ) : null}
 
       {offerFits ? (

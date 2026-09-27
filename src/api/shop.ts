@@ -1,3 +1,5 @@
+import { openingHours } from '@/i18n/data-locale';
+
 import { get } from './client';
 
 /**
@@ -38,7 +40,13 @@ export type ShopSettings = {
 };
 
 export const shopApi = {
-  settings: (signal?: AbortSignal) => get<ShopSettings>('/api/v1/settings/public', { signal }),
+  settings: (signal?: AbortSignal) =>
+    get<ShopSettings>('/api/v1/settings/public', { signal }).then((st) => ({
+      ...st,
+      // Typed by the shop in French ("Lun–Sam · 8h30–18h30"); shown in the customer's language.
+      contact: { ...st.contact, hours: openingHours(st.contact.hours) },
+      pickup: st.pickup ? { ...st.pickup, hours: openingHours(st.pickup.hours) } : null,
+    })),
 };
 
 /** Is there any way to reach a person at the shop? */

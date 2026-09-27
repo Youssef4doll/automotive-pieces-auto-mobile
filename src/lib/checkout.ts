@@ -59,3 +59,18 @@ export function deliveryDelay(settings: ShopSettings, governorate: string): stri
     : settings.delivery.grandTunis ?? settings.delivery.regions;
   return settings.grandTunis.includes(governorate) ? settings.delivery.grandTunis : settings.delivery.regions;
 }
+
+/**
+ * The shop's two delays as one span, for a tile too small for both sentences:
+ * "24h" and "48–72h" read "24–72h". Only when both are in hours; anything
+ * else the shop wrote is joined as it was written.
+ */
+export function delaySpan(a: string | null, b: string | null): string | null {
+  if (!a || !b) return a ?? b;
+  const hours = (s: string) => (/^\s*[\d\s–-]+h\s*$/i.test(s) ? (s.match(/\d+/g) ?? []).map(Number) : null);
+  const x = hours(a);
+  const y = hours(b);
+  if (!x || !y || !x.length || !y.length) return `${a} / ${b}`;
+  const all = [...x, ...y];
+  return `${Math.min(...all)}–${Math.max(...all)}h`;
+}

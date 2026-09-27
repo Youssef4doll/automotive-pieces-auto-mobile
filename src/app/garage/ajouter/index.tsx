@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { vehiclesApi, type Make } from '@/api/vehicles';
 import { PickerScreen, type PickerItem } from '@/components/picker-screen';
@@ -14,6 +14,7 @@ import { MakeLogo } from '@/components/ui/make-logo';
 import { VehicleCard } from '@/components/ui/vehicle-card';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
+import { Rail } from '@/components/ui/rail';
 
 /** How many makes get a badge on the rail above the full list. */
 const RAIL_SIZE = 8;
@@ -115,7 +116,7 @@ function Shortcuts({ topMakes, onMake }: { topMakes: Make[]; onMake: (make: Make
   return (
     <>
       {topMakes.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.railBar} contentContainerStyle={[styles.rail, row]}>
+        <Rail style={styles.railBar} contentContainerStyle={[styles.rail, row]}>
           {topMakes.map((m) => (
             <Pressable
               key={m.id}
@@ -130,7 +131,7 @@ function Shortcuts({ topMakes, onMake }: { topMakes: Make[]; onMake: (make: Make
               </Text>
             </Pressable>
           ))}
-        </ScrollView>
+        </Rail>
       ) : null}
 
       {vehicles.length ? (

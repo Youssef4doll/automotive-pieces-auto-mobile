@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 
 import type { ShopSettings } from '@/api/shop';
 import { fieldProblem, isEmail, signupProblems } from '@/lib/account';
-import { checkoutProblems, deliveryDelay } from '@/lib/checkout';
+import { checkoutProblems, delaySpan, deliveryDelay } from '@/lib/checkout';
 import { formatDT, yearSpan } from '@/lib/format';
 import type { CheckoutDetails } from '@/store/checkout';
 
@@ -107,5 +107,13 @@ describe('delivery delay', () => {
   it('is nothing when the shop has published nothing', () => {
     const none = { delivery: { grandTunis: null, regions: null }, grandTunis: [] } as unknown as ShopSettings;
     assert.equal(deliveryDelay(none, 'Sfax'), null);
+  });
+});
+
+describe('delaySpan', () => {
+  it('reads the two delays as one span on the small tile', () => {
+  assert.equal(delaySpan('24h', '48–72h'), '24–72h');
+  assert.equal(delaySpan('24h', null), '24h');
+    assert.equal(delaySpan('24h', '2 à 3 jours'), '24h / 2 à 3 jours');
   });
 });

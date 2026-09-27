@@ -118,6 +118,15 @@ export default function VehiclesScreen() {
                 if (engine) router.push({ pathname: '/pieces-compatibles', params: { engine } });
               }}
             />
+            <SheetAction
+              icon="info"
+              label={t('look.act.info')}
+              onPress={() => {
+                const engine = sheet?.engineId;
+                close();
+                if (engine) router.push({ pathname: '/garage/vehicule/[engine]', params: { engine } });
+              }}
+            />
             {sheet && sheet.engineId !== active?.engineId ? (
               <SheetAction
                 icon="star"

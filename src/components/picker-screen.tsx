@@ -166,6 +166,12 @@ export function PickerScreen<T>({
                 // a live list leaves it measuring a grid with a list's
                 // geometry.
                 key={layout}
+                // A picker list is short (makes, models, engines — tens, not
+                // thousands) and every row must be reachable. FlatList renders
+                // 10 rows first and relies on scroll events for the rest; on a
+                // web layout where the list does not scroll on its own, row 11
+                // never appeared ("Volkswagen is missing"). Render them all.
+                initialNumToRender={Math.max(10, shown.length)}
                 numColumns={grid ? 2 : 1}
                 columnWrapperStyle={grid ? styles.gridRow : undefined}
                 renderItem={({ item }) =>

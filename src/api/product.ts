@@ -28,6 +28,8 @@ export type ProductDetail = Product & {
   oeGroups: { owner: string; refs: { raw: string; normalized: string }[] }[];
   aftermarketRefs: { type: string; brand: string; raw: string }[];
   packContents: { name: string; slug: string; price: number }[];
+  /** The shop's links, then parts bought together in 2+ orders; empty when neither. */
+  boughtTogether: Product[];
   compatibility: { total: number; vehicles: CompatibleVehicle[] };
   manufacturer: {
     name: string;
