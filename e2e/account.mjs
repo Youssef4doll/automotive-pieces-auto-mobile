@@ -64,6 +64,9 @@ try {
   await page.getByLabel('Téléphone', { exact: true }).fill('20 333 444');
   await tapLabel(page, 'Gouvernorat');
   await tap(page, 'Ariana');
+  // Greater Tunis and Nabeul ask for the delegation (lib/delegations).
+  await tapLabel(page, 'Délégation');
+  await tap(page, 'La Soukra');
   await page.getByLabel('Adresse', { exact: true }).fill('5 rue du Compte, Ariana');
   await tap(page, 'Continuer');
   await page.waitForTimeout(3000);
