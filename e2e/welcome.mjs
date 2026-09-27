@@ -31,7 +31,7 @@ const says = async (page, s) => (await text(page)).toLowerCase().includes(s.toLo
     check(await says(page, 'Choisissez-la une fois'), 'step 3: the car');
     await tap(page, 'Plus tard');
     await page.waitForTimeout(1500);
-    check(new URL(page.url()).pathname === '/' && (await says(page, 'Que recherchez-vous')), 'later: lands on home', page.url());
+    check(new URL(page.url()).pathname === '/' && (await says(page, 'Comment trouver votre pièce')), 'later: lands on home', page.url());
     await page.reload({ waitUntil: 'networkidle' });
     await page.waitForTimeout(2500);
     check(new URL(page.url()).pathname === '/', 'once done, never again', page.url());

@@ -3,14 +3,13 @@ import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useState } from 'react';
 import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type ImageSourcePropType } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { hasContactChannel } from '@/api/shop';
 import { BrandStrip } from '@/components/ui/brand-strip';
-import { BubbleArc, type BubbleItem } from '@/components/ui/bubble-arc';
 import { PartImage } from '@/components/ui/part-image';
 import { PressScale } from '@/components/ui/press-scale';
 import { PromoBanner } from '@/components/ui/promo-banner';
@@ -25,8 +24,6 @@ import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { familyRender, RENDERS } from '@/illustrations/renders';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
-import { useCheckout } from '@/store/checkout';
-import { useAccount } from '@/store/account';
 import { useGarage } from '@/store/garage';
 import { useOnboarding } from '@/store/onboarding';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
@@ -61,9 +58,6 @@ export default function HomeScreen() {
   const { t, rtl } = useI18n();
   const active = useGarage((s) => s.active);
   const vehicleLine = useVehicleLine();
-  const accountName = useAccount((s) => (s.status === 'signedIn' ? s.account?.name : null));
-  const checkoutName = useCheckout((s) => s.details.customerName);
-  const firstName = ((accountName ?? checkoutName).trim().split(/\s+/)[0] ?? '').slice(0, 24);
   // The hero photograph is 3:4; it is lifted so the part sits beside the
   // slogan and under the search, then fades into the navy below.
   const heroHeight = Math.round(Math.min(width, MaxContentWidth + 120) * 4 / 3);
@@ -84,41 +78,6 @@ export default function HomeScreen() {
   const settings = useShopSettings();
   const refreshControl = usePullRefresh();
   const canAskShop = settings.status === 'loaded' && hasContactChannel(settings.data);
-
-  // The radial menu: the car in the middle — the one the app answers for,
-  // or the invitation to name one — with the other ways in either side.
-  // Side bubbles come to the centre when tapped; the centred one goes.
-  const { bubbles, centre } = useMemo(() => {
-    const car: BubbleItem = active
-      ? {
-          key: 'car',
-          icon: <MakeLogo name={active.makeName} slug={active.makeSlug} size={62} lifted={false} />,
-          label: `${active.makeName} ${active.modelName}`,
-          hint: t('look.hint.car'),
-          onPress: () => router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } }),
-        }
-      : { key: 'car', icon: <Render source={RENDERS.key} size={84} />, label: t('bubble.myCar'), hint: t('look.hint.pick'), onPress: () => router.push('/garage/ajouter') };
-    const reference: BubbleItem = {
-      key: 'reference',
-      icon: <Render source={RENDERS.magnifier} size={70} />,
-      label: t('bubble.reference'),
-      hint: t('look.hint.ref'),
-      onPress: () => router.push({ pathname: '/recherche', params: { mode: 'reference' } }),
-    };
-    const part: BubbleItem = { key: 'part', icon: <Render source={familyRender('freinage') ?? RENDERS.magnifier} size={70} />, label: t('bubble.part'), hint: t('look.hint.part'), onPress: () => router.navigate('/catalogue') };
-    const photo: BubbleItem | null = canAskShop
-      ? { key: 'photo', icon: <Render source={RENDERS.phone} size={70} />, label: t('bubble.photo'), hint: t('look.hint.photo'), onPress: () => router.push('/aide') }
-      : null;
-    // Balanced either side of the car: with one, "une autre voiture" takes
-    // the right; without, the reference does. Photo / Expert only when the
-    // shop has published a way to be reached — a promise of advice nobody
-    // can answer is worse than no promise.
-    const items: BubbleItem[] = active
-      ? [reference, part, car, { key: 'other', icon: <Render source={RENDERS.key} size={70} />, label: t('look.otherCar'), hint: t('look.hint.pick'), onPress: () => router.push('/garage/ajouter') }]
-      : [part, car, reference];
-    if (photo) items.push(photo);
-    return { bubbles: items, centre: active ? 2 : 1 };
-  }, [active, canAskShop, router, t]);
 
   // Every family, most parts first — a rail to browse, not four fixed tiles.
   const rail = useMemo<Family[]>(
@@ -239,18 +198,8 @@ export default function HomeScreen() {
               <Text style={[styles.vehicleAction, { fontFamily: familyFor('bodySemi', rtl) }]}>{active ? t('home.change') : t('look.choose')}</Text>
             </PressScale>
 
-            <View style={styles.titles}>
-              <Text style={[styles.hello, { fontFamily: familyFor('bodySemi', rtl), textAlign: rtl ? 'right' : 'left' }]}>
-                {firstName ? t('look.hello', { name: firstName }) : t('look.helloAnon')}
-              </Text>
-              <Text style={[styles.title, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('home.whatLooking')}</Text>
-              <Text style={[styles.subtitle, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('home.whatLookingWhy')}</Text>
-            </View>
           </View>
 
-          <View style={styles.arc}>
-            <BubbleArc items={bubbles} initial={centre} />
-          </View>
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push('/trouver')}
@@ -419,18 +368,15 @@ const styles = StyleSheet.create({
   vehicleName: { fontSize: 15, lineHeight: 20, color: Brand.white },
   vehicleSub: { fontSize: 13, lineHeight: 17, color: '#aab6cc' },
   vehicleAction: { fontSize: 14, color: Brand.gold400 },
-  titles: { paddingTop: Spacing.five, gap: Spacing.one },
-  hello: { fontSize: 16, lineHeight: 22, color: Brand.white },
-  title: { fontSize: 28, lineHeight: 34, letterSpacing: -0.4, color: Brand.white },
-  subtitle: { fontSize: 15, lineHeight: 21, color: '#c7d1e3', maxWidth: 320 },
-  arc: { marginTop: Spacing.three, height: 250 },
   // On its own dark pill: it sits over the road's centre line.
+  subtitle: { fontSize: 15, lineHeight: 21, color: '#c7d1e3', maxWidth: 320 },
   allWays: {
     alignSelf: 'center',
     alignItems: 'center',
     gap: 6,
     minHeight: Tap.min,
     paddingHorizontal: Spacing.four,
+    marginTop: Spacing.three,
     marginBottom: Spacing.four,
     borderRadius: Radius.pill,
     backgroundColor: Brand.navy900,
@@ -521,8 +467,3 @@ const styles = StyleSheet.create({
   },
   adviceCtaText: { fontSize: 15, color: C.onAccent },
 });
-
-/** A studio render inside an arc bubble. */
-function Render({ source, size }: { source: ImageSourcePropType; size: number }) {
-  return <Image source={source} style={{ width: size, height: size }} contentFit="contain" />;
-}

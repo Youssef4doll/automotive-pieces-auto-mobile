@@ -137,30 +137,10 @@ for (const width of SCREEN_VIEWPORTS) {
   }
 }
 
-// ------------------------------------------------------------------- arc ---
+// ------------------------------------------------------------------ ways ---
 //
-// The home screen's three bubbles: the centred one upright at full size with
-// its gold ring, its neighbours smaller and lower, and the row snapping.
-
-/** Each bubble's rendered scale, drop and x, keyed by its label. */
-async function readBubbles(page, labels) {
-  return page.evaluate((names) => {
-    const out = {};
-    for (const name of names) {
-      const btn = [...document.querySelectorAll('[aria-label]')].find((e) => e.getAttribute('aria-label') === name);
-      if (!btn) continue;
-      const body = btn.parentElement;
-      const m = getComputedStyle(body).transform.match(/matrix\(([^)]+)\)/);
-      const n = m ? m[1].split(',').map(Number) : [1, 0, 0, 1, 0, 0];
-      const r = btn.getBoundingClientRect();
-      out[name] = { scale: Number(n[0].toFixed(2)), y: Math.round(n[5]), x: Math.round(r.x + r.width / 2), cy: Math.round(r.y + r.height / 2) };
-    }
-    let el = document.querySelector(`[aria-label="${names[0]}"]`);
-    while (el && !(el.scrollWidth > el.clientWidth + 8)) el = el.parentElement;
-    out.snap = el ? getComputedStyle(el).scrollSnapType : null;
-    return out;
-  }, labels);
-}
+// The home screen no longer carries the bubble arc: the vehicle line, then
+// one link to every way of finding a part.
 
 {
   const { browser, page } = await open({ width: 390 });
@@ -168,38 +148,13 @@ async function readBubbles(page, labels) {
     await addBmw(page);
     await tap(page, 'Accueil');
     await page.waitForTimeout(1800);
-    // The choices sit under the photograph: bring the arc up first. By its
-    // label — the car's name is also on the vehicle line above it.
-    await page.evaluate(() => {
-      const b = [...document.querySelectorAll('[aria-label]')].find((e) => e.getAttribute('aria-label') === 'Une autre voiture' && e.checkVisibility());
-      b?.scrollIntoView({ block: 'center', inline: 'nearest' });
-    });
-    await page.waitForTimeout(900);
-    const b = await readBubbles(page, ['Je connais la pièce', 'BMW Série 1 (E87)', 'Une autre voiture']);
-    const car = b['BMW Série 1 (E87)'];
-    const left = b['Je connais la pièce'];
-    const right = b['Une autre voiture'];
-    if (!car || !left || !right) fail('arc: bubbles not found', b);
-    else {
-      check(car.scale === 1 && car.y === 0, 'arc: the car is the big centred bubble', car);
-      check(left.scale < 0.8 && right.scale < 0.8 && left.y > 0 && right.y > 0, 'arc: neighbours smaller and lower', { left, right });
-      check(Math.abs(car.x - 195) < 6, 'arc: opens centred on the car', car.x);
-      check(String(b.snap).startsWith('x '), 'arc: snapping', b.snap);
-
-      // The radial rule: a side bubble comes to the centre first and goes nowhere.
-      const url = page.url();
-      await page.mouse.click(right.x, right.cy);
-      await page.waitForTimeout(1200);
-      const after = await readBubbles(page, ['Une autre voiture']);
-      check(page.url() === url && after['Une autre voiture'] && Math.abs(after['Une autre voiture'].x - 195) < 12, 'arc: a side bubble is centred, not opened', {
-        url: page.url(),
-        x: after['Une autre voiture']?.x,
-      });
-      const hint = await page.evaluate(() => document.body.innerText.includes('Marque, modèle, motorisation'));
-      check(hint, 'arc: the caption says what the centred bubble does');
-    }
+    const gone = await page.evaluate(() => !document.body.innerText.includes('Que recherchez-vous'));
+    check(gone, 'home: no arc title');
+    await tap(page, 'Comment trouver votre pièce ?');
+    await page.waitForTimeout(1200);
+    check(page.url().endsWith('/trouver'), 'home: the ways link opens /trouver', page.url());
   } catch (e) {
-    fail('arc', { threw: String(e).split('\n')[0] });
+    fail('ways', { threw: String(e).split('\n')[0] });
   } finally {
     await browser.close();
   }
@@ -220,24 +175,8 @@ async function readBubbles(page, labels) {
     await page.waitForTimeout(2500);
     await scrollTo(page, 0);
 
-    // The bubbles run the other way: "Référence", first in French reading
-    // order, sits on the RIGHT in Arabic; the car stays in the middle.
-    const b = await readBubbles(page, ['لديّ المرجع', 'BMW Série 1 (E87)', 'أعرف القطعة', 'سيارة أخرى']);
-    const ok = b['لديّ المرجع'] && b['أعرف القطعة'] && b['سيارة أخرى'] && b['لديّ المرجع'].x > b['BMW Série 1 (E87)'].x && b['أعرف القطعة'].x > b['BMW Série 1 (E87)'].x && b['سيارة أخرى'].x < b['BMW Série 1 (E87)'].x;
-    check(ok, 'rtl: bubbles reversed', b);
-
-    // The greeting sits on the right of an Arabic hero.
-    const hello = await page.evaluate(() => {
-      const el = [...document.querySelectorAll('div')].find((d) => d.children.length === 0 && d.textContent.trim() === 'مرحبًا 👋');
-      if (!el) return null;
-      // The line is a full-width block aligned right, so the element's box
-      // says nothing; the text's own box does.
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      const r = range.getBoundingClientRect();
-      return { left: Math.round(r.x), fromRight: Math.round(window.innerWidth - r.right) };
-    });
-    check(hello && hello.fromRight < hello.left, 'rtl: greeting mirrored', hello);
+    const link = await page.evaluate(() => document.body.innerText.includes('كيف نجد قطعتك؟'));
+    check(link, 'rtl: the ways link is in Arabic');
 
     const r = await inspect(page, 390);
     if (r.hScroll || r.clipped.length || r.small.length || errors.length) fail('rtl: layout', { ...r, errors });

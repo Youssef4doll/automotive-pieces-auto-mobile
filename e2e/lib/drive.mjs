@@ -193,7 +193,8 @@ export async function scrollTo(page, top) {
 
 /** Put one car in the garage, through the picker the customer uses. */
 export async function addBmw(page) {
-  await tap(page, 'Je connais ma voiture');
+  await page.goto(`${APP_URL}/garage/ajouter`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1200);
   await tap(page, 'BMW');
   await tap(page, 'Série 1 (E87)');
   await page.waitForTimeout(500);
