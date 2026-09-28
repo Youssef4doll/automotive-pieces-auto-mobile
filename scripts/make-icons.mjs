@@ -3,9 +3,10 @@
  *
  *   assets/images/app-icon-art.webp  the app icon — the glass square with the
  *                                    car and the road. The launcher icon, the
- *                                    Android layers, the splash, the favicon.
+ *                                    Android layers, the favicon.
  *   assets/images/logo-lockup.webp   the logo — hexagon and wordmark. What the
- *                                    screens draw, and the notification icon.
+ *                                    screens draw, the launch screen's
+ *                                    wordmark, and the notification icon.
  *
  *   node scripts/make-icons.mjs
  *
@@ -30,7 +31,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const LOCKUP = resolve(ROOT, 'assets/images/logo-lockup.webp');
 const ART = resolve(ROOT, 'assets/images/app-icon-art.webp');
 
-/** From constants/theme.ts (`LaunchBackground`). Literal, because this is plain node. */
+/** The dark of the icon artwork, sampled from it: the Android icon's background layer. */
 const NIGHT = '#051022';
 
 const LOCKUP_TARGETS = [
@@ -61,10 +62,6 @@ const LOCKUP_TARGETS = [
 const ART_SIZE = 1254;
 /** The picture inside the glass rim, square — the launcher icon, full bleed (the OS rounds it). */
 const INSIDE = { x: 110, y: 106, w: 1030, h: 1030 };
-/** The glass with its rim and a margin of its glow — the splash. */
-const GLASS = { x: 40, y: 44, w: 1170, h: 1148 };
-/** The rim itself, inside GLASS, and its corner radius. */
-const RIM = { x: 92, y: 96, right: 1158, bottom: 1140, radius: 200 };
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
@@ -123,8 +120,16 @@ const boxes = await page.evaluate(() => {
   }
   if (!gold.found) throw new Error('no gold region found — is this the right logo file?');
 
+  // The wordmark: everything inked to the right of the hexagon.
+  const words = track();
+  for (let y = 0; y < c.height; y++) {
+    for (let x = gold.maxX + 8; x < c.width; x++) {
+      if (d[(y * c.width + x) * 4 + 3] >= 128) note(words, x, y);
+    }
+  }
+
   const rect = (b) => ({ x: b.minX, y: b.minY, w: b.maxX - b.minX + 1, h: b.maxY - b.minY + 1 });
-  return { gold: rect(gold), ink: rect(ink), imgW: c.width, imgH: c.height };
+  return { gold: rect(gold), ink: rect(ink), words: rect(words), imgW: c.width, imgH: c.height };
 });
 
 console.log(
@@ -184,6 +189,50 @@ for (const target of LOCKUP_TARGETS) {
   await write(target.file, png);
 }
 
+// ---- the launch screen: the wordmark alone, in two layers
+
+/**
+ * The name and "PIÈCES AUTO" in one file, the red swoosh in another, both
+ * on the same transparent square so they stack exactly. The native splash
+ * shows the name; the launch screen (components/preloader) then draws the
+ * swoosh in under it.
+ *
+ * The wordmark is 60% of the square's width: Android 12+ shows a splash
+ * picture through a circle, and a wider mark would lose its ends.
+ */
+const layers = await page.evaluate(
+  ({ box }) => {
+    const img = document.getElementById('lockup');
+    const size = 1024;
+    const w = size * 0.6;
+    const h = (box.h / box.w) * w;
+    const x = (size - w) / 2;
+    const y = (size - h) / 2;
+    const out = {};
+    for (const part of ['words', 'swoosh']) {
+      const c = document.createElement('canvas');
+      c.width = size;
+      c.height = size;
+      const g = c.getContext('2d');
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(img, box.x, box.y, box.w, box.h, x, y, w, h);
+      const frame = g.getImageData(0, 0, size, size);
+      const d = frame.data;
+      for (let i = 0; i < d.length; i += 4) {
+        // The swoosh is the only red in the logo; the lettering is white.
+        const red = d[i] > 120 && d[i] - d[i + 1] > 70 && d[i] - d[i + 2] > 60;
+        if ((part === 'swoosh') !== red) d[i + 3] = 0;
+      }
+      g.putImageData(frame, 0, 0);
+      out[part] = c.toDataURL('image/png');
+    }
+    return out;
+  },
+  { box: boxes.words },
+);
+await write('assets/images/splash-icon.png', layers.words);
+await write('assets/images/splash-swoosh.png', layers.swoosh);
+
 // ---- the app icon
 
 const artSize = await page.evaluate(() => document.getElementById('art').naturalWidth);
@@ -192,7 +241,7 @@ if (artSize !== ART_SIZE) {
 }
 
 const art = await page.evaluate(
-  ({ INSIDE, GLASS, RIM, NIGHT }) => {
+  ({ INSIDE, NIGHT }) => {
     const src = document.getElementById('art');
     const canvas = (w, h) => {
       const c = document.createElement('canvas');
@@ -246,45 +295,9 @@ const art = await page.evaluate(
     gv.drawImage(inside, 0, 0, 196, 196);
     out['assets/images/favicon.png'] = fav.toDataURL('image/png');
 
-    // Splash: the glass as drawn — rim, rounded corners and its glow — on
-    // transparent, over the launch night (app.json). The glass is ~55% of the
-    // box, so Android 12's circular splash mask never reaches it.
-    const scale = 560 / (RIM.right - RIM.x);
-    const w = Math.round(GLASS.w * scale);
-    const h = Math.round(GLASS.h * scale);
-    const [glass, gg] = canvas(w, h);
-    gg.drawImage(src, GLASS.x, GLASS.y, GLASS.w, GLASS.h, 0, 0, w, h);
-    // Opaque inside the rim; beyond it, the glow keeps its own light and
-    // fades out, so the square does not sit in a dark box on the night.
-    const [shape, gh] = canvas(w, h);
-    gh.fillStyle = '#fff';
-    gh.beginPath();
-    gh.roundRect(
-      (RIM.x - GLASS.x) * scale,
-      (RIM.y - GLASS.y) * scale,
-      (RIM.right - RIM.x) * scale,
-      (RIM.bottom - RIM.y) * scale,
-      RIM.radius * scale,
-    );
-    gh.fill();
-    const [soft, gso] = canvas(w, h);
-    gso.filter = 'blur(14px)';
-    gso.drawImage(shape, 0, 0);
-    const pic = gg.getImageData(0, 0, w, h);
-    const hard = gh.getImageData(0, 0, w, h).data;
-    const halo = gso.getImageData(0, 0, w, h).data;
-    for (let i = 0; i < pic.data.length; i += 4) {
-      const light = Math.min(255, 3 * (0.299 * pic.data[i] + 0.587 * pic.data[i + 1] + 0.114 * pic.data[i + 2]));
-      pic.data[i + 3] = Math.max(hard[i + 3], Math.round((halo[i + 3] * light) / 255));
-    }
-    gg.putImageData(pic, 0, 0);
-    const [splash, gp] = canvas(1024, 1024);
-    gp.drawImage(glass, Math.floor((1024 - w) / 2), Math.floor((1024 - h) / 2));
-    out['assets/images/splash-icon.png'] = splash.toDataURL('image/png');
-
     return out;
   },
-  { INSIDE, GLASS, RIM, NIGHT },
+  { INSIDE, NIGHT },
 );
 for (const [file, png] of Object.entries(art)) await write(file, png);
 

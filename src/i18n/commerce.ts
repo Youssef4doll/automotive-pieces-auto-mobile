@@ -13,9 +13,6 @@
  */
 export const commerce = {
   fr: {
-    'home.forYourCar': 'Pour votre {car}',
-    'home.orderAgain': 'Commander à nouveau',
-    'home.packs': 'Packs entretien',
     'catalog.sortDefault': 'Trier',
     'catalog.sortPriceUp': 'Prix croissant',
     'catalog.sortPriceDown': 'Prix décroissant',
@@ -355,9 +352,6 @@ export const commerce = {
   },
 
   en: {
-    'home.forYourCar': 'For your {car}',
-    'home.orderAgain': 'Order again',
-    'home.packs': 'Maintenance packs',
     'catalog.sortDefault': 'Sort',
     'catalog.sortPriceUp': 'Price: low to high',
     'catalog.sortPriceDown': 'Price: high to low',
@@ -696,9 +690,6 @@ export const commerce = {
   },
 
   ar: {
-    'home.forYourCar': 'لسيارتك {car}',
-    'home.orderAgain': 'اطلب مجددًا',
-    'home.packs': 'باقات الصيانة',
     'catalog.sortDefault': 'ترتيب',
     'catalog.sortPriceUp': 'السعر: من الأقل',
     'catalog.sortPriceDown': 'السعر: من الأعلى',

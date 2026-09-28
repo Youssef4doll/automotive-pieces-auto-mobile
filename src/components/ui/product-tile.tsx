@@ -36,6 +36,9 @@ const STOCK: Record<Product['availability'], { tone: string; key: DictKey }> = {
   UNAVAILABLE: { tone: C.textFaint, key: 'stock.unavailable' },
 };
 
+/** The "+" (44) and a gap, kept free at the end of the price and stock lines. */
+const ADD_ROOM = 44 + Spacing.one;
+
 export function ProductTile({ product }: { product: Product }) {
   const { t, rtl } = useI18n();
   const router = useRouter();
@@ -76,14 +79,18 @@ export function ProductTile({ product }: { product: Product }) {
             </Text>
           </View>
         ) : null}
-        <View style={styles.price}>
-          <Price value={product.price} compareAt={product.compareAtPrice} />
-        </View>
-        <View style={[row, styles.line]}>
-          <View style={[styles.dot, { backgroundColor: stock.tone }]} />
-          <Text variant="hint" tone={stock.tone} numberOfLines={1}>
-            {stockLine}
-          </Text>
+        {/* Clear of the "+" in the corner: a long price ("118,00 DT" under
+            "138,60 DT") ran under it and lost its last digits. */}
+        <View style={[styles.foot, start, quickAdd && (rtl ? { paddingLeft: ADD_ROOM } : { paddingRight: ADD_ROOM })]}>
+          <View style={styles.price}>
+            <Price value={product.price} compareAt={product.compareAtPrice} />
+          </View>
+          <View style={[row, styles.line]}>
+            <View style={[styles.dot, { backgroundColor: stock.tone }]} />
+            <Text variant="hint" tone={stock.tone} numberOfLines={1} style={styles.shrink}>
+              {stockLine}
+            </Text>
+          </View>
         </View>
       </View>
     </PressScale>
@@ -139,4 +146,6 @@ const styles = StyleSheet.create({
   line: { alignItems: 'center', gap: 5 },
   dot: { width: 7, height: 7, borderRadius: 4 },
   price: { paddingTop: 2 },
+  foot: { alignSelf: 'stretch', gap: 3 },
+  shrink: { flexShrink: 1 },
 });

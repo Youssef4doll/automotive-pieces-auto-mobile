@@ -83,9 +83,13 @@ export function Price({
 }
 
 const styles = StyleSheet.create({
+  // Wraps rather than overflowing: in a narrow tile the reference price sits
+  // on its own line above the amount instead of pushing it off the edge.
   row: {
     alignItems: 'baseline',
-    gap: Spacing.two,
+    flexWrap: 'wrap',
+    columnGap: Spacing.two,
+    rowGap: 0,
   },
   amount: {
     alignItems: 'flex-start',

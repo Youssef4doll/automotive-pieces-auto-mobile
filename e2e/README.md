@@ -132,12 +132,13 @@ points at.
 
 `npm run e2e:launch` opens the app as a person would — every other suite
 skips the launch screen, because Playwright sets `navigator.webdriver` — and
-checks that it is up on the first frames, on the launch night `#051022`,
-covers the screen, has the picture 240 wide and centred where the native
-splash leaves it, is announced as a progress indicator, stays at least its
-0.9 s minimum and goes within its cap (both timed inside the page), and that
-the home is underneath. Then again with reduced motion: no light across the
-glass, and it still leaves. Screenshots go to `SHOTS` (default
+checks that it is up on the first frames, on the shop's navy `#081633`,
+covers the screen, has the name 360 wide and centred where the native
+splash leaves it, is announced as a progress indicator, draws the red
+swoosh in (sampled until it completes, only ever growing), stays at least
+its 1 s minimum and goes within its cap (both timed inside the page), and
+that the home is underneath. Then again with reduced motion: the swoosh is
+whole from the start, and it still leaves. Screenshots go to `SHOTS` (default
 `/tmp/apa-launch-*.png`).
 
 ## After delivery (`e2e/after-delivery.mjs`)

@@ -104,7 +104,7 @@ export default function AccountScreen() {
           </Pressable>
           <View style={styles.flex}>
             <Text style={[styles.name, { fontFamily: familyFor('heading', rtl) }]}>{name || t('account.guestName')}</Text>
-            <Text variant="hint" numberOfLines={1}>
+            <Text variant="hint" numberOfLines={2}>
               {contactLine || t('account.guestWhy')}
             </Text>
           </View>

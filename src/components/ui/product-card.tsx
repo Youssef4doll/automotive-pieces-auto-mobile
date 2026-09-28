@@ -125,7 +125,9 @@ export function ProductCard({ product }: { product: Product }) {
             style={[
               styles.foot,
               { flexDirection: rtl ? 'row-reverse' : 'row' },
-              // Room for the "+" that sits over this corner.
+              // Room for the "+" that sits over this corner — beside the
+              // price, and tall enough that it never reaches up into the name.
+              quickAdd && styles.footWithAdd,
               quickAdd && (rtl ? { paddingLeft: Tap.min + Spacing.two } : { paddingRight: Tap.min + Spacing.two }),
             ]}
           >
@@ -224,6 +226,9 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     paddingTop: Spacing.two,
   },
+  // The "+" is Tap.min tall and pinned to the card's bottom padding; a foot
+  // at least that tall keeps it level with the price, clear of the name.
+  footWithAdd: { minHeight: Tap.min + Spacing.two },
   stock: {
     alignItems: 'center',
     gap: Spacing.one,

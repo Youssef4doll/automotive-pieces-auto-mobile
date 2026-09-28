@@ -227,7 +227,9 @@ const styles = StyleSheet.create({
   iconBtn: { width: Tap.min, height: Tap.min, alignItems: 'center', justifyContent: 'center', marginHorizontal: -Spacing.two },
   title: { flex: 1, fontSize: 26, lineHeight: 32, color: Brand.white, paddingHorizontal: Spacing.two },
   art: { position: 'absolute', top: 64, width: 150, height: 150, alignItems: 'center', justifyContent: 'center' },
-  tagline: { marginTop: 128, fontSize: 15, lineHeight: 20, color: '#d4dcea', maxWidth: '58%' },
+  // Clear of the picture: it is drawn 176 wide from the right edge, and at
+  // 58% "Pour un moteur qui respire bien" ran under the oil can on a 390pt phone.
+  tagline: { marginTop: 128, fontSize: 15, lineHeight: 20, color: '#d4dcea', maxWidth: '48%' },
   sheet: {
     marginTop: -Spacing.four,
     backgroundColor: C.background,

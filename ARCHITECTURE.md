@@ -1210,10 +1210,8 @@ an arrival window counted from the real "shipped" time (`lib/arrival.ts`).
   30 days, results found, nothing that looks like a phone or an e-mail).
 - Family pages: sort by price, "in stock" and brand chips built from the
   page's own facets.
-- Home: "Pour votre <car>" (VERIFIED fits only), "Commander à nouveau" (this
-  phone's last orders, re-read at today's prices), "Packs entretien"
-  (`catalogue/products?packs=1` — products whose specs list their contents),
-  and a due-date strip for the main car (`components/ui/care-due.tsx`).
+- Home: a due-date strip for the main car (`components/ui/care-due.tsx`).
+  (Product rows were added here and later removed — see §22.)
 - Product page: specs table, bought together, "Vous économisez X" only when
   the shop set a reference price, photo zoom.
 - **Cart**: one suggestion that reaches free delivery — linked by the shop to
@@ -1284,12 +1282,10 @@ cuts from it, and from nothing else:
   in would be rounded twice.
 - `android-icon-foreground.png` / `-background.png`: the picture at 700 of
   1024, so the strictest launcher mask (a circle over the middle 683) loses
-  only its outer edge, on the launch night `#051022`.
+  only its outer edge, on the artwork's own dark `#051022`.
 - `android-icon-monochrome.png` (Android 13 themed icons): the wordmark band
   only, white on transparent. The car and the road are shading, which one
   colour turns to mud.
-- `splash-icon.png`: the whole glass square — rim, corners, glow — at about
-  55% of its box, so Android 12's circular splash mask never reaches it.
 - `favicon.png`.
 
 The crops are measured on the supplied 1254 × 1254 file and written at the
@@ -1298,28 +1294,38 @@ cutting an off-centre icon. The notification icon stays the hexagon from the
 logo: Android draws it as a one-colour silhouette at 24 dp, where the glass
 square would be a white blob.
 
-**The launch screen** (`components/preloader.tsx`) is what people know from
-every app: the icon on a dark screen, a light passing across the glass, a
-gold line running under it, then the app. It is in two halves:
+**The launch screen** (`components/preloader.tsx`) is the shop's name and
+nothing else — AUTOMOTIVE and PIÈCES AUTO in white on the shop's navy
+(`Brand.navy950`, `#081633`), no tile, no frame (the owner's call, September
+28: the glass square was the icon, not the brand). Its only motion is the
+logo's own red swoosh drawing itself in under the name, left to right, as a
+pen would. It is in two halves:
 
 1. The native splash (`expo-splash-screen` in `app.json`: `splash-icon.png`,
-   240 wide, on `#051022`) is up from the moment the phone starts the app,
-   before any JavaScript.
+   360 wide, on `#081633`) shows the name without the swoosh from the moment
+   the phone starts the app, before any JavaScript.
 2. The preloader draws the same picture, at the same size and place, on the
    same colour, and hides the native splash on its first frame — so the
-   hand-over cannot be seen — then animates.
+   hand-over cannot be seen — then reveals `splash-swoosh.png` over it
+   through a window that opens from the left.
+
+Both pictures are cut by `make-icons.mjs` from the logo file (everything to
+the right of the hexagon; the red pixels are the swoosh, the rest the
+lettering) onto the same transparent square, the wordmark at 60% of its
+width so Android 12's circular splash mask never reaches its ends. The
+logo is never mirrored, so the swoosh draws left to right in Arabic too.
 
 It leaves when the fonts are in and the home's first data has been asked for
 (families, shop settings, promotions — they land in the API cache, so the
-home opens filled, not on skeletons), and never before 0.9 s (a flash of the
+home opens filled, not on skeletons), and never before 1 s (a flash of the
 logo reads as a glitch) or after 2.6 s whatever the network does (a launch
 screen that waits on a slow connection is a hang with a logo on it). With
-reduced motion on there is no light and no running line; it simply fades.
+reduced motion on the swoosh is simply there; the screen fades.
 The clock is light while it is up.
 
-`LaunchBackground` in `constants/theme.ts` is the launch night and is written
-twice more in `app.json` (the splash and the Android icon background) — a
-config file cannot import a constant, so change all three together.
+`LaunchBackground` in `constants/theme.ts` is the launch navy and is written
+again in `app.json` for the native splash — a config file cannot import a
+constant, so change both together.
 
 What to know when checking it:
 
@@ -1329,5 +1335,13 @@ What to know when checking it:
 - On the web, a browser driven by a test (`navigator.webdriver`) skips the
   launch screen so the suites can get on with the app. `e2e/launch.mjs`
   turns the flag off and checks it: up on the first frames, on the right
-  colour, the picture where the native splash leaves it, gone between its
-  minimum and its cap, the home underneath, and the reduced-motion version.
+  colour, the name where the native splash leaves it, the swoosh drawing in,
+  gone between its minimum and its cap, the home underneath, and the
+  reduced-motion version.
+
+**The home shows no products** (September 28, the owner's call). The rows
+"Pour votre <car>", "Commander à nouveau" and "Packs entretien" are gone
+with `components/ui/home-rows.tsx`; the home is the ways in — search, the
+car, the families, maintenance, the shop's campaigns, the makers, advice.
+Parts are one tap away in the catalogue, the family pages and the search.
+`catalogue/products?packs=1` stays on the website for whoever wants it next.
