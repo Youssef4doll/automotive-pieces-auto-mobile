@@ -36,8 +36,11 @@ const RAIL_SIZE = 8;
  *
  *   the cars already in the garage, one tap to switch back to one;
  *
- *   a rail of the makes the shop has the most parts for, ranked by that real
- *   count and nothing else. A badge is the shop's uploaded logo when there is
+ *   a rail of round make badges — always there, above the registration
+ *   card: the makes the shop has the most parts for first, then the ones it
+ *   has the most models of (both real counts; nothing invented), so the rail
+ *   is never empty just because fitment data is still thin — which is how it
+ *   once disappeared on a live catalogue. A badge is the shop's uploaded logo when there is
  *   one, otherwise the make's real mark (illustrations/marques — there to
  *   say which car, the way every parts catalogue does), and initials only
  *   for a make nobody has a mark for.
@@ -81,7 +84,9 @@ export default function MakesScreen() {
   const topMakes = useMemo(
     () =>
       resource.status === 'loaded'
-        ? [...resource.data].filter((m) => m.partCount > 0).sort((a, b) => b.partCount - a.partCount).slice(0, RAIL_SIZE)
+        ? [...resource.data]
+            .sort((a, b) => b.partCount - a.partCount || b.modelCount - a.modelCount || a.name.localeCompare(b.name))
+            .slice(0, RAIL_SIZE)
         : [],
     [resource],
   );
@@ -121,7 +126,7 @@ function Shortcuts({ topMakes, onMake }: { topMakes: Make[]; onMake: (make: Make
             <Pressable
               key={m.id}
               accessibilityRole="button"
-              accessibilityLabel={`${m.name}, ${t('picker.partCount', { n: m.partCount })}`}
+              accessibilityLabel={m.partCount > 0 ? `${m.name}, ${t('picker.partCount', { n: m.partCount })}` : m.name}
               onPress={() => onMake(m)}
               style={({ pressed }) => [styles.badge, pressed && styles.pressed]}
             >

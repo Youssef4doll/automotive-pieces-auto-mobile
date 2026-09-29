@@ -1407,3 +1407,13 @@ the declaration, sending, withdrawing, the staff screen accepting, the
 customer reading the answer, the guarantee page from a product) and
 `lib/__tests__/returns.test.ts`.
 
+**September 29, later.** The garage and basket icons (`illustrations/vehicle`
+`NavCar`, `illustrations/nav-cart`) were redrawn: nothing filled but the
+car's headlamps, because the old ones filled their wheels white and became
+two blobs on the navy capsule; the car is larger and plainer (roof,
+body, lamps, tyres), the basket lost its faint inner bars. And the make
+picker's round logo rail is back above the registration card on every
+catalogue: it had only listed makes with parts linked, so on a live
+catalogue whose fitment data is still thin it was empty and vanished. It now
+ranks by parts, then by models — both real counts — and is never empty.
+

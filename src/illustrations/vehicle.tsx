@@ -198,30 +198,18 @@ export function NavCar({
   size?: number;
   color?: ColorValue;
 }) {
+  const line = { stroke: color, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' };
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      {/* A closed body with the wheels sitting on its lower edge. The first
-          try left the body open and ran the axle line out past it to suggest
-          bumpers; at 20pt that extra width read as a bench, not a car. */}
-      <Path
-        d="M3.6 16.8 V12.8 a2 2 0 0 1 2-2 h12.8 a2 2 0 0 1 2 2 v4 Z"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <Path
-        d="M7 10.8 8.6 7.2 A2 2 0 0 1 10.4 6 h3.2 a2 2 0 0 1 1.8 1.2 L17 10.8"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      {/* Filled white rather than left open: the body's bottom edge runs
-          behind them, and an unfilled wheel shows that line as a chord. */}
-      <Circle cx={7.4} cy={17.6} r={1.7} fill={Brand.white} stroke={color} strokeWidth={2} />
-      <Circle cx={16.6} cy={17.6} r={1.7} fill={Brand.white} stroke={color} strokeWidth={2} />
+      {/* Head-on: the windscreen and roof, the body below it, two headlamps
+          and the tyres under it. Nothing is filled but the lamps, so it reads
+          the same on white and on the tab bar's navy capsule — the previous
+          drawing filled its wheels white, which became two blobs there. */}
+      <Path d="M5 11 6.8 6.3A2 2 0 0 1 8.7 5h6.6a2 2 0 0 1 1.9 1.3L19 11" {...line} />
+      <Path d="M4.8 11h14.4a2 2 0 0 1 2 2v3.8a1 1 0 0 1-1 1H3.8a1 1 0 0 1-1-1V13a2 2 0 0 1 2-2Z" {...line} />
+      <Path d="M6.2 17.8v2M17.8 17.8v2" {...line} />
+      <Circle cx={7.2} cy={14.4} r={1.3} fill={color} />
+      <Circle cx={16.8} cy={14.4} r={1.3} fill={color} />
     </Svg>
   );
 }
