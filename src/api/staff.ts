@@ -22,7 +22,74 @@ export type Dashboard = {
   lowStockCount: number;
   recentOrders: OrderRow[];
   lowStock: { id: string; name: string; stockQty: number; lowStockThreshold: number }[];
+  /** Return requests waiting on the shop. Absent from an older shop. */
+  returns?: { requested: number; approved: number; received: number };
 };
+
+export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REFUSED' | 'RECEIVED' | 'RESOLVED' | 'CANCELLED';
+export type ReturnFilter = 'open' | 'all' | ReturnStatus;
+export type ReturnReason = 'WRONG_PART' | 'DAMAGED' | 'DOES_NOT_FIT' | 'DEFECTIVE' | 'NOT_NEEDED';
+export type ReturnCover = 'shop' | 'warranty' | 'standard';
+
+export type ReturnRow = {
+  id: string;
+  ref: string;
+  status: ReturnStatus;
+  reason: ReturnReason;
+  wish: 'EXCHANGE' | 'REFUND';
+  cover: ReturnCover;
+  createdAt: string;
+  orderId: string;
+  orderRef: string;
+  customerName: string;
+  phone: string;
+  parts: string[];
+  photoCount: number;
+};
+
+export type ReturnDetail = {
+  id: string;
+  ref: string;
+  status: ReturnStatus;
+  reason: ReturnReason;
+  wish: 'EXCHANGE' | 'REFUND';
+  note: string | null;
+  unmounted: boolean;
+  cover: ReturnCover;
+  method: 'DROP_OFF' | 'PICKUP' | null;
+  shopNote: string | null;
+  outcome: 'EXCHANGED' | 'REFUNDED' | null;
+  refundAmount: number | null;
+  restocked: boolean;
+  photoIds: string[];
+  deliveredAt: string | null;
+  next: ReturnStatus[];
+  createdAt: string;
+  decidedAt: string | null;
+  receivedAt: string | null;
+  resolvedAt: string | null;
+  cancelledAt: string | null;
+  order: {
+    id: string;
+    ref: string;
+    customerName: string;
+    phone: string;
+    email: string | null;
+    vehicleLabel: string | null;
+    deliveryMethod: 'DELIVERY' | 'PICKUP';
+    governorate: string;
+    address: string | null;
+  };
+  lines: { orderItemId: string; name: string; sku: string; qty: number; ordered: number; unitPrice: number; fit: 'VERIFIED' | 'DERIVED' | 'UNLISTED' | null; productId: string | null }[];
+  /** At the prices charged — a starting figure for a refund, which the shop sets. */
+  value: number;
+};
+
+export type ReturnMove =
+  | { to: 'APPROVED'; method: 'DROP_OFF' | 'PICKUP'; shopNote?: string }
+  | { to: 'REFUSED'; shopNote: string }
+  | { to: 'RECEIVED'; restock: boolean }
+  | { to: 'RESOLVED'; outcome: 'EXCHANGED' | 'REFUNDED'; refundAmount?: number; shopNote?: string };
 
 export type OrderRow = {
   id: string;
@@ -164,6 +231,13 @@ export const staffApi = {
   familyPicture: (id: string, form: FormData) =>
     call<{ imageUrl: string | null }>(`/categories/${id}/image`, { method: 'POST', body: form }),
   removeFamilyPicture: (id: string) => call<{ imageUrl: null }>(`/categories/${id}/image`, { method: 'DELETE' }),
+
+  returns: (filter: ReturnFilter, signal?: AbortSignal) =>
+    call<{ counts: { requested: number; approved: number; received: number }; returns: ReturnRow[] }>(`/returns${qs({ filter })}`, { signal }),
+  returnDetail: (id: string, signal?: AbortSignal) => call<ReturnDetail>(`/returns/${id}`, { signal }),
+  moveReturn: (id: string, move: ReturnMove) => call<ReturnDetail>(`/returns/${id}`, { method: 'POST', body: move }),
+  /** A customer's photo: served to staff only, so it is fetched with the session rather than linked. */
+  returnPhotoUrl: (photoId: string) => `/api/v1/admin/returns/photos/${photoId}`,
 
   settings: (signal?: AbortSignal) => call<Setting[]>('/settings', { signal }),
   saveSettings: (patch: Record<string, string>) => call<Setting[]>('/settings', { method: 'PATCH', body: patch }),

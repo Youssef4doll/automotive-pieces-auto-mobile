@@ -1345,3 +1345,65 @@ with `components/ui/home-rows.tsx`; the home is the ways in — search, the
 car, the families, maintenance, the shop's campaigns, the makers, advice.
 Parts are one tap away in the catalogue, the family pages and the search.
 `catalogue/products?packs=1` stays on the website for whoever wants it next.
+
+## 23. Returns, end to end, and the tab bar (September 29, 2026)
+
+**A customer can return a part from the order itself.** Until now the
+policy said "contact us". The website's side is its HANDOVER §5.hh; the rules
+are the policy page's own sentences (`lib/returns-rules.ts` there), worked
+out per order by the shop and sent in the order view as `returnOptions` —
+this app never decides a deadline or who pays, it draws what it is sent.
+
+- **On the order** (`components/ui/order-returns.tsx`, on `/suivi/[ref]`):
+  "Retours et garantie" appears once the order is delivered, or as soon as a
+  request exists. Each request shows where it stands (Demande envoyée →
+  Acceptée → Pièce reçue → Terminée), the shop's answer — how to bring the
+  part back (with the shop's address when it has published one), its
+  message, the exchange or the refund and its amount — and, while the shop
+  has not answered, "Annuler la demande". The screen re-reads the order when
+  you come back to it, so a request just sent is on it.
+- **The request** (`/retour/[ref]`): which part (a stepper up to what is
+  still free), what is wrong — five reasons, each with its deadline and, for
+  the shop's own errors, "à notre charge" (naming the car when the order
+  carried one, which is what makes a misfit the shop's error) — then what
+  that reason asks: photos (required for a wrong or damaged part), a note,
+  exchange or refund, and the "never fitted, in its packaging" declaration
+  for a 14-day return. It will not send without what the reason needs, and
+  says so; the shop checks it all again. Afterwards: "Demande envoyée", the
+  RET reference, and — only if this phone follows the order — that a
+  notification will come. Nothing claims a refund is automatic.
+- **"Retours et garantie"** (`/garanties`): the three commitments with the
+  shop's own figures from its settings (14-day return and its conditions;
+  the shop's errors at its charge, 48 hours with a photo; 12-month warranty
+  and what it does not cover), then how to ask. Opened from the product
+  page's guarantee tiles (now one tappable row), from Compte, and from every
+  order.
+- **Staff** (`/gestion/retours`, `/gestion/retours/[id]`): the list with
+  filters, the detail with the policy's line for the case, the customer's
+  words and photos (fetched with the session, `components/staff/private-photo`,
+  never a public link), the order's car and each line's fitment verdict,
+  and the answer, one step at a time. The dashboard counts requests waiting.
+- Every move reaches the customer by push (the orders channel; tapping opens
+  the order) and by e-mail when the order has an address.
+
+Pure helpers in `lib/returns.ts` (tested): whether a return can start, the
+step a request is at, which policy sentence applies (left out rather than
+printed with an invented figure when the shop's settings are not loaded), and
+the error sentence for each refusal.
+
+**The tab bar** (`components/tab-bar.tsx`) is now a rounded bar lifted off
+the bottom edge, with a soft shadow, and a navy capsule behind the open
+tab's icon that slides to the tab you pick (a short spring; none with
+reduced motion). The active tab is still three signals — the capsule, the
+white icon and full-weight label, `accessibilityState.selected` — never
+colour alone. The basket count is gold with navy figures, ringed in white.
+It stays in the layout rather than floating over the screens, so the
+basket's checkout bar and every screen's bottom stay where they were. In
+Arabic the tabs run right to left and the capsule counts from the right.
+`TabBarHeight` is 80: the bar's 64, 4 above, at least 12 below.
+
+Tests: `e2e/returns.mjs` (the card, the request screen, the refusal without
+the declaration, sending, withdrawing, the staff screen accepting, the
+customer reading the answer, the guarantee page from a product) and
+`lib/__tests__/returns.test.ts`.
+

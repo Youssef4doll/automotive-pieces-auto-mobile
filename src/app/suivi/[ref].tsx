@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
@@ -25,6 +25,7 @@ import { useToast } from '@/store/toast';
 import { track } from '@/services/analytics';
 import { OrderNotify } from '@/components/ui/order-notify';
 import { OrderRating } from '@/components/ui/order-rating';
+import { OrderReturns } from '@/components/ui/order-returns';
 
 /** The shop's own status flow — see `ORDER_STATUS_FLOW` on the website. */
 const FLOW: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PREPARED', 'SHIPPED', 'DELIVERED'];
@@ -58,6 +59,16 @@ export default function TrackingScreen() {
   );
   const order = useResource(load);
   const status = order.status === 'loaded' ? order.data.status : null;
+  // Back from "Retourner une pièce" (or anything else pushed over this
+  // screen): read the order again, so a request just sent is on it.
+  const focusedOnce = useRef(false);
+  const reload = order.status === 'loaded' ? order.reload : null;
+  useFocusEffect(
+    useCallback(() => {
+      if (focusedOnce.current) reload?.();
+      focusedOnce.current = true;
+    }, [reload]),
+  );
   useEffect(() => {
     if (status) track('order_viewed', { ref, status });
   }, [ref, status]);
@@ -202,6 +213,8 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
         {/* Delivered: the customer's word on it, for the shop. Before that:
             the option to be told when it moves (phones with push only). */}
         <OrderRating order={order} onRated={onRefresh} />
+        {/* Returns: each request and the shop's answers; the way to start one while a window is open. */}
+        <OrderReturns order={order} onChanged={onRefresh} />
         {!cancelled && order.status !== 'DELIVERED' ? <OrderNotify orderRef={order.ref} /> : null}
 
         {/* A question about this order: the shop's channels, with the

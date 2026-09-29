@@ -24,6 +24,8 @@ export type ShopSettings = {
   supplierLeadTime: string | null;
   warrantyMonths: number;
   returnDays: number;
+  /** The shop's-error window: "signalez-le dans les 48 heures avec une photo". Absent from an older shop. */
+  shopErrorHours?: number;
   paymentMethods: readonly 'COD'[];
   /** Only when the shop has said where the shop is. */
   pickup: { address: string; hours: string | null } | null;

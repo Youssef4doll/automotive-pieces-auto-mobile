@@ -39,6 +39,58 @@ export type CartQuote = {
 
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
 
+/** Why a part is coming back — each one a rule of the shop's policy page. */
+export type ReturnReason = 'WRONG_PART' | 'DAMAGED' | 'DOES_NOT_FIT' | 'DEFECTIVE' | 'NOT_NEEDED';
+export type ReturnWish = 'EXCHANGE' | 'REFUND';
+export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REFUSED' | 'RECEIVED' | 'RESOLVED' | 'CANCELLED';
+/**
+ * Who carries the cost, as the policy says it: `shop` — the shop's error,
+ * return and replacement at its charge; `warranty` — the part is covered, not
+ * the labour; `standard` — the 14-day return on the policy's conditions.
+ */
+export type ReturnCover = 'shop' | 'warranty' | 'standard';
+
+/** One reason, as the shop worked it out for this order: open or not, until when, on what conditions. */
+export type ReturnReasonOption = {
+  reason: ReturnReason;
+  open: boolean;
+  until: string;
+  photo: 'required' | 'optional';
+  /** The customer declares the part was never fitted, in its packaging. */
+  unmounted: boolean;
+  cover: ReturnCover;
+};
+
+export type ReturnRequest = {
+  ref: string;
+  status: ReturnStatus;
+  reason: ReturnReason;
+  wish: ReturnWish;
+  note: string | null;
+  unmounted: boolean;
+  cover: ReturnCover;
+  /** Set by the shop when it accepts. */
+  method: 'DROP_OFF' | 'PICKUP' | null;
+  /** The shop's message to the customer. */
+  shopNote: string | null;
+  outcome: 'EXCHANGED' | 'REFUNDED' | null;
+  refundAmount: number | null;
+  photoCount: number;
+  items: { orderItemId: string; name: string; sku: string; qty: number }[];
+  createdAt: string;
+  decidedAt: string | null;
+  receivedAt: string | null;
+  resolvedAt: string | null;
+  cancelledAt: string | null;
+};
+
+export type ReturnOptions = {
+  deliveredAt: string;
+  reasons: ReturnReasonOption[];
+  /** How many of each line are still free to return. */
+  items: { orderItemId: string; returnable: number }[];
+};
+
 export type Order = {
   ref: string;
   status: OrderStatus;
@@ -53,6 +105,8 @@ export type Order = {
   paymentMethod: 'COD' | 'CARD';
   vehicleLabel: string | null;
   items: {
+    /** The line's own id — what a return points at. Absent from views served before returns existed. */
+    id?: string;
     productId: string | null;
     /** Null when the part is no longer on sale — it cannot be reopened. */
     slug: string | null;
@@ -74,6 +128,10 @@ export type Order = {
   total: number;
   /** The customer's rating, once given — DELIVERED orders only. */
   review?: { stars: number; comment: string | null } | null;
+  /** Return requests on this order, newest first, with the shop's answers. */
+  returns?: ReturnRequest[];
+  /** For a delivered order: what can still be returned. Null before delivery. */
+  returnOptions?: ReturnOptions | null;
 };
 
 export type OrderInput = {
@@ -132,6 +190,18 @@ export const ordersApi = {
   /** Rate a delivered order; `unavailable` (not_delivered) before that. Answers the order. */
   review: (ref: string, token: string, input: { stars: number; comment?: string }) =>
     send<Order>(`/api/v1/orders/${encodeURIComponent(ref)}/review`, { method: 'POST', token, body: input }),
+
+  /**
+   * "Retourner une pièce": multipart — `request` (JSON: reason, wish, note,
+   * unmounted, items) and up to four `photos`. The shop checks every rule
+   * again; a refusal is `invalid` with `reason` (closed, qty, photo_required,
+   * unmounted_required…). Answers the new request's reference and the order.
+   */
+  fileReturn: (ref: string, token: string, form: FormData) =>
+    send<{ returnRef: string; order: Order }>(`/api/v1/orders/${encodeURIComponent(ref)}/returns`, { method: 'POST', token, body: form }),
+  /** Withdraw a request the shop has not answered yet. */
+  withdrawReturn: (ref: string, token: string, returnRef: string) =>
+    send<Order>(`/api/v1/orders/${encodeURIComponent(ref)}/returns/${encodeURIComponent(returnRef)}/cancel`, { method: 'POST', token }),
 
   /** Recover an order on this phone with its reference and the phone number on it. */
   lookup: (ref: string, phone: string) =>

@@ -67,7 +67,8 @@
     "e2e:account": "node e2e/account.mjs",
     "e2e:welcome": "node e2e/welcome.mjs",
     "e2e:after-delivery": "node e2e/after-delivery.mjs",
-    "e2e:launch": "node e2e/launch.mjs"
+    "e2e:launch": "node e2e/launch.mjs",
+    "e2e:returns": "node e2e/returns.mjs"
   },
   "private": true
 }

@@ -348,14 +348,21 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
           {/* Quantity and the button, side by side, as in the reference. */}
           {/* Three facts, each the shop's own: its delay, its warranty, its
               return window. */}
+          {/* The whole row opens "Retours et garantie": what each promise
+              means, and how to use it. */}
           {settings ? (
-            <View style={[styles.facts, row]}>
+            <Pressable
+              accessibilityRole="link"
+              accessibilityHint={t('returns.policy')}
+              onPress={() => router.push('/garanties')}
+              style={({ pressed }) => [styles.facts, row, pressed && styles.factsPressed]}
+            >
               <Fact icon="truck" title={t('product.deliveryShort')} value={shipShort ?? t('product.cod')} />
               <View style={styles.factRule} />
               <Fact icon="shield" title={t('product.warrantyShort')} value={t('product.months', { n: settings.warrantyMonths })} />
               <View style={styles.factRule} />
               <Fact icon="rotate-ccw" title={t('product.returnShort')} value={t('product.days', { n: settings.returnDays })} />
-            </View>
+            </Pressable>
           ) : null}
 
           <View style={styles.sections}>
@@ -735,7 +742,9 @@ const styles = StyleSheet.create({
   facts: {
     marginTop: Spacing.three,
     paddingVertical: Spacing.two,
+    borderRadius: Radius.tile,
   },
+  factsPressed: { backgroundColor: C.surface },
   fact: { flex: 1, alignItems: 'center', gap: 4, paddingHorizontal: Spacing.one },
   factText: { textAlign: 'center' },
   factRule: { width: Border.thin, backgroundColor: C.border },

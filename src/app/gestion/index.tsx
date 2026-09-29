@@ -57,7 +57,7 @@ export default function StaffHome() {
             <Text variant="label" tone={C.textMuted}>
               {t('staff.todo')}
             </Text>
-            {dash.data.pendingCount + dash.data.outOfStock + dash.data.lowStockCount === 0 ? (
+            {dash.data.pendingCount + dash.data.outOfStock + dash.data.lowStockCount + (dash.data.returns?.requested ?? 0) === 0 ? (
               <Text variant="body">{t('staff.allClear')}</Text>
             ) : null}
             {dash.data.pendingCount > 0 ? (
@@ -65,6 +65,14 @@ export default function StaffHome() {
                 icon="clock"
                 label={t('staff.pendingN', { n: dash.data.pendingCount })}
                 onPress={() => router.push({ pathname: '/gestion/commandes', params: { status: 'PENDING' } })}
+              />
+            ) : null}
+            {dash.data.returns?.requested ? (
+              <MenuRow
+                icon="rotate-ccw"
+                tone={C.danger}
+                label={t('staff.returns.waiting', { n: dash.data.returns.requested })}
+                onPress={() => router.push({ pathname: '/gestion/retours', params: { filter: 'REQUESTED' } })}
               />
             ) : null}
             {dash.data.outOfStock > 0 ? (
@@ -86,6 +94,7 @@ export default function StaffHome() {
 
           <Card>
             <MenuRow icon="file-text" label={t('staff.menu.orders')} onPress={() => router.push('/gestion/commandes')} />
+            <MenuRow icon="rotate-ccw" label={t('staff.returns')} onPress={() => router.push('/gestion/retours')} />
             <MenuRow icon="package" label={t('staff.menu.stock')} onPress={() => router.push('/gestion/stock')} />
             <MenuRow icon="image" label={t('staff.menu.families')} onPress={() => router.push('/gestion/familles')} />
             <MenuRow icon="settings" label={t('staff.menu.settings')} onPress={() => router.push('/gestion/boutique')} />

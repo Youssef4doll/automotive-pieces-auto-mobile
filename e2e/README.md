@@ -141,6 +141,19 @@ that the home is underneath. Then again with reduced motion: the swoosh is
 whole from the start, and it still leaves. Screenshots go to `SHOTS` (default
 `/tmp/apa-launch-*.png`).
 
+## Returns (`e2e/returns.mjs`)
+
+`npm run e2e:returns` places an order on the local shop, delivers it with the
+staff API and walks a return through the app: no return before delivery;
+"Retours et garantie" on the delivered order; the request screen with each
+reason's deadline and "à notre charge" for the shop's own errors; the 14-day
+conditions; the refusal to send without the "never fitted" declaration; the
+request sent and named; shown on the order and withdrawn; a second one
+accepted from the staff screens (`/gestion/retours/[id]`, with the policy's
+line); the customer reading the acceptance and the shop's message; and the
+guarantee page opened from a product's tiles, with the shop's own figures.
+Screenshots go to `SHOTS` (default `/tmp/apa-returns-*.png`). Local shop only.
+
 ## After delivery (`e2e/after-delivery.mjs`)
 
 Places an order over the API as the app would, moves it to DELIVERED with the

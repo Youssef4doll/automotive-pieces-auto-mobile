@@ -55,6 +55,10 @@ export type EventName =
   | 'promo_entered'
   | 'free_delivery_suggestion_added'
   | 'order_rated'
+  | 'return_opened'
+  | 'return_requested'
+  | 'return_failed'
+  | 'return_withdrawn'
   /** An uncaught error the error screens never saw (services/crash). */
   | 'app_crash'
   | 'update_downloaded';
@@ -67,7 +71,7 @@ type Queued = { name: EventName; at: string; props?: Props };
  * losing a `purchase` because the app was swiped away four seconds later
  * would make the one number that matters the least reliable one.
  */
-const IMMEDIATE: ReadonlySet<EventName> = new Set(['app_error', 'app_crash', 'expert_request', 'purchase', 'purchase_failed', 'sign_up', 'login', 'logout', 'account_deleted']);
+const IMMEDIATE: ReadonlySet<EventName> = new Set(['app_error', 'app_crash', 'expert_request', 'purchase', 'purchase_failed', 'sign_up', 'login', 'logout', 'account_deleted', 'return_requested']);
 
 const ID_KEY = 'apa-analytics.id';
 const FLUSH_MS = 5_000;
