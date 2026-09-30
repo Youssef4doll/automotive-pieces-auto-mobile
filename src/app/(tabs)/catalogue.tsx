@@ -345,6 +345,7 @@ const styles = StyleSheet.create({
   },
   carCtaPressed: { backgroundColor: Brand.gold600 },
   carCtaText: { fontSize: 16, lineHeight: 20, color: Brand.navy950 },
-  changeBtn: { minHeight: Tap.min, justifyContent: 'center' },
+  // A full tap target even when the word is short (« تغيير » is 23pt wide).
+  changeBtn: { minHeight: Tap.min, minWidth: Tap.min, paddingHorizontal: Spacing.one, alignItems: 'center', justifyContent: 'center' },
   change: { textDecorationLine: 'underline' },
 });

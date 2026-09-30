@@ -17,7 +17,7 @@ const fits = (await (await fetch(`${SHOP}/api/v1/catalogue/products?engine=${eng
 const all = (await (await fetch(`${SHOP}/api/v1/catalogue/products?family=filtres&engine=${engine}`)).json()).data.products;
 const misfit = all.find((p) => p.fitment === 'DOES_NOT_FIT')?.slug ?? fits;
 
-const ROUTES = [
+const ALL_ROUTES = [
   '/', '/catalogue', '/garage', '/panier', '/compte',
   '/recherche', '/recherche?q=filtre', '/recherche?mode=reference',
   '/famille/freinage', '/famille/filtres', '/marque/bosch',
@@ -26,6 +26,8 @@ const ROUTES = [
   '/compte/commandes', '/compte/parametres', '/compte/adresses', '/compte/retrouver', '/compte/connexion', '/bienvenue',
   '/aide', '/commande/livraison',
 ];
+// ONLY=/catalogue,/panier re-checks a few screens after a fix.
+const ROUTES = process.env.ONLY ? ALL_ROUTES.filter((r) => process.env.ONLY.split(',').includes(r)) : ALL_ROUTES;
 
 let failures = 0;
 const results = [];
