@@ -32,6 +32,7 @@ export type EventName =
   | 'search_query'
   | 'search_result_clicked'
   | 'category_viewed'
+  | 'catalogue_sorted'
   | 'product_viewed'
   | 'compatibility_checked'
   | 'add_to_cart'

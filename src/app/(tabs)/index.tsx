@@ -11,6 +11,7 @@ import { catalogueApi, type Family } from '@/api/catalogue';
 import { BrandStrip } from '@/components/ui/brand-strip';
 import { CareBanner } from '@/components/ui/care-banner';
 import { CareDueStrip } from '@/components/ui/care-due';
+import { AdviceCard } from '@/components/ui/advice-card';
 import { PartImage } from '@/components/ui/part-image';
 import { PressScale } from '@/components/ui/press-scale';
 import { PromoBanner } from '@/components/ui/promo-banner';
@@ -272,25 +273,9 @@ export default function HomeScreen() {
 
 
           {/* Always there: the photo goes to the shop's inbox (/demande-photo). */}
-          <View style={styles.column}>
-              <View style={[styles.advice, row]}>
-                <View style={styles.adviceArt}>
-                  <Image source={RENDERS.phone} style={{ width: 92, height: 92 }} contentFit="contain" />
-                </View>
-                <View style={[styles.flex, { gap: 6, alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
-                  <Text style={[styles.careTitle, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('look.advice')}</Text>
-                  <Text style={[styles.careWhy, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.adviceWhy')}</Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => router.push('/demande-photo')}
-                    style={({ pressed }) => [styles.adviceCta, row, pressed && { backgroundColor: Brand.gold600 }]}
-                  >
-                    <Feather name="camera" size={16} color={C.onAccent} />
-                    <Text style={[styles.adviceCtaText, { fontFamily: familyFor('display', rtl) }]}>{t('look.adviceCta')}</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
+          <View style={[styles.column, styles.adviceWrap]}>
+            <AdviceCard />
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -399,34 +384,7 @@ const styles = StyleSheet.create({
   catSkeleton: { width: 72, height: 72, borderRadius: 36 },
   catName: { textAlign: 'center' },
   care: { marginTop: Spacing.four },
-  careTitle: { fontSize: 20, lineHeight: 26, color: Brand.white },
-  careWhy: { fontSize: 14, lineHeight: 19, color: '#c7d1e3' },
+  adviceWrap: { marginTop: Spacing.four },
   block: { paddingTop: Spacing.four },
   promo: { paddingTop: Spacing.four },
-  advice: {
-    marginTop: Spacing.four,
-    padding: Spacing.four,
-    gap: Spacing.three,
-    borderRadius: Radius.card,
-    backgroundColor: Brand.navy950,
-    alignItems: 'center',
-  },
-  adviceArt: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: Brand.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  adviceCta: {
-    marginTop: Spacing.one,
-    alignItems: 'center',
-    gap: 6,
-    minHeight: Tap.min,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-    backgroundColor: Brand.gold500,
-  },
-  adviceCtaText: { fontSize: 15, color: C.onAccent },
 });

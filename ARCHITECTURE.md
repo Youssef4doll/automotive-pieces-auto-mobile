@@ -1417,3 +1417,84 @@ catalogue: it had only listed makes with parts linked, so on a live
 catalogue whose fitment data is still thin it was empty and vanished. It now
 ranks by parts, then by models — both real counts — and is never empty.
 
+
+## 24. Sign-in, failures, the catalogue, the bar (September 30, 2026)
+
+The shop's side of all of this is its HANDOVER §5.ii.
+
+**When the shop does not answer** (`api/client.ts`, `api/retry.ts`, tested).
+Reads (`get`, and `send` without a body method) are asked again after a
+failure that says nothing about the request: no signal (twice, after about
+0.7 s and 2 s), a timeout (once — each attempt may take the full 12 s), a
+502/503/504 (after the shop's `Retry-After`, capped at 5 s — the shop now
+answers `503 temporarily_unavailable` when its database is waking), a flood
+window that reopens within seconds. Never a 4xx: that is the shop's answer.
+A gateway's HTML error page is now a server failure (retryable), not
+"malformed". `rateLimited` and `server` carry `retryAfter`.
+
+**Orders are safe to send twice.** A POST is still never retried blindly —
+unless it carries an `Idempotency-Key`, and the order does
+(`newIdempotencyKey`, 24 bytes from expo-crypto's CSPRNG). The payment step
+keeps one key per basket-and-details (a new one when anything it sends
+changes), so the client's own retry after a dropped connection, and the
+customer tapping « Confirmer » again after a timeout, both come back with the
+order the first attempt placed — never a second parcel. The timeout and
+no-signal sentences now say exactly that ("Réessayez — elle ne sera jamais
+passée deux fois"). `expo-crypto` is new (SDK 57's, in Expo Go).
+
+**Sign-in.** The password rule is the shop's: eight characters, not a common
+password, not the account's own name or e-mail — the phone checks the length,
+the shop the rest, and each refusal's `reason` has its own sentence
+(`lib/account` `passwordProblem`). Sign-in and sign-up send the phone's name
+(`lib/device-name`: model and system from expo-device, nothing that
+identifies the owner) so the account can list its phones.
+**Compte → Connexion et sécurité** (`app/compte/securite.tsx`, signed in
+only): change the password with the current one (the shop then signs out
+every other phone, staff session and website sign-in; this phone stays in,
+and the toast says how many were signed out), and the signed-in phones as
+the shop knows them — name, last activity, sign-in date, « Cet appareil »,
+« Déconnecter » on each other one, « Déconnecter les autres appareils ». A
+401 there means this phone was signed out elsewhere, and it is signed out
+here too. The staff sign-in sends the name as well.
+
+**The catalogue tab** is laid out around how a customer reaches a part, in
+the order that converts: the search box; **the car** — the make's badge, its
+name and a gold « Voir les pièces compatibles » when there is one, a dashed
+« Ajoutez votre véhicule » when not; **En promotion** — the shop's
+marked-down parts as real tiles with their add button, only while there are
+any (`productsApi.onSale`, a compare-at price the owner set); **every family**
+as a two-column grid of pictures (48.5 % each so two always fit at 320 pt),
+best stocked first, part count on the picture, the filter box above it; the
+parts makers; and at the foot « Vous ne trouvez pas votre pièce ? » — the
+advice card.
+
+**Sorting and the whole list.** A family's (and a parts maker's) « Trier »
+chip names the current order and opens a sheet of the shop's five
+(`components/ui/sort-sheet`): Pertinence (what fits and what is in stock
+first), prix croissant / décroissant, Nouveautés, Les plus commandées — each
+with its reason where the name alone does not say. « En promo » appears when
+the family holds marked-down parts. And the list is now the whole list: it
+used to stop at the first twenty parts because nothing answered the grid's
+end; `hooks/use-more-products` fetches the next page as it comes into view
+(once, however often the end is reached), drops the extra pages when the
+question changes, and never shows a part twice.
+
+**« Besoin d'un conseil ? »** (`components/ui/advice-card`) is drawn like the
+reference's quiet cards: a pale surface, a flat navy-and-gold drawing of a
+phone framing a brake disc with a question bubble (`illustrations/advice-art`,
+replacing the photographed phone in a white disc on navy), the question, one
+line, and « Envoyer une photo » as an underlined link with an arrow; the
+whole card is the button.
+
+**The tab bar** follows the reference: a white, fully rounded bar (66 tall)
+with a pale pill behind the open tab's icon *and* label, sliding between
+tabs. The icons are one set drawn for it (`illustrations/tab-icons`): navy
+outlines, the open tab's filled with gold under its outline — gold as a line
+on white would be 1.8:1, as a fill under navy it reads at any size. Labels
+stay navy, bold when open. `TabBarHeight` is 82. `illustrations/nav-cart` is
+gone; `NavCar` stays for the rows that show a car.
+
+Tests: `lib/__tests__/retry.test.ts`, the password cases in `rules.test.ts`,
+and `e2e/account.mjs` now walks the security screen (another phone listed by
+name and signed out, the current password checked, a common new one refused,
+the change).

@@ -137,6 +137,9 @@ export default function AccountScreen() {
             onPress={() => router.navigate('/garage')}
           />
           <Row icon="map-pin" label={t('account.addresses')} onPress={() => router.push('/compte/adresses')} />
+          {signedIn ? (
+            <Row icon="lock" label={t('security.row')} value={t('security.rowHint')} onPress={() => router.push('/compte/securite')} />
+          ) : null}
           <Row icon="rotate-ccw" label={t('returns.title')} onPress={() => router.push('/garanties')} />
           <Row icon="help-circle" label={t('account.helpContact')} onPress={() => router.push('/aide')} />
           <Row icon="settings" label={t('account.settings')} onPress={() => router.push('/compte/parametres')} last />

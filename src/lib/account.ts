@@ -20,7 +20,7 @@ export function signupProblems(d: SignupInput): Partial<Record<SignupField, Dict
   else if (name.length < 2 || letters < 2) out.name = 'checkout.err.customerName';
   if (!EMAIL.test(d.email.trim())) out.email = 'checkout.err.email';
   if (d.phone.replace(/\D/g, '').length < 8) out.phone = 'checkout.err.phone';
-  if (d.password.length < 6) out.password = 'auth.err.password';
+  if (d.password.length < PASSWORD_MIN) out.password = 'auth.err.password';
   return out;
 }
 
@@ -38,8 +38,27 @@ export function fieldProblem(field: string, reason?: string): { field: SignupFie
     case 'phone':
       return { field: 'phone', key: 'checkout.err.phone' };
     case 'password':
-      return { field: 'password', key: 'auth.err.password' };
+      return { field: 'password', key: passwordProblem(reason) };
     default:
       return null;
+  }
+}
+
+/** The shop's password rule: eight characters, and more it checks itself (website lib/validation). */
+export const PASSWORD_MIN = 8;
+
+/** Why the shop refused a password (`reason` on the refusal), as a sentence. */
+export function passwordProblem(reason?: string): DictKey {
+  switch (reason) {
+    case 'common':
+      return 'auth.err.passwordCommon';
+    case 'personal':
+      return 'auth.err.passwordPersonal';
+    case 'long':
+      return 'auth.err.passwordLong';
+    case 'same':
+      return 'security.err.same';
+    default:
+      return 'auth.err.password';
   }
 }

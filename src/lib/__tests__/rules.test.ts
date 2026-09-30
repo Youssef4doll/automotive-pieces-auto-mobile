@@ -61,7 +61,7 @@ describe('checkout form', () => {
 });
 
 describe('create-account form', () => {
-  const ok = { name: 'Amina Ben Salah', email: 'amina@exemple.tn', phone: '22334455', password: 'secret1' };
+  const ok = { name: 'Amina Ben Salah', email: 'amina@exemple.tn', phone: '22334455', password: 'vert-olivier-7' };
   it('accepts a complete form', () => {
     assert.deepEqual(signupProblems(ok), {});
   });
@@ -73,9 +73,14 @@ describe('create-account form', () => {
       'phone',
     ]);
   });
-  it('needs six characters of password, as the website', () => {
-    assert.equal(signupProblems({ ...ok, password: '12345' }).password, 'auth.err.password');
-    assert.equal(signupProblems({ ...ok, password: '123456' }).password, undefined);
+  it('needs eight characters of password, as the website', () => {
+    assert.equal(signupProblems({ ...ok, password: 'k7#pLm2' }).password, 'auth.err.password');
+    assert.equal(signupProblems({ ...ok, password: 'k7#pLm2q' }).password, undefined);
+  });
+  it('says why the shop refused a password', () => {
+    assert.deepEqual(fieldProblem('password', 'common'), { field: 'password', key: 'auth.err.passwordCommon' });
+    assert.deepEqual(fieldProblem('password', 'personal'), { field: 'password', key: 'auth.err.passwordPersonal' });
+    assert.deepEqual(fieldProblem('password', 'short'), { field: 'password', key: 'auth.err.password' });
   });
   it('maps the shop’s refusals onto the fields', () => {
     assert.deepEqual(fieldProblem('email', 'taken'), { field: 'email', key: 'auth.err.taken' });

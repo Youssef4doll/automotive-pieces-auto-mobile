@@ -328,10 +328,10 @@ export const Elevation = {
  * `useTabBarSpace` in hooks/ adds the safe-area inset and the breathing room;
  * screens should use that rather than this constant directly.
  *
- * The bar (components/tab-bar) is 64 tall, with 4 above it and at least 12
+ * The bar (components/tab-bar) is 66 tall, with 4 above it and at least 12
  * below — the room that lets it read as lifted off the edge.
  */
-export const TabBarHeight = 80;
+export const TabBarHeight = 82;
 
 /**
  * A phone's worth of width, centred, on anything wider.

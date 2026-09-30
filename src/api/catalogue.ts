@@ -89,11 +89,23 @@ export type ProductPage = {
   page: number;
   perPage: number;
   hasMore: boolean;
-  /** The brands the family holds (counted without the brand filter), for the filter chips. */
-  facets?: { brands: { name: string; slug: string; count: number }[] };
+  /**
+   * The brands the family holds (counted without the brand filter), for the
+   * filter chips; `onSale`, how many of its parts the shop has marked down
+   * (the "En promo" chip shows only when there are some).
+   */
+  facets?: { brands: { name: string; slug: string; count: number }[]; onSale?: number };
 };
 
-export type ProductSort = 'price_asc' | 'price_desc';
+/**
+ * How a list may be ordered — the shop's APP_SORTS (website lib/data/catalog),
+ * each a figure the database holds. `relevance` is the default and is never
+ * sent: what fits the car and is in stock first, then photographed parts,
+ * the most ordered, the price. `popular` counts order lines placed with the
+ * shop — real orders, not an estimate.
+ */
+export const PRODUCT_SORTS = ['relevance', 'price_asc', 'price_desc', 'newest', 'popular'] as const;
+export type ProductSort = (typeof PRODUCT_SORTS)[number];
 
 export const productsApi = {
   /**
@@ -124,14 +136,26 @@ export const productsApi = {
     return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
   },
 
+  /**
+   * The parts the shop has marked down (a compare-at price above today's),
+   * in the default order — for the catalogue's "En promotion" row, which is
+   * shown only while this has something in it.
+   */
+  onSale: (engineId: string | undefined, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ onSale: '1' });
+    if (engineId) params.set('engine', engineId);
+    return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
+  },
+
   /** These parts, on sale only, at today's prices — for "Commander à nouveau". */
   byIds: (ids: string[], engineId: string | undefined, signal?: AbortSignal) => {
     const params = new URLSearchParams({ ids: ids.slice(0, 20).join(',') });
     if (engineId) params.set('engine', engineId);
     return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
   },
-  ofBrand: (brandSlug: string, options: { engineId?: string; page?: number } = {}, signal?: AbortSignal) => {
+  ofBrand: (brandSlug: string, options: { engineId?: string; page?: number; sort?: ProductSort } = {}, signal?: AbortSignal) => {
     const params = new URLSearchParams({ brand: brandSlug });
+    if (options.sort && options.sort !== 'relevance') params.set('sort', options.sort);
     if (options.engineId) params.set('engine', options.engineId);
     if (options.page && options.page > 1) params.set('page', String(options.page));
     return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
@@ -139,14 +163,23 @@ export const productsApi = {
 
   inFamily: (
     familySlug: string,
-    options: { engineId?: string; subcategorySlug?: string; page?: number; brand?: string; sort?: ProductSort; inStock?: boolean } = {},
+    options: {
+      engineId?: string;
+      subcategorySlug?: string;
+      page?: number;
+      brand?: string;
+      sort?: ProductSort;
+      inStock?: boolean;
+      onSale?: boolean;
+    } = {},
     signal?: AbortSignal,
   ) => {
     const params = new URLSearchParams({ family: familySlug });
     if (options.subcategorySlug) params.set('subcategory', options.subcategorySlug);
     if (options.brand) params.set('brand', options.brand);
-    if (options.sort) params.set('sort', options.sort);
+    if (options.sort && options.sort !== 'relevance') params.set('sort', options.sort);
     if (options.inStock) params.set('inStock', '1');
+    if (options.onSale) params.set('onSale', '1');
     if (options.engineId) params.set('engine', options.engineId);
     if (options.page && options.page > 1) params.set('page', String(options.page));
     return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });

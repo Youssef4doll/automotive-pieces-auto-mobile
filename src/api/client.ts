@@ -1,4 +1,8 @@
+import { getRandomBytes } from 'expo-crypto';
+
 import { API_BASE_URL, REQUEST_TIMEOUT_MS } from '@/constants/config';
+
+import { retryAfterSeconds, retryDelay } from './retry';
 
 /**
  * The one place the app talks to the shop.
@@ -33,7 +37,8 @@ export type ApiFailure =
   | { kind: 'offline' }
   | { kind: 'timeout' }
   | { kind: 'notFound' }
-  | { kind: 'rateLimited' }
+  /** `retryAfter`: seconds, when the shop said. */
+  | { kind: 'rateLimited'; retryAfter?: number }
   /** No token, or a token the shop refused. */
   | { kind: 'unauthorized' }
   /** Signed in correctly as somebody who may not do this — a customer at the staff door. */
@@ -45,7 +50,12 @@ export type ApiFailure =
   | { kind: 'invalid'; field: string; reason?: string; room?: number }
   /** A part the shop can no longer sell; the basket points at the line. */
   | { kind: 'unavailable'; productId: string }
-  | { kind: 'server'; status: number }
+  /**
+   * The shop answered with a failure of its own. 503 is "busy, ask again"
+   * (its database waking, a slow moment) and says when in `retryAfter`;
+   * reads have already been retried by the time a screen sees it.
+   */
+  | { kind: 'server'; status: number; retryAfter?: number }
   /** The shop answered with something that is not the shape we asked for. */
   | { kind: 'malformed' };
 
@@ -72,6 +82,12 @@ type RequestInit = {
   /** An order's access token, sent as `Authorization: Bearer`. */
   token?: string;
   signal?: AbortSignal;
+  /**
+   * Sent as `Idempotency-Key`. The shop answers a repeat of the same key with
+   * the first answer instead of doing the thing twice — which is what lets
+   * `send` retry a POST at all. See `newIdempotencyKey`.
+   */
+  idempotencyKey?: string;
 };
 
 /**
@@ -98,6 +114,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     // FormData sets its own multipart boundary; naming the type here would drop it.
     if (init.body !== undefined && !multipart) headers['Content-Type'] = 'application/json';
     if (init.token) headers.Authorization = `Bearer ${init.token}`;
+    if (init.idempotencyKey) headers['Idempotency-Key'] = init.idempotencyKey;
 
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method: init.method ?? 'GET',
@@ -110,19 +127,24 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       cache: 'no-store',
     });
 
+    const retryAfter = retryAfterSeconds(response.headers.get('retry-after'));
     let body: unknown;
     try {
       body = await response.json();
     } catch {
-      // An HTML error page, a captive portal's login screen, a truncated
-      // body. All of them are "not the shop" rather than a 500.
+      // A gateway's HTML page in front of a failing shop (502, 503, 504) is
+      // the shop failing, and worth retrying. A 200 that is not JSON — a
+      // captive portal's login screen, a truncated body — is "not the shop".
+      if (response.status >= 500) {
+        throw new ApiError({ kind: 'server', status: response.status, retryAfter }, `${path}: ${response.status}`);
+      }
       throw new ApiError({ kind: 'malformed' }, `${path}: response was not JSON`);
     }
 
     if (!response.ok) {
       const detail = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;
       if (response.status === 404) throw new ApiError({ kind: 'notFound' }, `${path}: 404`);
-      if (response.status === 429) throw new ApiError({ kind: 'rateLimited' }, `${path}: 429`);
+      if (response.status === 429) throw new ApiError({ kind: 'rateLimited', retryAfter }, `${path}: 429`);
       if (response.status === 401) throw new ApiError({ kind: 'unauthorized' }, `${path}: 401`);
       if (response.status === 403) throw new ApiError({ kind: 'forbidden' }, `${path}: 403`);
       if (detail.error === 'invalid_field' && typeof detail.field === 'string') {
@@ -139,7 +161,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       if (detail.error === 'unavailable' && typeof detail.productId === 'string') {
         throw new ApiError({ kind: 'unavailable', productId: detail.productId }, `${path}: unavailable`);
       }
-      throw new ApiError({ kind: 'server', status: response.status }, `${path}: ${response.status}`);
+      throw new ApiError({ kind: 'server', status: response.status, retryAfter }, `${path}: ${response.status}`);
     }
 
     if (!isEnvelope<T>(body) || !('data' in body)) {
@@ -160,6 +182,51 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     clearTimeout(timer);
     signal?.removeEventListener('abort', onCallerAbort);
   }
+}
+
+function wait(ms: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) return reject(signal.reason ?? new DOMException('aborted', 'AbortError'));
+    const timer = setTimeout(done, ms);
+    function done() {
+      signal?.removeEventListener('abort', stop);
+      resolve();
+    }
+    function stop() {
+      clearTimeout(timer);
+      reject(signal?.reason ?? new DOMException('aborted', 'AbortError'));
+    }
+    signal?.addEventListener('abort', stop, { once: true });
+  });
+}
+
+/** `request`, sent again after a failure that `retryDelay` says is worth it. */
+async function withRetries<T>(path: string, init: RequestInit): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await request<T>(path, init);
+    } catch (err) {
+      const delay = err instanceof ApiError ? retryDelay(err.failure, attempt) : null;
+      if (delay === null) throw err;
+      await wait(delay, init.signal);
+    }
+  }
+}
+
+/**
+ * A fresh Idempotency-Key: 24 random bytes from the platform's CSPRNG,
+ * base64url. One per thing the customer means to do once — the app keeps it
+ * while what it sends is unchanged, and makes a new one when it changes.
+ */
+export function newIdempotencyKey() {
+  const bytes = getRandomBytes(24);
+  const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const n = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
+    out += abc[(n >> 18) & 63] + abc[(n >> 12) & 63] + abc[(n >> 6) & 63] + abc[n & 63];
+  }
+  return out;
 }
 
 /**
@@ -192,7 +259,7 @@ export async function get<T>(path: string, options?: { signal?: AbortSignal; fre
   const existing = inFlight.get(path);
   if (existing && !options?.fresh) return existing as Promise<T>;
 
-  const pending = request<T>(path, { signal: options?.signal })
+  const pending = withRetries<T>(path, { signal: options?.signal })
     .then((data) => {
       cache.set(path, { data, at: Date.now() });
       return data;
@@ -209,13 +276,14 @@ export async function get<T>(path: string, options?: { signal?: AbortSignal; fre
  * A request that is never cached and never shared: a POST, or a read that
  * depends on who is asking (an order, behind its token).
  *
- * No automatic retry, deliberately. A retried order is a second parcel on a
- * delivery van; if the first attempt timed out, the customer is shown what
- * happened and decides, and the order screen offers "Retrouver ma commande"
- * for the case where it had in fact gone through.
+ * A read is retried like `get`'s. A write is sent once — a retried POST can
+ * be a second parcel on a delivery van — unless it carries an idempotency
+ * key: then the shop answers a repeat with the first result, and retrying is
+ * exactly as safe as reading. Placing an order does (api/orders `place`).
  */
 export function send<T>(path: string, init: RequestInit = {}): Promise<T> {
-  return request<T>(path, init);
+  const read = (init.method ?? 'GET') === 'GET';
+  return read || init.idempotencyKey ? withRetries<T>(path, init) : request<T>(path, init);
 }
 
 /** Drop everything cached. For pull-to-refresh, "Réessayer", and signing out. */

@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { catalogueApi, type ProductSort, productsApi, type Family } from '@/api/catalogue';
@@ -20,6 +20,8 @@ import { track } from '@/services/analytics';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { Rail } from '@/components/ui/rail';
 import { Button } from '@/components/ui/button';
+import { SortChip, SortSheet } from '@/components/ui/sort-sheet';
+import { useMoreProducts } from '@/hooks/use-more-products';
 
 /**
  * One family of parts — the reference's "Freinage" screen.
@@ -52,24 +54,31 @@ export default function FamilyScreen() {
 
   const engineId = useGarage((s) => s.active?.engineId);
   const [subcategory, setSubcategory] = useState<string | null>(initialSubcategory ?? null);
-  // Sort and filters: price order, on the shelf only, one brand.
-  const [sort, setSort] = useState<ProductSort | null>(null);
+  // Sort and filters: the order (a sheet of five), on the shelf only, marked
+  // down, one brand.
+  const [sort, setSort] = useState<ProductSort>('relevance');
+  const [sorting, setSorting] = useState(false);
   const [inStock, setInStock] = useState(false);
+  const [onSale, setOnSale] = useState(false);
   const [brand, setBrand] = useState<string | null>(null);
-  const filtered = Boolean(sort || inStock || brand);
+  const filtered = sort !== 'relevance' || inStock || onSale || Boolean(brand);
 
   const loadFamilies = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(loadFamilies);
-  const loadProducts = useCallback(
-    (signal: AbortSignal) =>
+  const loadPage = useCallback(
+    (page: number, signal: AbortSignal) =>
       productsApi.inFamily(
         family,
-        { engineId, subcategorySlug: subcategory ?? undefined, sort: sort ?? undefined, inStock, brand: brand ?? undefined },
+        { engineId, subcategorySlug: subcategory ?? undefined, sort, inStock, onSale, brand: brand ?? undefined, page },
         signal,
       ),
-    [family, engineId, subcategory, sort, inStock, brand],
+    [family, engineId, subcategory, sort, inStock, onSale, brand],
   );
+  const loadProducts = useCallback((signal: AbortSignal) => loadPage(1, signal), [loadPage]);
   const products = useResource(loadProducts);
+  // Every page after the first, as the grid's end comes into view.
+  const more = useMoreProducts(products, [family, engineId, subcategory, sort, inStock, onSale, brand].join('|'), loadPage);
+  const onSaleCount = products.status === 'loaded' ? (products.data.facets?.onSale ?? 0) : 0;
   // The brand chips stay put while a filtered page loads (adjusted during
   // render, not in an effect).
   const [brands, setBrands] = useState<{ name: string; slug: string; count: number }[]>([]);
@@ -122,12 +131,13 @@ export default function FamilyScreen() {
           </Rail>
         ) : null}
         <Rail style={styles.chipBar} contentContainerStyle={[styles.chips, row]}>
-          <Chip
-            label={sort === 'price_asc' ? t('catalog.sortPriceUp') : sort === 'price_desc' ? t('catalog.sortPriceDown') : t('catalog.sortDefault')}
-            selected={sort !== null}
-            onPress={() => setSort((s) => (s === null ? 'price_asc' : s === 'price_asc' ? 'price_desc' : null))}
-          />
+          <SortChip sort={sort} onPress={() => setSorting(true)} />
           <Chip label={t('catalog.inStock')} selected={inStock} onPress={() => setInStock((v) => !v)} />
+          {/* Only when the shop has marked something down here: a filter
+              that always empties the list is a promise the shop cannot keep. */}
+          {onSaleCount > 0 || onSale ? (
+            <Chip label={t('catalog.onSale')} selected={onSale} onPress={() => setOnSale((v) => !v)} />
+          ) : null}
           {brands.length > 1
             ? brands.map((b) => (
                 <Chip key={b.slug} label={b.name} selected={brand === b.slug} onPress={() => setBrand((cur) => (cur === b.slug ? null : b.slug))} />
@@ -150,8 +160,40 @@ export default function FamilyScreen() {
     <View style={styles.root}>
       <Stack.Screen options={{ headerShown: false, title: name }} />
       <StatusBar style="light" />
+      <SortSheet
+        visible={sorting}
+        sort={sort}
+        onChoose={(next) => {
+          setSort(next);
+          track('catalogue_sorted', { family, sort: next });
+        }}
+        onClose={() => setSorting(false)}
+      />
       {products.status === 'loaded' && products.data.products.length > 0 ? (
-        <ProductGrid products={products.data.products} header={<View style={styles.bleed}>{head}</View>} />
+        <ProductGrid
+          products={more.products}
+          header={<View style={styles.bleed}>{head}</View>}
+          onEndReached={more.loadMore}
+          footer={
+            more.loadingMore ? (
+              <View style={[styles.more, row]} accessibilityLiveRegion="polite">
+                <ActivityIndicator color={C.textMuted} />
+                <Text variant="hint">{t('catalog.moreLoading')}</Text>
+              </View>
+            ) : more.failedMore ? (
+              <View style={styles.moreFailed}>
+                <Text variant="hint" style={styles.center}>
+                  {t('catalog.moreFailed')}
+                </Text>
+                <Button label={t('catalog.moreRetry')} variant="secondary" onPress={more.loadMore} />
+              </View>
+            ) : more.hasMore ? null : more.products.length > 6 ? (
+              <Text variant="hint" tone={C.textFaint} style={[styles.center, styles.more]}>
+                {t('catalog.shownOf', { shown: more.products.length, total: more.total })}
+              </Text>
+            ) : null
+          }
+        />
       ) : (
         <ScrollView contentContainerStyle={styles.fill} refreshControl={refreshControl}>
           {head}
@@ -168,8 +210,9 @@ export default function FamilyScreen() {
                     label={t('catalog.clearFilters')}
                     variant="secondary"
                     onPress={() => {
-                      setSort(null);
+                      setSort('relevance');
                       setInStock(false);
+                      setOnSale(false);
                       setBrand(null);
                     }}
                   />
@@ -254,4 +297,7 @@ const styles = StyleSheet.create({
   sectionHead: { alignItems: 'baseline', justifyContent: 'space-between', paddingBottom: Spacing.two },
   section: { fontSize: 19, lineHeight: 25, color: C.text },
   pad: { padding: Spacing.three },
+  more: { justifyContent: 'center', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.four },
+  moreFailed: { gap: Spacing.two, paddingVertical: Spacing.three },
+  center: { textAlign: 'center' },
 });

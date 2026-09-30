@@ -1,10 +1,10 @@
 import { Feather } from '@expo/vector-icons';
 import { Redirect, Stack, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { ApiError, type ApiFailure } from '@/api/client';
-import { justPlaced, ordersApi } from '@/api/orders';
+import { ApiError, newIdempotencyKey, type ApiFailure } from '@/api/client';
+import { justPlaced, ordersApi, type OrderInput } from '@/api/orders';
 import { Button } from '@/components/ui/button';
 import { OrderSummary } from '@/components/ui/order-summary';
 import { StepIndicator } from '@/components/ui/step-indicator';
@@ -31,10 +31,14 @@ import { track } from '@/services/analytics';
  * button is the shop's quote for this basket and this delivery method, the
  * same computation the order will run a second later.
  *
- * The order is sent once. The button is not pressable while it is in
- * flight, and a failure is never retried automatically: a retried POST is a
- * second parcel on a delivery van. A timeout in particular says the order
- * may have gone through, because it may have.
+ * The order carries an idempotency key, one per basket-and-details: while
+ * nothing the customer is sending changes, every try — the client's own
+ * retry after a dropped connection, the customer tapping "Commander" again
+ * after a timeout — reuses it, and the shop answers the repeat with the
+ * order the first one placed. A timed-out order is therefore safe to try
+ * again, and the copy says so. Change the basket or the address and the next
+ * try is a new order with a new key. The button is still not pressable while
+ * one is in flight.
  */
 export default function PaymentStep() {
   const { t, rtl } = useI18n();
@@ -49,6 +53,7 @@ export default function PaymentStep() {
   const quote = quoteOf(state);
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<DictKey | null>(null);
+  const attempt = useRef<{ body: string; key: string } | null>(null);
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   if (items.length === 0 && !placing) return <Redirect href="/panier" />;
@@ -57,7 +62,7 @@ export default function PaymentStep() {
     setError(null);
     setPlacing(true);
     try {
-      const result = await ordersApi.place({
+      const input: OrderInput = {
         customerName: details.customerName.trim(),
         phone: details.phone.trim(),
         email: details.email.trim() || undefined,
@@ -72,7 +77,10 @@ export default function PaymentStep() {
         // button already has its discount in it. The shop judges it again.
         promoCode: quote?.promo?.code,
         items: items.map((i) => ({ productId: i.productId, qty: i.qty })),
-      }, accountToken());
+      };
+      const body = JSON.stringify(input);
+      if (attempt.current?.body !== body) attempt.current = { body, key: newIdempotencyKey() };
+      const result = await ordersApi.place(input, accountToken(), attempt.current.key);
       // The key first, then everything that depends on the order existing.
       await remember(
         {

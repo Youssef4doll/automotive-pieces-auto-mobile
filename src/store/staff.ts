@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { ApiError, clearCache, send } from '@/api/client';
 import { secrets } from './storage';
+import { deviceName } from '@/lib/device-name';
 
 /**
  * The shop's staff, signed in on this phone.
@@ -56,7 +57,7 @@ export const useStaff = create<StaffState>()((set, get) => ({
   signIn: async (email, password) => {
     const { token, admin } = await send<{ token: string; admin: { name: string } }>('/api/v1/admin/session', {
       method: 'POST',
-      body: { email: email.trim(), password },
+      body: { email: email.trim(), password, device: deviceName() },
     });
     await secrets.set(KEY, token);
     set({ status: 'signedIn', token, name: admin.name });

@@ -9,6 +9,7 @@ import { APP_URL, open, tap, tapLabel } from './lib/drive.mjs';
  * Local shop only: it creates an account and places a real order.
  */
 const SHOP = process.env.SHOP_URL ?? 'http://localhost:3000';
+const SHOTS = process.env.SHOTS ?? '/tmp/apa-account';
 if (!/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(SHOP)) {
   console.error('account.mjs creates accounts and orders; it runs against a local shop only.');
   process.exit(1);
@@ -36,7 +37,7 @@ const api = async (path, init = {}) => {
 };
 
 const email = `e2e.${Date.now()}@example.com`;
-const password = 'essai-123';
+let password = 'Piston-bleu-42';
 const products = (await (await fetch(`${SHOP}/api/v1/catalogue/products?family=filtres`)).json()).data.products;
 const part = products.find((p) => p.availability === 'IN_STOCK') ?? products[0];
 
@@ -89,7 +90,13 @@ try {
   await page.getByLabel('Mot de passe', { exact: true }).fill('123');
   await page.getByRole('button', { name: 'Créer un compte' }).last().click();
   await page.waitForTimeout(600);
-  check((await says(page, 'adresse e-mail')) && (await says(page, '6 caractères')), 'sign-up: field errors under the fields, before sending');
+  check((await says(page, 'adresse e-mail')) && (await says(page, '8 caractères')), 'sign-up: field errors under the fields, before sending');
+
+  // A common password passes the phone's own length check and is refused by the shop, with its reason.
+  await page.getByLabel('Nom et prénom', { exact: true }).fill('Compte Essai');
+  await page.getByLabel('Mot de passe', { exact: true }).fill('azerty2024');
+  await page.getByRole('button', { name: 'Créer un compte' }).last().click();
+  check(await shows(page, 'plus utilisés'), 'sign-up: a common password is refused, and said why');
 
   await page.getByLabel('Nom et prénom', { exact: true }).fill('Compte Essai');
   await page.getByLabel('Mot de passe', { exact: true }).fill(password);
@@ -145,6 +152,41 @@ try {
     await go(page, `/suivi/${ref}`, 3500);
     check(await says(page, 'Compte Essai'), 'phone B: the order opens through the account session');
   }
+
+  // ---- Connexion et sécurité: this phone, another one, signed out; the password changed
+  await go(page, '/compte');
+  await tap(page, 'Connexion et sécurité', { exact: false });
+  check(await shows(page, 'Appareils connectés'), 'security: opens from the account');
+  check((await says(page, 'Cet appareil')) && (await says(page, 'Seul ce téléphone est connecté')), 'security: only this phone is signed in');
+  const other = await api('/auth/session', { method: 'POST', body: JSON.stringify({ email, password, device: 'Galaxy A54 · Android 14' }) });
+  const otherToken = other.body?.data?.token;
+  await go(page, '/compte/securite', 3000);
+  check(await says(page, 'Galaxy A54 · Android 14'), 'security: another phone is listed by its name');
+  await page.screenshot({ path: `${SHOTS}-security.png` });
+  await page.getByRole('button', { name: 'Déconnecter Galaxy A54 · Android 14' }).click();
+  check(await shows(page, 'Appareil déconnecté'), 'security: that phone is signed out from here');
+  const gone = await api('/account', { headers: { authorization: `Bearer ${otherToken}` } });
+  check(gone.status === 401, 'security: and the shop agrees', gone.status);
+
+  await tap(page, 'Changer le mot de passe');
+  await page.getByLabel('Mot de passe actuel', { exact: true }).fill('pas-le-bon-1');
+  await page.getByLabel('Nouveau mot de passe', { exact: true }).fill('Soupape-verte-7');
+  await page.getByLabel('Confirmer le nouveau mot de passe', { exact: true }).fill('Soupape-verte-7');
+  await tap(page, 'Enregistrer');
+  check(await shows(page, 'Mot de passe incorrect'), 'security: the current password is checked');
+  await page.getByLabel('Mot de passe actuel', { exact: true }).fill(password);
+  await page.getByLabel('Nouveau mot de passe', { exact: true }).fill('motdepasse');
+  await page.getByLabel('Confirmer le nouveau mot de passe', { exact: true }).fill('motdepasse');
+  await tap(page, 'Enregistrer');
+  check(await shows(page, 'plus utilisés'), 'security: a common new password is refused');
+  await page.getByLabel('Nouveau mot de passe', { exact: true }).fill('Soupape-verte-7');
+  await page.getByLabel('Confirmer le nouveau mot de passe', { exact: true }).fill('Soupape-verte-7');
+  await tap(page, 'Enregistrer');
+  check(await shows(page, 'Mot de passe modifié'), 'security: the password is changed');
+  password = 'Soupape-verte-7';
+  const stillIn = await api('/auth/session', { method: 'POST', body: JSON.stringify({ email, password }) });
+  check(stillIn.status === 200, 'security: the new password signs in', stillIn.status);
+  if (stillIn.body?.data?.token) await api('/auth/session', { method: 'DELETE', headers: { authorization: `Bearer ${stillIn.body.data.token}` } });
 
   // ---- forgotten password: the same answer for any address
   const reset = await api('/auth/password-reset', { method: 'POST', body: JSON.stringify({ email: 'personne@example.com' }) });

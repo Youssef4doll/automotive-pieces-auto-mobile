@@ -170,9 +170,14 @@ export const ordersApi = {
    * Place the order. Returns the token — the proof this phone will hold.
    * `session` is the signed-in account's, when there is one: the order then
    * joins the account too.
+   *
+   * `idempotencyKey` names this one attempt (client `newIdempotencyKey`).
+   * The shop answers a repeat of it with the order the first one placed, so
+   * a timed-out order can be retried — by `send`, and by the customer
+   * tapping again — without ever becoming two.
    */
-  place: (input: OrderInput, session?: string) =>
-    send<{ ref: string; token: string; order: Order }>('/api/v1/orders', { method: 'POST', body: input, token: session }),
+  place: (input: OrderInput, session: string | undefined, idempotencyKey: string) =>
+    send<{ ref: string; token: string; order: Order }>('/api/v1/orders', { method: 'POST', body: input, token: session, idempotencyKey }),
 
   get: (ref: string, token: string, signal?: AbortSignal) =>
     send<Order>(`/api/v1/orders/${encodeURIComponent(ref)}`, { token, signal }),

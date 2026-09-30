@@ -1,10 +1,8 @@
-import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 
 import { TabBar } from '@/components/tab-bar';
 import { C, familyFor } from '@/constants/theme';
-import { NavCart } from '@/illustrations/nav-cart';
-import { NavCar } from '@/illustrations/vehicle';
+import { TabIcon } from '@/illustrations/tab-icons';
 import { useI18n } from '@/i18n/provider';
 import { useCartCount } from '@/store/cart';
 
@@ -26,16 +24,16 @@ import { useCartCount } from '@/store/cart';
  *
  * ## The bar
  *
- * Drawn by components/tab-bar: a rounded bar lifted off the bottom edge, a
- * navy capsule sliding to the open tab. The active tab is still three
- * signals, never colour alone — see there.
+ * Drawn by components/tab-bar: a white rounded bar lifted off the bottom
+ * edge, a pale pill sliding to the open tab behind its icon and label. The
+ * active tab is still three signals, never colour alone — see there.
  *
  * ## The icons
  *
- * Feather, at 20pt, except the garage. Feather has no car — the first pass
- * used `disc`, a brake rotor, and nobody read it as a garage. `NavCar` is
- * drawn to Feather's own grammar (24-unit box, 2.0 stroke, round caps and
- * joins) so the row still looks like one set.
+ * One set, drawn for the bar (illustrations/tab-icons): navy outlines, and
+ * the open tab's filled with the shop's gold. Feather had no car — the first
+ * pass used `disc`, a brake rotor, and nobody read it as a garage — and a
+ * set mixing Feather with two drawings of our own never quite matched.
  */
 export default function TabsLayout() {
   const { t, rtl } = useI18n();
@@ -61,9 +59,7 @@ export default function TabsLayout() {
           headerShown: false,
           title: t('app.name'),
           tabBarLabel: t('tab.home'),
-          tabBarIcon: ({ color }) => (
-            <Feather name="home" size={22} color={color} />
-          ),
+          tabBarIcon: ({ focused, color }) => <TabIcon name="home" active={focused} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -71,9 +67,7 @@ export default function TabsLayout() {
         options={{
           title: t('catalog.title'),
           tabBarLabel: t('tab.catalog'),
-          tabBarIcon: ({ color }) => (
-            <Feather name="grid" size={22} color={color} />
-          ),
+          tabBarIcon: ({ focused, color }) => <TabIcon name="catalogue" active={focused} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -81,9 +75,7 @@ export default function TabsLayout() {
         options={{
           title: t('garage.title'),
           tabBarLabel: t('tab.garage'),
-          tabBarIcon: ({ color }) => (
-            <NavCar size={22} color={color} />
-          ),
+          tabBarIcon: ({ focused, color }) => <TabIcon name="garage" active={focused} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -93,9 +85,7 @@ export default function TabsLayout() {
           tabBarLabel: t('tab.cart'),
           tabBarBadge: cartCount > 0 ? (cartCount > 99 ? '99+' : cartCount) : undefined,
           tabBarAccessibilityLabel: cartCount > 0 ? `${t('tab.cart')}, ${t('a11y.cartCount', { n: cartCount })}` : t('tab.cart'),
-          tabBarIcon: ({ color }) => (
-            <NavCart size={22} color={color} />
-          ),
+          tabBarIcon: ({ focused, color }) => <TabIcon name="cart" active={focused} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -103,9 +93,7 @@ export default function TabsLayout() {
         options={{
           title: t('account.me'),
           tabBarLabel: t('tab.account'),
-          tabBarIcon: ({ color }) => (
-            <Feather name="user" size={22} color={color} />
-          ),
+          tabBarIcon: ({ focused, color }) => <TabIcon name="account" active={focused} color={color} />,
         }}
       />
     </Tabs>

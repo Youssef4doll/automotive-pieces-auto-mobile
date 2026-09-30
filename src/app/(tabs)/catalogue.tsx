@@ -1,33 +1,48 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
-import { catalogueApi, type Family } from '@/api/catalogue';
+import { catalogueApi, productsApi, type Family } from '@/api/catalogue';
+import { AdviceCard } from '@/components/ui/advice-card';
 import { BrandStrip } from '@/components/ui/brand-strip';
+import { MakeLogo } from '@/components/ui/make-logo';
 import { PartImage } from '@/components/ui/part-image';
 import { PressScale } from '@/components/ui/press-scale';
+import { ProductTile } from '@/components/ui/product-tile';
+import { Rail } from '@/components/ui/rail';
 import { SearchLauncher } from '@/components/ui/search-launcher';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Empty, Failed } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
-import { C, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
+import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
+import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { useResource } from '@/hooks/use-resource';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { useI18n } from '@/i18n/provider';
-import { usePullRefresh } from '@/hooks/use-pull-refresh';
-import { Rail } from '@/components/ui/rail';
+import { NavCar } from '@/illustrations/vehicle';
+import { useGarage } from '@/store/garage';
 
 /**
- * The catalogue's top level, as discovery rather than a directory: the
- * best-stocked families large and swipeable (by picture, for the customer
- * who does not know the words), then every family as one clean list —
- * picture, name, what is inside, how many parts — and the parts makers.
- * A small box filters by family or subfamily name as they type (the
- * families are already on the phone; no request). No four-column grid: at
- * 320pt its names were cut in half.
+ * The catalogue's top level, laid out around the three ways a customer
+ * arrives at a part, in the order they convert:
  *
- * The part search sits above both, because a customer who scrolls into
+ *   by their car — the card at the top names the car the app is answering
+ *   for and opens the parts the shop has confirmed for it, or asks for the
+ *   car when there is none (every list judges parts against it);
+ *
+ *   by a deal — the parts the shop has marked down, as a row of real tiles
+ *   with the add button on them, shown only while there are some (a
+ *   compare-at price the owner set; nothing here invents a promotion);
+ *
+ *   by family — every family as a two-column grid of pictures, best stocked
+ *   first, with a small box that filters them as the customer types (the
+ *   families are already on the phone; no request).
+ *
+ * Then the parts makers, and at the foot the way out for somebody who still
+ * has not found it: a photo to the shop.
+ *
+ * The search box sits above everything, because a customer who scrolls into
  * "Freinage" looking for one pad can type it instead.
  *
  * Every family here holds at least one part — the API drops the empty
@@ -43,12 +58,15 @@ export default function CatalogueScreen() {
   const { t, rtl } = useI18n();
   const tabBarSpace = useTabBarSpace();
   const [filter, setFilter] = useState('');
+  const engineId = useGarage((s) => s.active?.engineId);
 
   const load = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(load);
+  const loadDeals = useCallback((signal: AbortSignal) => productsApi.onSale(engineId, signal), [engineId]);
+  const deals = useResource(loadDeals);
+  const refreshControl = usePullRefresh();
 
-
-  const refreshControl = usePullRefresh();  const byStock = useMemo<Family[]>(
+  const byStock = useMemo<Family[]>(
     () => (families.status === 'loaded' ? [...families.data].sort((a, b) => b.productCount - a.productCount) : []),
     [families],
   );
@@ -58,8 +76,10 @@ export default function CatalogueScreen() {
     return byStock.filter((f) => normal(f.name).includes(q) || f.subcategories.some((s) => normal(s.name).includes(q)));
   }, [byStock, filter]);
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
   const open = (f: Family) => router.push({ pathname: '/famille/[family]', params: { family: f.slug, familyName: f.name } });
   const filtering = filter.trim().length > 0;
+  const onSale = deals.status === 'loaded' ? deals.data.products : [];
 
   return (
     <ScrollView
@@ -68,19 +88,9 @@ export default function CatalogueScreen() {
       keyboardShouldPersistTaps="handled"
       refreshControl={refreshControl}
     >
-      <View style={styles.column}>
+      <View style={[styles.column, styles.top]}>
         <SearchLauncher />
-        <View style={[styles.filter, row]}>
-          <Feather name="filter" size={16} color={C.textMuted} />
-          <TextInput
-            value={filter}
-            onChangeText={setFilter}
-            placeholder={t('look.familySearch')}
-            placeholderTextColor={C.textFaint}
-            accessibilityLabel={t('look.familySearch')}
-            style={[styles.filterInput, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}
-          />
-        </View>
+        <ForMyCar />
       </View>
 
       {families.status === 'failed' ? (
@@ -89,85 +99,101 @@ export default function CatalogueScreen() {
         <Empty title={t('catalog.noFamilies')} body={t('catalog.emptyWhy')} />
       ) : (
         <>
-          {/* The best-stocked families, large and swipeable — where a
-              customer who does not know the words starts, by picture. */}
-          {!filtering ? (
-            <>
-              <Text style={[styles.title, styles.column, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
-                {t('look.mostStocked')}
-              </Text>
+          {/* The shop's own markdowns, while there are any. */}
+          {onSale.length > 0 && !filtering ? (
+            <View style={styles.section} testID="catalogue-deals">
+              <View style={[styles.column, styles.sectionHead, row]}>
+                <View style={[styles.dealMark, row]}>
+                  <Feather name="tag" size={IconSize.small} color={Brand.navy900} />
+                </View>
+                <Text style={[styles.title, styles.flex, align, { fontFamily: familyFor('heading', rtl) }]}>{t('catalog.onSaleTitle')}</Text>
+                <Text variant="hint">{t('catalog.partCount', { n: deals.status === 'loaded' ? deals.data.total : onSale.length })}</Text>
+              </View>
               <Rail contentContainerStyle={[styles.rail, row]}>
-                {families.status === 'loading'
-                  ? [0, 1, 2, 3].map((i) => <Skeleton key={i} style={styles.bigSkeleton} />)
-                  : byStock.slice(0, 6).map((f) => (
-                      <PressScale
-                        key={f.id}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
-                        onPress={() => open(f)}
-                        style={styles.big}
-                        scaleTo={0.96}
-                      >
-                        <View style={styles.bigArt}>
-                          <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 132 : 116} label={f.name} fit="cover" />
-                        </View>
-                        <Text variant="rowTitle" numberOfLines={1} style={{ textAlign: rtl ? 'right' : 'left' }}>
-                          {f.name}
-                        </Text>
-                        <Text variant="hint" style={{ textAlign: rtl ? 'right' : 'left' }}>
-                          {t('catalog.partCount', { n: f.productCount })}
-                        </Text>
-                      </PressScale>
-                    ))}
+                {onSale.map((p) => (
+                  <View key={p.id} style={styles.dealTile}>
+                    <ProductTile product={p} />
+                  </View>
+                ))}
               </Rail>
-            </>
+            </View>
           ) : null}
 
-          <View style={styles.column}>
-            <Text style={[styles.title, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
-              {t('look.allFamilies')}
-            </Text>
+          <View style={[styles.column, styles.section]}>
+            <View style={[styles.sectionHead, row]}>
+              <Text style={[styles.title, styles.flex, align, { fontFamily: familyFor('heading', rtl) }]}>{t('look.allFamilies')}</Text>
+              {families.status === 'loaded' ? <Text variant="hint">{families.data.length}</Text> : null}
+            </View>
+            <View style={[styles.filter, row]}>
+              <Feather name="filter" size={16} color={C.textMuted} />
+              <TextInput
+                value={filter}
+                onChangeText={setFilter}
+                placeholder={t('look.familySearch')}
+                placeholderTextColor={C.textFaint}
+                accessibilityLabel={t('look.familySearch')}
+                style={[styles.filterInput, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}
+              />
+              {filtering ? (
+                <Pressable accessibilityRole="button" accessibilityLabel={t('catalog.clearFilters')} onPress={() => setFilter('')} hitSlop={10}>
+                  <Feather name="x" size={16} color={C.textMuted} />
+                </Pressable>
+              ) : null}
+            </View>
+
             {families.status === 'loading' ? (
-              [0, 1, 2, 3, 4].map((i) => <Skeleton key={i} style={styles.rowSkeleton} />)
+              <View style={[styles.grid, row]}>
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} style={styles.cardSkeleton} />
+                ))}
+              </View>
             ) : shown.length === 0 ? (
               <Text variant="hint" style={styles.none}>
                 {t('search.none', { q: filter.trim() })}
               </Text>
             ) : (
-              shown.map((f, i) => (
-                <PressScale
-                  key={f.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
-                  onPress={() => open(f)}
-                  style={[styles.row, row, i < shown.length - 1 && styles.rule]}
-                  pressedStyle={styles.pressed}
-                  scaleTo={0.985}
-                >
-                  <View style={styles.disc}>
-                    <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 48 : 34} label={f.name} fit="cover" />
-                  </View>
-                  <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
-                    <Text variant="body" tone={C.text} numberOfLines={1}>
-                      {f.name}
-                    </Text>
-                    {f.subcategories.length ? (
-                      <Text variant="hint" numberOfLines={1}>
-                        {f.subcategories.slice(0, 3).map((x) => x.name).join(' · ')}
+              <View style={[styles.grid, row]} testID="family-grid">
+                {shown.map((f) => (
+                  <PressScale
+                    key={f.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
+                    onPress={() => open(f)}
+                    style={styles.card}
+                    pressedStyle={styles.cardPressed}
+                    scaleTo={0.97}
+                  >
+                    <View style={styles.cardArt}>
+                      <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 150 : 84} label={f.name} fit="cover" />
+                      <View style={[styles.count, rtl ? { left: Spacing.two } : { right: Spacing.two }]}>
+                        <Text style={[styles.countText, { fontFamily: familyFor('display', rtl) }]}>{f.productCount}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.cardBody}>
+                      <Text style={[styles.cardName, align, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={2}>
+                        {f.name}
                       </Text>
-                    ) : null}
-                  </View>
-                  <Text variant="hint" tone={C.textFaint}>
-                    {f.productCount}
-                  </Text>
-                  <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={18} color={C.textFaint} />
-                </PressScale>
-              ))
+                      {f.subcategories.length ? (
+                        <Text variant="hint" numberOfLines={1} style={align}>
+                          {f.subcategories
+                            .slice(0, 2)
+                            .map((x) => x.name)
+                            .join(' · ')}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </PressScale>
+                ))}
+              </View>
             )}
           </View>
 
-          <View style={[styles.column, styles.brands]}>
+          <View style={[styles.column, styles.section]}>
             <BrandStrip />
+          </View>
+
+          <View style={[styles.column, styles.section]}>
+            <AdviceCard title="look.cantFind" />
           </View>
         </>
       )}
@@ -175,48 +201,150 @@ export default function CatalogueScreen() {
   );
 }
 
+/**
+ * The car the lists are judged against — and the shortest way to what fits
+ * it. With a car: its make's mark, its name, and "Pièces compatibles". With
+ * none: why it is worth saying which car, and the picker.
+ */
+function ForMyCar() {
+  const { t, rtl } = useI18n();
+  const router = useRouter();
+  const active = useGarage((s) => s.active);
+  const hydrated = useGarage((s) => s.hydrated);
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
+  if (!hydrated) return null;
+
+  if (!active) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${t('catalog.addCar')}. ${t('catalog.addCarWhy')}`}
+        onPress={() => router.push('/garage/ajouter')}
+        style={({ pressed }) => [styles.car, styles.carEmpty, row, pressed && styles.carPressed]}
+        testID="catalogue-car"
+      >
+        <View style={styles.carIcon}>
+          <NavCar size={IconSize.feature} color={Brand.navy900} />
+        </View>
+        <View style={styles.flex}>
+          <Text style={[styles.carName, align, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('catalog.addCar')}</Text>
+          <Text variant="hint" style={align}>
+            {t('catalog.addCarWhy')}
+          </Text>
+        </View>
+        <Feather name="plus-circle" size={IconSize.large} color={C.text} />
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={styles.car} testID="catalogue-car">
+      <View style={[styles.carTop, row]}>
+        <MakeLogo name={active.makeName} slug={active.makeSlug} size={44} lifted={false} />
+        <View style={styles.flex}>
+          <Text variant="hint" tone={Brand.navy300} style={align}>
+            {t('catalog.forCar')}
+          </Text>
+          <Text style={[styles.carName, styles.carNameOnNavy, align, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={1}>
+            {`${active.makeName} ${active.modelName}`}
+          </Text>
+          <Text variant="hint" tone={Brand.navy300} numberOfLines={1} style={align}>
+            {active.engineName}
+          </Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${t('home.change')}, ${active.makeName} ${active.modelName}`}
+          onPress={() => router.push('/garage')}
+          hitSlop={8}
+          style={styles.changeBtn}
+        >
+          <Text variant="hint" tone={Brand.white} style={styles.change}>
+            {t('home.change')}
+          </Text>
+        </Pressable>
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } })}
+        style={({ pressed }) => [styles.carCta, row, pressed && styles.carCtaPressed]}
+      >
+        <Feather name="check-circle" size={IconSize.medium} color={Brand.navy950} />
+        <Text style={[styles.carCtaText, { fontFamily: familyFor('display', rtl) }]}>{t('catalog.fitsCta')}</Text>
+        <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={IconSize.medium} color={Brand.navy950} />
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
-  scroll: { paddingTop: Spacing.two, gap: Spacing.three },
+  scroll: { paddingTop: Spacing.two, gap: Spacing.four },
   column: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', paddingHorizontal: Spacing.three },
+  top: { gap: Spacing.three },
   flex: { flex: 1, minWidth: 0, gap: 2 },
+  section: { gap: Spacing.two },
+  sectionHead: { alignItems: 'center', gap: Spacing.two },
+  title: { fontSize: 19, lineHeight: 25, color: C.text },
+  dealMark: { width: 28, height: 28, borderRadius: 14, backgroundColor: Brand.gold500, alignItems: 'center', justifyContent: 'center' },
+  rail: { gap: Spacing.two, paddingHorizontal: Spacing.three, paddingBottom: Spacing.one },
+  dealTile: { width: 172 },
   filter: {
     alignItems: 'center',
     gap: Spacing.two,
     minHeight: Tap.min,
-    marginTop: Spacing.two,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
     backgroundColor: C.surface,
   },
   filterInput: { flex: 1, minWidth: 0, fontSize: 16, color: C.text, paddingVertical: Spacing.two, outlineStyle: 'none' } as never,
-  title: { fontSize: 19, lineHeight: 25, color: C.text, paddingBottom: Spacing.one },
-  rail: { gap: Spacing.three, paddingHorizontal: Spacing.three, paddingBottom: Spacing.one },
-  big: { width: 148, gap: 2 },
-  bigArt: {
-    width: 148,
-    height: 132,
-    borderRadius: Radius.card,
-    backgroundColor: C.surface,
+  // Two to a row at every width — 48.5% each and the 3% between them, so
+  // no fixed gap can push the second card onto its own line at 320pt — and
+  // an odd last card keeps its half width.
+  grid: { flexWrap: 'wrap', justifyContent: 'space-between', rowGap: Spacing.three, paddingTop: Spacing.two },
+  card: { width: '48.5%', borderRadius: Radius.card, borderWidth: Border.thin, borderColor: C.border, backgroundColor: C.background, overflow: 'hidden' },
+  cardPressed: { backgroundColor: C.surface },
+  cardArt: { height: 116, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  count: {
+    position: 'absolute',
+    top: Spacing.two,
+    minWidth: 26,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: 11,
+    backgroundColor: Brand.white,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    marginBottom: Spacing.two,
   },
-  bigSkeleton: { width: 148, height: 180, borderRadius: Radius.card },
-  row: { alignItems: 'center', gap: Spacing.three, minHeight: 64, paddingVertical: Spacing.two },
-  rule: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
-  pressed: { backgroundColor: C.surface },
-  disc: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: C.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  rowSkeleton: { height: 56, borderRadius: Radius.tile, marginBottom: Spacing.two },
+  countText: { fontSize: 12, lineHeight: 15, color: C.text },
+  cardBody: { padding: Spacing.three, paddingTop: Spacing.two, gap: 2, minHeight: 64 },
+  cardName: { fontSize: 15, lineHeight: 20, color: C.text },
+  cardSkeleton: { width: '48.5%', height: 184, borderRadius: Radius.card },
   none: { textAlign: 'center', paddingVertical: Spacing.three },
-  brands: { paddingTop: Spacing.two },
+  car: {
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Radius.card,
+    backgroundColor: Brand.navy950,
+  },
+  carTop: { alignItems: 'center', gap: Spacing.three },
+  carEmpty: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.background, borderWidth: Border.thin, borderColor: C.border, borderStyle: 'dashed' },
+  carPressed: { backgroundColor: C.surface },
+  carIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
+  carName: { fontSize: 16, lineHeight: 21, color: C.text },
+  carNameOnNavy: { color: Brand.white },
+  carCta: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    minHeight: Tap.min,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    backgroundColor: Brand.gold500,
+  },
+  carCtaPressed: { backgroundColor: Brand.gold600 },
+  carCtaText: { fontSize: 16, lineHeight: 20, color: Brand.navy950 },
+  changeBtn: { minHeight: Tap.min, justifyContent: 'center' },
+  change: { textDecorationLine: 'underline' },
 });
