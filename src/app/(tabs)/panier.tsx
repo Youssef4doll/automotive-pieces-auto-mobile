@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { Product } from '@/api/catalogue';
 import type { CartQuoteLine } from '@/api/orders';
@@ -14,7 +14,7 @@ import { Loading } from '@/components/ui/states';
 import { StickyBar } from '@/components/ui/sticky-bar';
 import { Text } from '@/components/ui/text';
 import { API_BASE_URL } from '@/constants/config';
-import { Border, C, IconSize, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { Border, Brand, C, Elevation, familyFor, IconSize, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { quoteOf, useCartQuote } from '@/hooks/use-cart-quote';
 import { PartImage } from '@/components/ui/part-image';
 import { PromoField } from '@/components/ui/promo-field';
@@ -22,8 +22,11 @@ import { formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { MAX_QTY, useCart, type CartItem } from '@/store/cart';
 import { track } from '@/services/analytics';
-import { EmptyState } from '@/components/ui/empty-state';
-import { CartArt } from '@/illustrations/empty-art';
+import { EmptyBasketArt } from '@/illustrations/empty-art';
+import { catalogueApi } from '@/api/catalogue';
+import { PressScale } from '@/components/ui/press-scale';
+import { useResource } from '@/hooks/use-resource';
+import { useGarage } from '@/store/garage';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 
 /**
@@ -62,16 +65,7 @@ export default function CartScreen() {
 
   if (!hydrated) return <Loading />;
 
-  if (items.length === 0) {
-    return (
-      <View style={[styles.empty, { paddingBottom: tabBarSpace }]}>
-        <EmptyState art={<CartArt size={112} />} title={t('cart.empty')} body={t('cart.emptyWhy')}>
-          <Button label={t('cart.browse')} onPress={() => router.navigate('/catalogue')} />
-          <Button label={t('search.placeholder')} variant="secondary" icon="search" onPress={() => router.push('/recherche')} />
-        </EmptyState>
-      </View>
-    );
-  }
+  if (items.length === 0) return <EmptyCart bottom={tabBarSpace} />;
 
   const lineFor = (productId: string) => quote?.lines.find((l) => l.productId === productId) ?? null;
   const stale = state.status === 'loading';
@@ -323,6 +317,96 @@ function Gap() {
   return <View style={{ height: Spacing.two }} />;
 }
 
+/**
+ * The empty basket, as a place to start rather than a dead end.
+ *
+ * The drawing (an empty basket, two parts on their way in), what it is and
+ * that it keeps what is put in it, the two ways in — then the shortcuts that
+ * actually fill it: the parts the shop has confirmed for the car in the
+ * garage, when there is one, and the four best-stocked families as round
+ * drawings, one tap from their parts. All of it from what the shop holds;
+ * nothing is suggested that it does not have.
+ *
+ * Laid out from the top, not centred: centred, it floated in the middle of a
+ * tall phone with a hand's width of nothing above it.
+ */
+function EmptyCart({ bottom }: { bottom: number }) {
+  const { t, rtl } = useI18n();
+  const router = useRouter();
+  const active = useGarage((s) => s.active);
+  const load = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
+  const families = useResource(load);
+  const top = families.status === 'loaded' ? [...families.data].sort((a, b) => b.productCount - a.productCount).slice(0, 4) : [];
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+
+  return (
+    <ScrollView style={styles.emptyRoot} contentContainerStyle={[styles.emptyScroll, { paddingBottom: bottom }]}>
+      <View style={styles.emptyColumn}>
+        <View style={styles.emptyHero}>
+          <EmptyBasketArt width={232} />
+          <Text style={[styles.emptyTitle, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('cart.empty')}</Text>
+          <Text variant="hint" style={styles.emptyWhy}>
+            {t('cart.emptyWhy')}
+          </Text>
+        </View>
+
+        <View style={styles.emptyActions}>
+          <Button label={t('cart.browse')} icon="grid" onPress={() => router.navigate('/catalogue')} />
+          <Button label={t('cart.search')} variant="secondary" icon="search" onPress={() => router.push('/recherche')} />
+        </View>
+
+        {active ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } })}
+            style={({ pressed }) => [styles.forCar, row, pressed && styles.forCarPressed]}
+          >
+            <View style={styles.forCarIcon}>
+              <Feather name="check-circle" size={IconSize.large} color={Brand.navy950} />
+            </View>
+            <View style={styles.flexText}>
+              <Text variant="rowTitle" tone={Brand.white} numberOfLines={1}>
+                {t('cart.forCar')}
+              </Text>
+              <Text variant="hint" tone={Brand.navy300} numberOfLines={1}>
+                {`${active.makeName} ${active.modelName} · ${active.engineName}`}
+              </Text>
+            </View>
+            <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={Brand.white} />
+          </Pressable>
+        ) : null}
+
+        {top.length ? (
+          <View style={styles.startCard}>
+            <Text style={[styles.startTitle, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+              {t('cart.startFamily')}
+            </Text>
+            <View style={[styles.startRow, row]}>
+              {top.map((f) => (
+                <PressScale
+                  key={f.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
+                  onPress={() => router.push({ pathname: '/famille/[family]', params: { family: f.slug, familyName: f.name } })}
+                  style={styles.startCell}
+                  scaleTo={0.94}
+                >
+                  <View style={styles.startDisc}>
+                    <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 56 : 38} label={f.name} fit="cover" drawn />
+                  </View>
+                  <Text variant="hint" tone={C.text} numberOfLines={2} style={styles.startName}>
+                    {f.name}
+                  </Text>
+                </PressScale>
+              ))}
+            </View>
+          </View>
+        ) : null}
+      </View>
+    </ScrollView>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
   list: {
@@ -333,7 +417,23 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.five,
   },
   count: { paddingBottom: Spacing.two },
-  empty: { flex: 1, justifyContent: 'center', backgroundColor: C.background },
+  emptyRoot: { flex: 1, backgroundColor: C.background },
+  emptyScroll: { paddingTop: Spacing.three },
+  emptyColumn: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: Spacing.three, gap: Spacing.four },
+  emptyHero: { alignItems: 'center', gap: Spacing.two },
+  emptyTitle: { fontSize: 22, lineHeight: 28, color: C.text, textAlign: 'center', marginTop: Spacing.two },
+  emptyWhy: { textAlign: 'center', maxWidth: 300 },
+  emptyActions: { gap: Spacing.two },
+  forCar: { alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.card, backgroundColor: Brand.navy950 },
+  forCarPressed: { backgroundColor: Brand.navy900 },
+  forCarIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: Brand.gold500, alignItems: 'center', justifyContent: 'center' },
+  flexText: { flex: 1, minWidth: 0, gap: 2 },
+  startCard: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.card, borderWidth: Border.thin, borderColor: C.border, backgroundColor: Brand.white, ...Elevation.resting },
+  startTitle: { fontSize: 17, lineHeight: 22, color: C.text },
+  startRow: { justifyContent: 'space-between' },
+  startCell: { width: '24%', alignItems: 'center', gap: 6 },
+  startDisc: { width: 56, height: 56, borderRadius: 28, borderWidth: Border.thin, borderColor: C.border, backgroundColor: Brand.white, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  startName: { textAlign: 'center', fontSize: 12, lineHeight: 15 },
   centred: { textAlign: 'center' },
   line: {
     gap: Spacing.two,

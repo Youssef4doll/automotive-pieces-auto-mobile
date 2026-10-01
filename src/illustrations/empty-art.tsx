@@ -56,3 +56,61 @@ export function ParcelArt({ size = 120 }: { size?: number }) {
     </Svg>
   );
 }
+
+/**
+ * The empty basket: a shop basket with nothing in it yet, and two parts —
+ * a brake disc and a spark plug — on their way in along dotted arcs. Wider
+ * than tall, so it sits on the page like a scene rather than a sticker in a
+ * ring; drawn in the same flat navy and gold as everything else here.
+ */
+export function EmptyBasketArt({ width = 240 }: { width?: number }) {
+  const height = (width * 170) / 240;
+  return (
+    <Svg width={width} height={height} viewBox="0 0 240 170">
+      {/* The floor. */}
+      <Ellipse cx={120} cy={158} rx={78} ry={7} fill={Brand.navy950} opacity={0.07} />
+      <Circle cx={120} cy={98} r={66} fill={Brand.navy50} />
+
+      {/* The way in. */}
+      <G stroke={Brand.navy300} strokeWidth={2} strokeDasharray="2 6" strokeLinecap="round" fill="none">
+        <Path d="M56 58 C70 46 84 52 92 70" />
+        <Path d="M188 46 C176 40 160 48 152 68" />
+      </G>
+
+      {/* The basket: handle, gold rim, navy body with its slats. */}
+      <Path d="M82 82 C88 44 152 44 158 82" stroke={Brand.navy900} strokeWidth={7} strokeLinecap="round" fill="none" />
+      <Path d="M64 88 H176 L164 142 A9 9 0 0 1 155.2 149 H84.8 A9 9 0 0 1 76 142 Z" fill={Brand.navy900} />
+      <G stroke={Brand.white} strokeOpacity={0.16} strokeWidth={3} strokeLinecap="round">
+        <Line x1={96} y1={98} x2={99} y2={139} />
+        <Line x1={120} y1={98} x2={120} y2={139} />
+        <Line x1={144} y1={98} x2={141} y2={139} />
+      </G>
+      <Rect x={56} y={78} width={128} height={15} rx={7.5} fill={Brand.gold500} />
+      <Rect x={64} y={81} width={60} height={3} rx={1.5} fill={Brand.white} opacity={0.45} />
+
+      {/* A brake disc, tumbling in from the left. */}
+      <G transform="rotate(-14 46 48)">
+        <Circle cx={46} cy={48} r={17} fill="#d5dce8" />
+        <Circle cx={46} cy={48} r={17} fill="none" stroke={Brand.navy700} strokeWidth={2.5} />
+        <Circle cx={46} cy={48} r={7} fill={Brand.navy900} />
+        <Circle cx={46} cy={48} r={2.4} fill="#d5dce8" />
+        {[0, 90, 180, 270].map((a) => (
+          <Circle key={a} cx={46 + 11.5 * Math.cos((a * Math.PI) / 180)} cy={48 + 11.5 * Math.sin((a * Math.PI) / 180)} r={1.4} fill={Brand.navy700} />
+        ))}
+      </G>
+
+      {/* A spark plug, from the right. */}
+      <G transform="rotate(28 196 36)">
+        <Rect x={192.5} y={14} width={7} height={8} rx={2} fill={Brand.navy900} />
+        <Rect x={189} y={22} width={14} height={9} rx={2} fill={Brand.gold500} />
+        <Rect x={191} y={31} width={10} height={16} rx={3} fill={Brand.white} stroke={Brand.navy900} strokeWidth={2} />
+        <Rect x={194} y={47} width={4} height={6} fill={Brand.navy700} />
+        <Path d="M196 53 v4 h-3" stroke={Brand.navy900} strokeWidth={2} strokeLinecap="round" fill="none" />
+      </G>
+
+      {/* Two gold glints. */}
+      <Path d="M28 104 v10 M23 109 h10" stroke={Brand.gold500} strokeWidth={3} strokeLinecap="round" />
+      <Path d="M212 96 v8 M208 100 h8" stroke={Brand.gold500} strokeWidth={2.5} strokeLinecap="round" />
+    </Svg>
+  );
+}
