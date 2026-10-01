@@ -2,7 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { C, familyFor, IconSize, Radius, Spacing } from '@/constants/theme';
+import { Brand, C, Elevation, familyFor, IconSize, Radius, Spacing } from '@/constants/theme';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
 import { AdviceArt } from '@/illustrations/advice-art';
@@ -21,7 +21,7 @@ import { Text } from './text';
  * `title` lets a screen ask it in its own words ("Vous ne trouvez pas votre
  * pièce ?" at the foot of the catalogue); the rest is the same everywhere.
  */
-export function AdviceCard({ title = 'look.advice' }: { title?: DictKey }) {
+export function AdviceCard({ title = 'look.advice', onPale = false }: { title?: DictKey; /** On a screen whose background is already the pale surface: draw the card white. */ onPale?: boolean }) {
   const { t, rtl } = useI18n();
   const router = useRouter();
   const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
@@ -32,7 +32,7 @@ export function AdviceCard({ title = 'look.advice' }: { title?: DictKey }) {
       accessibilityHint={t('look.adviceCta')}
       onPress={() => router.push('/demande-photo')}
       testID="advice-card"
-      style={({ pressed }) => [styles.card, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.card, onPale && styles.white, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.pressed]}
     >
       <AdviceArt size={84} />
       <View style={[styles.body, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
@@ -59,6 +59,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.card,
     backgroundColor: C.surface,
   },
+  white: { backgroundColor: Brand.white, ...Elevation.resting },
   pressed: { backgroundColor: C.surfacePressed },
   body: { flex: 1, minWidth: 0, gap: Spacing.one },
   title: { fontSize: 17, lineHeight: 22, color: C.text },

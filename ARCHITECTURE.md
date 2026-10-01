@@ -1519,3 +1519,15 @@ plain navy (#081633) — no car, no road, no glow. `scripts/make-plain-icon.py`
 builds `icon.png`, the three Android adaptive layers (wordmark inside the
 safe circle) and the favicon from `splash-icon.png` and `splash-swoosh.png`;
 the adaptive background colour is the launch navy too.
+
+**The garage, October 1.** The hero card leads with the make's badge beside
+the name, then a car in profile at night (`illustrations/car-silhouette`:
+navy gradient body, a gold line of light along the roof, a lit headlamp,
+alloy wheels, a warm glow on the road — still no car in particular), then
+"Voir les pièces compatibles". The three doors are their own white tiles
+with gold icon discs; the owner's upkeep reminders (`CareDueStrip`) appear
+under them when something is due; "Mes véhicules" says what is behind it;
+the advice card closes the page (`AdviceCard onPale`, white on the pale
+background). The empty basket became a page to start from: a new drawing
+(`EmptyBasketArt`), laid out from the top, with the car's compatible parts
+and the four best-stocked families.

@@ -11,7 +11,11 @@ import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { Image } from 'expo-image';
 
 import { MakeLogo } from '@/components/ui/make-logo';
+import { AdviceCard } from '@/components/ui/advice-card';
+import { CareDueStrip } from '@/components/ui/care-due';
+import { CarSilhouette } from '@/illustrations/car-silhouette';
 import { RENDERS } from '@/illustrations/renders';
+import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { yearSpan } from '@/lib/format';
 import { useGarage, type SavedVehicle } from '@/store/garage';
@@ -101,7 +105,7 @@ export default function GarageScreen() {
           <HeroCard vehicle={active} principal onMakePrincipal={() => undefined} />
         )}
 
-        {/* Three quieter doors: icon and word, no card each. */}
+        {/* Three doors, each its own tile. */}
         <View style={[styles.quick, row]}>
           {small.map((b) => (
             <PressScale
@@ -112,9 +116,10 @@ export default function GarageScreen() {
               onPress={b.onPress}
               style={[styles.quickItem, b.disabled && styles.disabled]}
               pressedStyle={styles.pressed}
+              scaleTo={0.96}
             >
               <View style={styles.quickIcon}>
-                <Feather name={b.icon} size={20} color={C.text} />
+                <Feather name={b.icon} size={20} color={Brand.navy900} />
               </View>
               <Text style={[styles.quickLabel, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={2}>
                 {b.label}
@@ -123,10 +128,23 @@ export default function GarageScreen() {
           ))}
         </View>
 
+        {/* What its owner's own dates say is coming up; nothing when nothing is. */}
+        <View style={styles.bleed}>
+          <CareDueStrip />
+        </View>
+
         <PressScale accessibilityRole="button" onPress={() => router.push('/garage/vehicules')} style={[row, styles.manage]} pressedStyle={styles.pressed}>
-          <Text variant="body" tone={C.text} style={styles.flex}>
-            {t('look.myVehicles', { n: vehicles.length })}
-          </Text>
+          <View style={styles.manageIcon}>
+            <NavCar size={20} color={Brand.navy900} />
+          </View>
+          <View style={[styles.flex, { gap: 2 }]}>
+            <Text variant="rowTitle" style={{ textAlign: rtl ? 'right' : 'left' }}>
+              {t('look.myVehicles', { n: vehicles.length })}
+            </Text>
+            <Text variant="hint" style={{ textAlign: rtl ? 'right' : 'left' }}>
+              {t('look.myVehiclesHint')}
+            </Text>
+          </View>
           <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={18} color={C.textMuted} />
         </PressScale>
 
@@ -135,6 +153,8 @@ export default function GarageScreen() {
             {t('garage.full')}
           </Text>
         ) : null}
+
+        <AdviceCard onPale />
       </View>
     </ScrollView>
   );
@@ -156,32 +176,28 @@ function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehic
         style={styles.heroMain}
       >
         <View style={[row, styles.heroTop]}>
-          <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start', gap: 4 }]}>
+          <MakeLogo name={vehicle.makeName} slug={vehicle.makeSlug} size={52} />
+          <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start', gap: 2 }]}>
             {principal ? (
-              <Text variant="hint" tone={Brand.navy300}>
-                {t('look.principalVehicle')}
-              </Text>
+              <View style={[styles.pill, row]}>
+                <Feather name="star" size={11} color={Brand.gold400} />
+                <Text style={[styles.pillText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.principal')}</Text>
+              </View>
             ) : null}
             <Text style={[styles.heroName, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]} numberOfLines={2}>
               {vehicle.makeName} {vehicle.modelName}
             </Text>
-            <Text variant="hint" tone="#c7d1e3">
+            <Text variant="hint" tone={Brand.navy300} numberOfLines={1}>
               {line}
             </Text>
-            {principal ? (
-              <View style={[styles.pill, row]}>
-                <Feather name="check-circle" size={12} color={Brand.green600} />
-                <Text style={[styles.pillText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.principal')}</Text>
-              </View>
-            ) : null}
           </View>
           <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={20} color={Brand.navy300} />
         </View>
-        {/* The car's own make, large: the card is about this car, and a
-            picture of some other car standing in for it would say otherwise. */}
+        {/* A car in profile at night (illustrations/car-silhouette) — no
+            car in particular; the make's own badge is beside the name. */}
         <View style={styles.heroArt} pointerEvents="none">
-          <View style={styles.heroHalo}>
-            <MakeLogo name={vehicle.makeName} slug={vehicle.makeSlug} size={96} />
+          <View style={rtl ? styles.flipped : null}>
+            <CarSilhouette width={288} />
           </View>
         </View>
       </PressScale>
@@ -222,8 +238,8 @@ const styles = StyleSheet.create({
   },
   heroGlow: { position: 'absolute', width: 300, height: 300, borderRadius: 150, right: -80, top: 40, backgroundColor: Brand.navy700, opacity: 0.6 },
   heroMain: { gap: Spacing.two },
-  heroTop: { alignItems: 'flex-start', gap: Spacing.two },
-  heroName: { fontSize: 24, lineHeight: 30, color: Brand.white },
+  heroTop: { alignItems: 'center', gap: Spacing.three },
+  heroName: { fontSize: 22, lineHeight: 28, color: Brand.white },
   pill: {
     alignItems: 'center',
     gap: 4,
@@ -231,17 +247,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: Radius.pill,
-    backgroundColor: 'rgba(22,163,74,0.16)',
+    backgroundColor: 'rgba(251,192,0,0.14)',
   },
-  pillText: { fontSize: 12, lineHeight: 16, color: '#86efac' },
-  heroArt: { alignItems: 'center', paddingVertical: Spacing.three },
-  heroHalo: {
-    padding: 10,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(251,192,0,0.35)',
-  },
+  pillText: { fontSize: 12, lineHeight: 16, color: Brand.gold400 },
+  heroArt: { alignItems: 'center', justifyContent: 'flex-end', marginTop: Spacing.two, marginHorizontal: -Spacing.two },
+  flipped: { transform: [{ scaleX: -1 }] },
+  bleed: { marginHorizontal: -Spacing.three },
   heroCta: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -251,14 +262,18 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.gold500,
   },
   heroCtaText: { fontSize: 16, color: C.onAccent },
-  quick: {
-    backgroundColor: Brand.white,
-    borderRadius: Radius.card,
+  quick: { gap: Spacing.two },
+  quickItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.one,
     paddingVertical: Spacing.three,
+    borderRadius: Radius.card,
+    backgroundColor: Brand.white,
     ...Elevation.resting,
   },
-  quickItem: { flex: 1, alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.one, borderRadius: Radius.tile, paddingVertical: Spacing.one },
-  quickIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
+  quickIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: Brand.gold500, alignItems: 'center', justifyContent: 'center' },
   quickLabel: { fontSize: 13, lineHeight: 17, color: C.text, textAlign: 'center' },
   pressed: { backgroundColor: C.surface },
   disabled: { opacity: 0.45 },
@@ -274,9 +289,12 @@ const styles = StyleSheet.create({
   makePrincipalText: { fontSize: 14, color: Brand.white },
   manage: {
     alignItems: 'center',
+    gap: Spacing.three,
     minHeight: Tap.primary + Spacing.one,
-    paddingHorizontal: Spacing.three,
+    padding: Spacing.three,
     borderRadius: Radius.card,
     backgroundColor: Brand.white,
+    ...Elevation.resting,
   },
+  manageIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
 });
