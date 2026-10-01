@@ -24,6 +24,7 @@ import { MAX_QTY, useCart, type CartItem } from '@/store/cart';
 import { track } from '@/services/analytics';
 import { EmptyState } from '@/components/ui/empty-state';
 import { CartArt } from '@/illustrations/empty-art';
+import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 
 /**
  * Panier.
@@ -43,6 +44,7 @@ import { CartArt } from '@/illustrations/empty-art';
  * real difference. It is information, never a countdown.
  */
 export default function CartScreen() {
+  const tabBarSpace = useTabBarSpace();
   const { t, rtl } = useI18n();
   const router = useRouter();
   const items = useCart((s) => s.items);
@@ -62,7 +64,7 @@ export default function CartScreen() {
 
   if (items.length === 0) {
     return (
-      <View style={styles.empty}>
+      <View style={[styles.empty, { paddingBottom: tabBarSpace }]}>
         <EmptyState art={<CartArt size={112} />} title={t('cart.empty')} body={t('cart.emptyWhy')}>
           <Button label={t('cart.browse')} onPress={() => router.navigate('/catalogue')} />
           <Button label={t('search.placeholder')} variant="secondary" icon="search" onPress={() => router.push('/recherche')} />

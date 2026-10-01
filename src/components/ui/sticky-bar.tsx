@@ -2,6 +2,7 @@ import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Border, C, MaxContentWidth, Spacing } from '@/constants/theme';
+import { tabBarFootprint } from '@/components/tab-bar';
 
 /**
  * The bottom of a screen that exists to be acted on: the product page's
@@ -25,7 +26,9 @@ export function StickyBar({
 }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.bar, { paddingBottom: (inTabs ? 0 : insets.bottom) + Spacing.three }, style]}>
+    // In the tabs the bar floats over the screen's end (components/tab-bar):
+    // this one runs on under it, so its buttons sit just above the glass.
+    <View style={[styles.bar, { paddingBottom: (inTabs ? tabBarFootprint(insets.bottom) : insets.bottom) + Spacing.three }, style]}>
       <View style={styles.inner}>{children}</View>
     </View>
   );

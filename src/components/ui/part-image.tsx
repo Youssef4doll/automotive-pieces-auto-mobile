@@ -39,6 +39,7 @@ export function PartImage({
   label,
   fit = 'contain',
   tagIllustration = false,
+  drawn = false,
 }: {
   /** The family (or category) slug, for the drawing. */
   slug: string;
@@ -52,10 +53,16 @@ export function PartImage({
   fit?: 'contain' | 'cover';
   /** A product shown without its own photograph: say so on the picture. */
   tagIllustration?: boolean;
+  /**
+   * Skip the studio render for the shop's flat drawing — the catalogue's
+   * four-across family grid, where small renders read as grey smudges and
+   * the drawings read as icons.
+   */
+  drawn?: boolean;
 }) {
   const [photoFailed, setPhotoFailed] = useState(false);
   const [iconFailed, setIconFailed] = useState(false);
-  const render = familyRender(slug);
+  const render = drawn ? null : familyRender(slug);
 
   if (imageUrl && !photoFailed) {
     return (

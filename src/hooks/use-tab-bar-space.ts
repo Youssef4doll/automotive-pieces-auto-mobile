@@ -1,6 +1,7 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Spacing, TabBarHeight } from '@/constants/theme';
+import { tabBarFootprint } from '@/components/tab-bar';
+import { Spacing } from '@/constants/theme';
 
 /**
  * The padding a scrolling screen inside the tabs needs at its bottom.
@@ -15,5 +16,5 @@ import { Spacing, TabBarHeight } from '@/constants/theme';
  */
 export function useTabBarSpace() {
   const insets = useSafeAreaInsets();
-  return TabBarHeight + insets.bottom + Spacing.four;
+  return tabBarFootprint(insets.bottom) + Spacing.four;
 }

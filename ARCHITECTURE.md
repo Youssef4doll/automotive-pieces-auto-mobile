@@ -1498,3 +1498,17 @@ Tests: `lib/__tests__/retry.test.ts`, the password cases in `rules.test.ts`,
 and `e2e/account.mjs` now walks the security screen (another phone listed by
 name and signed out, the current password checked, a common new one refused,
 the change).
+
+**October 1.** Two changes asked for after seeing it on a phone. The
+families are back in the old card: four across (six on a tablet), round
+discs with the shop's flat drawings (`PartImage drawn` skips the studio
+render, which at 44pt read as a grey smudge; an uploaded family photo still
+wins), name and count under each — sixteen families a screen instead of the
+picture grid's four. And the tab bar is glass and floats over the screens:
+Apple's liquid glass (`expo-glass-effect` `GlassView`) where iOS has it,
+otherwise a frosted white (blurred with `backdrop-filter` on the web build,
+near-opaque on Android, which has no live blur); the open tab's pill is a
+translucent navy tint so it reads on either. Content scrolls on under it, so
+every tab screen keeps `tabBarFootprint` clear at its end (`useTabBarSpace`;
+Compte and the empty basket now do too) and the basket's checkout bar runs on
+under the glass with its button just above it.

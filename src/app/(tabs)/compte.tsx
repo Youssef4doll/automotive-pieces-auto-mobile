@@ -20,6 +20,7 @@ import { useOrders } from '@/store/orders';
 import { useStaff } from '@/store/staff';
 import { useProfilePhoto } from '@/store/profile-photo';
 import { useToast } from '@/store/toast';
+import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 
 /**
  * Mon compte — the reference's list, row for row.
@@ -37,6 +38,7 @@ import { useToast } from '@/store/toast';
  * details (as far as the owner has published them), and the settings.
  */
 export default function AccountScreen() {
+  const tabBarSpace = useTabBarSpace();
   const { t, rtl } = useI18n();
   const router = useRouter();
   const orders = useOrders((s) => s.orders);
@@ -82,7 +84,7 @@ export default function AccountScreen() {
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   return (
-    <ScrollView style={styles.root} contentContainerStyle={styles.scroll}>
+    <ScrollView style={styles.root} contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]}>
       <View style={styles.column}>
         <View style={[styles.profile, row]}>
           <Pressable

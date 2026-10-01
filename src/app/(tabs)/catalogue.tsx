@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { catalogueApi, productsApi, type Family } from '@/api/catalogue';
 import { AdviceCard } from '@/components/ui/advice-card';
@@ -15,7 +15,7 @@ import { SearchLauncher } from '@/components/ui/search-launcher';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Empty, Failed } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
-import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
+import { Border, Brand, C, Elevation, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { useResource } from '@/hooks/use-resource';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
@@ -58,6 +58,9 @@ export default function CatalogueScreen() {
   const { t, rtl } = useI18n();
   const tabBarSpace = useTabBarSpace();
   const [filter, setFilter] = useState('');
+  const { width } = useWindowDimensions();
+  // Four across on a phone, six on a tablet.
+  const columns = Math.min(width, MaxContentWidth) >= 600 ? 6 : 4;
   const engineId = useGarage((s) => s.active?.engineId);
 
   const load = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
@@ -119,73 +122,66 @@ export default function CatalogueScreen() {
             </View>
           ) : null}
 
-          <View style={[styles.column, styles.section]}>
-            <View style={[styles.sectionHead, row]}>
-              <Text style={[styles.title, styles.flex, align, { fontFamily: familyFor('heading', rtl) }]}>{t('look.allFamilies')}</Text>
-              {families.status === 'loaded' ? <Text variant="hint">{families.data.length}</Text> : null}
-            </View>
-            <View style={[styles.filter, row]}>
-              <Feather name="filter" size={16} color={C.textMuted} />
-              <TextInput
-                value={filter}
-                onChangeText={setFilter}
-                placeholder={t('look.familySearch')}
-                placeholderTextColor={C.textFaint}
-                accessibilityLabel={t('look.familySearch')}
-                style={[styles.filterInput, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}
-              />
-              {filtering ? (
-                <Pressable accessibilityRole="button" accessibilityLabel={t('catalog.clearFilters')} onPress={() => setFilter('')} hitSlop={10}>
-                  <Feather name="x" size={16} color={C.textMuted} />
-                </Pressable>
-              ) : null}
-            </View>
-
-            {families.status === 'loading' ? (
-              <View style={[styles.grid, row]}>
-                {[0, 1, 2, 3].map((i) => (
-                  <Skeleton key={i} style={styles.cardSkeleton} />
-                ))}
+          {/* Every family, four across as round drawings in one white card —
+              the version customers knew, back by request; the picture grid
+              was bigger but showed four families a screen instead of sixteen. */}
+          <View style={styles.column}>
+            <View style={styles.familyCard}>
+              <Text style={[styles.title, align, { fontFamily: familyFor('heading', rtl) }]}>{t('look.families')}</Text>
+              <View style={[styles.filter, row]}>
+                <Feather name="filter" size={16} color={C.textMuted} />
+                <TextInput
+                  value={filter}
+                  onChangeText={setFilter}
+                  placeholder={t('look.familySearch')}
+                  placeholderTextColor={C.textFaint}
+                  accessibilityLabel={t('look.familySearch')}
+                  style={[styles.filterInput, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}
+                />
+                {filtering ? (
+                  <Pressable accessibilityRole="button" accessibilityLabel={t('catalog.clearFilters')} onPress={() => setFilter('')} hitSlop={10}>
+                    <Feather name="x" size={16} color={C.textMuted} />
+                  </Pressable>
+                ) : null}
               </View>
-            ) : shown.length === 0 ? (
-              <Text variant="hint" style={styles.none}>
-                {t('search.none', { q: filter.trim() })}
-              </Text>
-            ) : (
-              <View style={[styles.grid, row]} testID="family-grid">
-                {shown.map((f) => (
-                  <PressScale
-                    key={f.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
-                    onPress={() => open(f)}
-                    style={styles.card}
-                    pressedStyle={styles.cardPressed}
-                    scaleTo={0.97}
-                  >
-                    <View style={styles.cardArt}>
-                      <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 150 : 84} label={f.name} fit="cover" />
-                      <View style={[styles.count, rtl ? { left: Spacing.two } : { right: Spacing.two }]}>
-                        <Text style={[styles.countText, { fontFamily: familyFor('display', rtl) }]}>{f.productCount}</Text>
-                      </View>
+
+              {families.status === 'loading' ? (
+                <View style={[styles.grid, row]}>
+                  {Array.from({ length: 8 }, (_, i) => (
+                    <View key={i} style={[styles.cell, { width: `${100 / columns}%` }]}>
+                      <Skeleton style={styles.discSkeleton} />
                     </View>
-                    <View style={styles.cardBody}>
-                      <Text style={[styles.cardName, align, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={2}>
+                  ))}
+                </View>
+              ) : shown.length === 0 ? (
+                <Text variant="hint" style={styles.none}>
+                  {t('search.none', { q: filter.trim() })}
+                </Text>
+              ) : (
+                <View style={[styles.grid, row]} testID="family-grid">
+                  {shown.map((f) => (
+                    <PressScale
+                      key={f.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
+                      onPress={() => open(f)}
+                      style={[styles.cell, { width: `${100 / columns}%` }]}
+                      scaleTo={0.94}
+                    >
+                      <View style={styles.disc}>
+                        <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 64 : 44} label={f.name} fit="cover" drawn />
+                      </View>
+                      <Text variant="hint" tone={C.text} numberOfLines={2} style={styles.name}>
                         {f.name}
                       </Text>
-                      {f.subcategories.length ? (
-                        <Text variant="hint" numberOfLines={1} style={align}>
-                          {f.subcategories
-                            .slice(0, 2)
-                            .map((x) => x.name)
-                            .join(' · ')}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </PressScale>
-                ))}
-              </View>
-            )}
+                      <Text variant="hint" tone={C.textFaint} style={styles.count}>
+                        {f.productCount}
+                      </Text>
+                    </PressScale>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
 
           <View style={[styles.column, styles.section]}>
@@ -299,28 +295,32 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
   },
   filterInput: { flex: 1, minWidth: 0, fontSize: 16, color: C.text, paddingVertical: Spacing.two, outlineStyle: 'none' } as never,
-  // Two to a row at every width — 48.5% each and the 3% between them, so
-  // no fixed gap can push the second card onto its own line at 320pt — and
-  // an odd last card keeps its half width.
-  grid: { flexWrap: 'wrap', justifyContent: 'space-between', rowGap: Spacing.three, paddingTop: Spacing.two },
-  card: { width: '48.5%', borderRadius: Radius.card, borderWidth: Border.thin, borderColor: C.border, backgroundColor: C.background, overflow: 'hidden' },
-  cardPressed: { backgroundColor: C.surface },
-  cardArt: { height: 116, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  count: {
-    position: 'absolute',
-    top: Spacing.two,
-    minWidth: 26,
-    height: 22,
-    paddingHorizontal: 6,
-    borderRadius: 11,
+  familyCard: {
     backgroundColor: Brand.white,
+    borderRadius: Radius.card,
+    borderWidth: Border.thin,
+    borderColor: C.border,
+    padding: Spacing.three,
+    gap: Spacing.three,
+    ...Elevation.resting,
+  },
+  grid: { flexWrap: 'wrap', rowGap: Spacing.three },
+  cell: { alignItems: 'center', gap: 4, paddingHorizontal: 2, paddingVertical: Spacing.one, borderRadius: Radius.tile },
+  disc: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: Brand.white,
+    borderWidth: 1,
+    borderColor: C.border,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+    ...Elevation.resting,
   },
-  countText: { fontSize: 12, lineHeight: 15, color: C.text },
-  cardBody: { padding: Spacing.three, paddingTop: Spacing.two, gap: 2, minHeight: 64 },
-  cardName: { fontSize: 15, lineHeight: 20, color: C.text },
-  cardSkeleton: { width: '48.5%', height: 184, borderRadius: Radius.card },
+  discSkeleton: { width: 64, height: 64, borderRadius: 32 },
+  name: { textAlign: 'center', fontSize: 12, lineHeight: 15, minHeight: 30 },
+  count: { fontSize: 11, lineHeight: 13 },
   none: { textAlign: 'center', paddingVertical: Spacing.three },
   car: {
     gap: Spacing.three,
