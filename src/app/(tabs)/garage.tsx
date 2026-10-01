@@ -62,7 +62,7 @@ export default function GarageScreen() {
   // The principal first, then the others as they were added.
   const ordered = [active, ...vehicles.filter((v) => v.engineId !== active.engineId)];
   const small: { icon: React.ComponentProps<typeof Feather>['name']; label: string; onPress: () => void; disabled?: boolean }[] = [
-    { icon: 'clock', label: t('look.bento.history'), onPress: () => router.push('/compte/commandes') },
+    { icon: 'clock', label: t('account.orders'), onPress: () => router.push('/compte/commandes') },
     { icon: 'info', label: t('look.bento.info'), onPress: () => router.push({ pathname: '/garage/vehicule/[engine]', params: { engine: active.engineId } }) },
     { icon: 'plus', label: t('look.bento.add'), onPress: () => router.push('/garage/ajouter'), disabled: isFull() },
   ];
