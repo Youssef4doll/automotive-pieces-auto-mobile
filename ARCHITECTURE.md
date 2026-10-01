@@ -1520,14 +1520,19 @@ builds `icon.png`, the three Android adaptive layers (wordmark inside the
 safe circle) and the favicon from `splash-icon.png` and `splash-swoosh.png`;
 the adaptive background colour is the launch navy too.
 
-**The garage, October 1.** The hero card leads with the make's badge beside
-the name, then a car in profile at night (`illustrations/car-silhouette`:
-navy gradient body, a gold line of light along the roof, a lit headlamp,
-alloy wheels, a warm glow on the road — still no car in particular), then
-"Voir les pièces compatibles". The three doors are their own white tiles
-with gold icon discs; the owner's upkeep reminders (`CareDueStrip`) appear
-under them when something is due; "Mes véhicules" says what is behind it;
-the advice card closes the page (`AdviceCard onPale`, white on the pale
-background). The empty basket became a page to start from: a new drawing
+**The garage, October 1.** The hero is a wallet pass, chosen from three
+mock-ups: the shop's navy with a soft diagonal sheen, the make's own mark
+large and faded behind the text, its badge and "MON VÉHICULE" across the
+top, the name, then MOTORISATION and ANNÉES as labelled fields (years only
+when the shop recorded them, kept left-to-right in Arabic), over a gold
+edge; "Voir les pièces compatibles" is the gold button under it. A car that
+is not the principal one offers "Rendre principal" inside the pass, so every
+card in the carousel is the same height; the pass's tap area sits behind its
+content so that button is never a button inside a button. The three doors
+are their own white tiles with gold icon discs; the owner's upkeep reminders
+(`CareDueStrip`) appear under them when something is due; "Mes véhicules"
+says what is behind it; the advice card closes the page (`AdviceCard
+onPale`). A drawn car and a night-time silhouette were both tried here and
+dropped. The empty basket became a page to start from: a new drawing
 (`EmptyBasketArt`), laid out from the top, with the car's compatible parts
 and the four best-stocked families.

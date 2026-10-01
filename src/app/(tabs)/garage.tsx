@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { PressScale } from '@/components/ui/press-scale';
@@ -10,10 +10,11 @@ import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap }
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { Image } from 'expo-image';
 
-import { MakeLogo } from '@/components/ui/make-logo';
+import { MakeLogo, MarkGlyph } from '@/components/ui/make-logo';
+import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import { MAKE_MARKS, markKey } from '@/illustrations/marques';
 import { AdviceCard } from '@/components/ui/advice-card';
 import { CareDueStrip } from '@/components/ui/care-due';
-import { CarSilhouette } from '@/illustrations/car-silhouette';
 import { RENDERS } from '@/illustrations/renders';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
@@ -160,47 +161,93 @@ export default function GarageScreen() {
   );
 }
 
+/**
+ * The car as a wallet pass: the navy of the shop with a soft diagonal sheen,
+ * the make's own mark large and faded behind the text, the make's badge and
+ * "MON VÉHICULE" across the top, the name, then the two facts the shop holds
+ * for it as labelled fields — the engine, and the years when it recorded
+ * them (left out, never guessed, when it did not) — over a gold edge. The
+ * action that matters, the parts that fit, is the gold button under it.
+ *
+ * The whole pass opens "Mes véhicules"; a car that is not the principal one
+ * offers to become it.
+ */
 function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehicle; principal: boolean; onMakePrincipal: () => void }) {
   const { t, rtl } = useI18n();
   const router = useRouter();
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
-  const line = [vehicle.engineName, yearSpan(vehicle.yearFrom ?? null, vehicle.yearTo ?? null, t)].filter(Boolean).join(' · ');
+  const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
+  const years = yearSpan(vehicle.yearFrom ?? null, vehicle.yearTo ?? null, t);
+  const mark = MAKE_MARKS[markKey(vehicle.makeSlug)] ?? MAKE_MARKS[markKey(vehicle.makeName)];
   return (
-    <View style={styles.hero}>
-      <View style={styles.heroGlow} pointerEvents="none" />
-      <PressScale
-        accessibilityRole="button"
-        accessibilityLabel={`${principal ? t('look.principalVehicle') : ''} ${vehicle.makeName} ${vehicle.modelName}, ${line}`}
-        onPress={() => router.push('/garage/vehicules')}
-        scaleTo={0.985}
-        style={styles.heroMain}
-      >
-        <View style={[row, styles.heroTop]}>
-          <MakeLogo name={vehicle.makeName} slug={vehicle.makeSlug} size={52} />
-          <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start', gap: 2 }]}>
-            {principal ? (
-              <View style={[styles.pill, row]}>
-                <Feather name="star" size={11} color={Brand.gold400} />
-                <Text style={[styles.pillText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.principal')}</Text>
-              </View>
-            ) : null}
-            <Text style={[styles.heroName, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]} numberOfLines={2}>
-              {vehicle.makeName} {vehicle.modelName}
-            </Text>
-            <Text variant="hint" tone={Brand.navy300} numberOfLines={1}>
-              {line}
-            </Text>
+    <View style={styles.passWrap}>
+      <View style={styles.pass}>
+        <Svg style={StyleSheet.absoluteFill} viewBox="0 0 340 210" preserveAspectRatio="none">
+          <Defs>
+            <LinearGradient id="pass" x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="1">
+              <Stop offset="0" stopColor={Brand.navy700} />
+              <Stop offset="1" stopColor={Brand.navy950} />
+            </LinearGradient>
+          </Defs>
+          <Rect x={0} y={0} width={340} height={210} fill="url(#pass)" />
+          <Path d={rtl ? 'M140 0 L0 0 L0 210 L220 210 Z' : 'M200 0 L340 0 L340 210 L120 210 Z'} fill={Brand.white} opacity={0.035} />
+          <Path d={rtl ? 'M90 0 L0 0 L0 210 L150 210 Z' : 'M250 0 L340 0 L340 210 L190 210 Z'} fill={Brand.white} opacity={0.03} />
+        </Svg>
+        {mark ? (
+          <View style={[styles.watermark, rtl ? { left: -36 } : { right: -36 }]} pointerEvents="none">
+            <MarkGlyph mark={mark} size={184} color={Brand.white} />
           </View>
-          <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={20} color={Brand.navy300} />
-        </View>
-        {/* A car in profile at night (illustrations/car-silhouette) — no
-            car in particular; the make's own badge is beside the name. */}
-        <View style={styles.heroArt} pointerEvents="none">
-          <View style={rtl ? styles.flipped : null}>
-            <CarSilhouette width={288} />
+        ) : null}
+        {/* The whole pass opens "Mes véhicules" — a layer behind the words,
+            so the "Rendre principal" button on it is not a button inside a
+            button. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={[principal ? t('look.principal') : null, `${vehicle.makeName} ${vehicle.modelName}`, vehicle.engineName, years].filter(Boolean).join(', ')}
+          onPress={() => router.push('/garage/vehicules')}
+          style={({ pressed }) => [StyleSheet.absoluteFill, pressed && styles.passPressed]}
+        />
+
+        <View style={[styles.passHead, row]} pointerEvents="box-none">
+          <View pointerEvents="none">
+            <MakeLogo name={vehicle.makeName} slug={vehicle.makeSlug} size={40} lifted={false} />
           </View>
+          <Text pointerEvents="none" style={[styles.kicker, { fontFamily: familyFor('display', rtl) }]} numberOfLines={1}>
+            {t('account.myVehicle')}
+          </Text>
+          <View style={styles.flex} pointerEvents="none" />
+          {principal ? (
+            <View style={[styles.passTag, row]} pointerEvents="none">
+              <Feather name="star" size={11} color={Brand.navy950} />
+              <Text style={[styles.passTagText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.principalShort')}</Text>
+            </View>
+          ) : (
+            // In the pass rather than under it, so every card in the
+            // carousel is the same height.
+            <Pressable
+              accessibilityRole="button"
+              onPress={onMakePrincipal}
+              hitSlop={8}
+              style={({ pressed }) => [styles.passMake, row, pressed && { opacity: 0.7 }]}
+            >
+              <Feather name="star" size={12} color={Brand.white} />
+              <Text style={[styles.passMakeText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.setPrincipal')}</Text>
+            </Pressable>
+          )}
         </View>
-      </PressScale>
+
+        <Text pointerEvents="none" style={[styles.passName, align, { fontFamily: familyFor('headingStrong', rtl) }]} numberOfLines={2}>
+          {vehicle.makeName} {vehicle.modelName}
+        </Text>
+
+        <View style={[styles.fields, row]} pointerEvents="none">
+          <Field label={t('picker.stepEngine')} value={vehicle.engineName} />
+          {years ? <Field label={t('look.fieldYears')} value={`\u2066${years}\u2069`} /> : null}
+        </View>
+
+        <View style={styles.passEdge} pointerEvents="none" />
+      </View>
+
       <PressScale
         accessibilityRole="button"
         onPress={() => router.push({ pathname: '/pieces-compatibles', params: { engine: vehicle.engineId } })}
@@ -210,12 +257,20 @@ function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehic
         <Feather name="check-circle" size={18} color={C.onAccent} />
         <Text style={[styles.heroCtaText, { fontFamily: familyFor('display', rtl) }]}>{t('home.seeCompatible')}</Text>
       </PressScale>
-      {!principal ? (
-        <PressScale accessibilityRole="button" onPress={onMakePrincipal} style={[styles.makePrincipal, row]} pressedStyle={{ opacity: 0.7 }}>
-          <Feather name="star" size={15} color={Brand.white} />
-          <Text style={[styles.makePrincipalText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.setPrincipal')}</Text>
-        </PressScale>
-      ) : null}
+    </View>
+  );
+}
+
+function Field({ label, value }: { label: string; value: string }) {
+  const { rtl } = useI18n();
+  return (
+    <View style={[styles.field, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+      <Text style={[styles.fieldLabel, { fontFamily: familyFor('display', rtl) }]} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={[styles.fieldValue, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={1}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -228,31 +283,32 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', justifyContent: 'center', gap: Spacing.three, padding: Spacing.four, backgroundColor: C.background },
   centred: { textAlign: 'center' },
   wide: { alignSelf: 'stretch' },
-  hero: {
-    borderRadius: Radius.card,
-    backgroundColor: Brand.navy900,
-    padding: Spacing.four,
-    paddingBottom: Spacing.three,
-    overflow: 'hidden',
-    gap: Spacing.three,
-  },
-  heroGlow: { position: 'absolute', width: 300, height: 300, borderRadius: 150, right: -80, top: 40, backgroundColor: Brand.navy700, opacity: 0.6 },
-  heroMain: { gap: Spacing.two },
-  heroTop: { alignItems: 'center', gap: Spacing.three },
-  heroName: { fontSize: 22, lineHeight: 28, color: Brand.white },
-  pill: {
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.pill,
-    backgroundColor: 'rgba(251,192,0,0.14)',
-  },
-  pillText: { fontSize: 12, lineHeight: 16, color: Brand.gold400 },
-  heroArt: { alignItems: 'center', justifyContent: 'flex-end', marginTop: Spacing.two, marginHorizontal: -Spacing.two },
-  flipped: { transform: [{ scaleX: -1 }] },
+  passWrap: { gap: Spacing.three },
   bleed: { marginHorizontal: -Spacing.three },
+  pass: {
+    minHeight: 204,
+    borderRadius: 22,
+    overflow: 'hidden',
+    padding: Spacing.four,
+    paddingBottom: Spacing.four + 6,
+    gap: Spacing.three,
+    backgroundColor: Brand.navy900,
+    ...Elevation.lifted,
+  },
+  watermark: { position: 'absolute', top: 26, opacity: 0.08 },
+  passHead: { alignItems: 'center', gap: Spacing.two },
+  kicker: { fontSize: 12, lineHeight: 16, letterSpacing: 1.6, color: Brand.navy300, textTransform: 'uppercase', flexShrink: 1 },
+  passTag: { alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.pill, backgroundColor: Brand.gold500 },
+  passTagText: { fontSize: 11, lineHeight: 15, color: Brand.navy950 },
+  passMake: { alignItems: 'center', gap: 4, minHeight: 28, paddingHorizontal: 10, borderRadius: Radius.pill, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
+  passMakeText: { fontSize: 12, lineHeight: 16, color: Brand.white },
+  passName: { fontSize: 26, lineHeight: 31, color: Brand.white, marginTop: Spacing.one },
+  fields: { gap: Spacing.five, flexWrap: 'wrap' },
+  field: { gap: 2 },
+  fieldLabel: { fontSize: 10, lineHeight: 13, letterSpacing: 1.4, color: Brand.navy300, textTransform: 'uppercase' },
+  fieldValue: { fontSize: 16, lineHeight: 21, color: Brand.white },
+  passPressed: { backgroundColor: 'rgba(255,255,255,0.05)' },
+  passEdge: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 6, backgroundColor: Brand.gold500 },
   heroCta: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -285,8 +341,6 @@ const styles = StyleSheet.create({
   dots: { justifyContent: 'center', gap: 6, paddingTop: Spacing.two },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.border },
   dotOn: { width: 18, backgroundColor: C.text },
-  makePrincipal: { alignSelf: 'center', alignItems: 'center', gap: 6, minHeight: Tap.min, paddingHorizontal: Spacing.three },
-  makePrincipalText: { fontSize: 14, color: Brand.white },
   manage: {
     alignItems: 'center',
     gap: Spacing.three,
