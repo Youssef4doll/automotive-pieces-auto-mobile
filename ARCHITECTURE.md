@@ -1512,3 +1512,10 @@ translucent navy tint so it reads on either. Content scrolls on under it, so
 every tab screen keeps `tabBarFootprint` clear at its end (`useTabBarSpace`;
 Compte and the empty basket now do too) and the basket's checkout bar runs on
 under the glass with its button just above it.
+
+**The icon, October 1.** The app icon is the launch screen's own picture:
+the AUTOMOTIVE wordmark with its red swoosh and PIÈCES AUTO, on the same
+plain navy (#081633) — no car, no road, no glow. `scripts/make-plain-icon.py`
+builds `icon.png`, the three Android adaptive layers (wordmark inside the
+safe circle) and the favicon from `splash-icon.png` and `splash-swoosh.png`;
+the adaptive background colour is the launch navy too.

@@ -1,4 +1,8 @@
 /**
+ * NOTE (October 2026): the app icon and its Android layers are now made by
+ * scripts/make-plain-icon.py — the wordmark on plain navy. Running this
+ * script rewrites them with the old artwork; run make-plain-icon.py after it.
+ *
  * Derives every piece of brand artwork from the two files the shop supplied:
  *
  *   assets/images/app-icon-art.webp  the app icon — the glass square with the
