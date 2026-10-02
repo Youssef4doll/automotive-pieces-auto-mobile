@@ -6,15 +6,19 @@ import { Text } from './text';
 /**
  * An empty screen that still looks like the shop: the drawing on a soft
  * halo, a title that says what is missing, a line that says why it will not
- * stay that way, and the ways on.
+ * stay that way, and the ways on. A `scene` — a whole drawing with its own
+ * ground and sparkles, like the artist's box — stands on the page instead.
  */
 export function EmptyState({
   art,
   title,
   body,
+  scene = false,
   children,
 }: {
   art: React.ReactNode;
+  /** The art is a full scene: no halo behind it. */
+  scene?: boolean;
   title: string;
   body?: string | null;
   /** The actions — buttons, full width. */
@@ -22,9 +26,13 @@ export function EmptyState({
 }) {
   return (
     <View style={styles.root}>
-      <View style={styles.halo}>
-        <View style={styles.disc}>{art}</View>
-      </View>
+      {scene ? (
+        <View style={styles.scene}>{art}</View>
+      ) : (
+        <View style={styles.halo}>
+          <View style={styles.disc}>{art}</View>
+        </View>
+      )}
       <Text variant="sectionTitle" style={styles.centred}>
         {title}
       </Text>
@@ -62,6 +70,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
   },
+  scene: { alignItems: 'center', marginBottom: Spacing.two },
   centred: { textAlign: 'center' },
   body: { maxWidth: 300 },
   actions: { alignSelf: 'stretch', gap: Spacing.two, marginTop: Spacing.three, maxWidth: 420, width: '100%', marginHorizontal: 'auto' },

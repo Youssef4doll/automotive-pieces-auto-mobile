@@ -167,8 +167,8 @@ export default function AccountScreen() {
             <Pressable
               accessibilityRole="button"
               onPress={async () => {
+                // "À bientôt" is drawn over the app (components/auth-moment).
                 await signOut();
-                toast({ message: t('auth.signedOut'), tone: 'neutral' });
               }}
               style={styles.danger}
             >

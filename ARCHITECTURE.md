@@ -1524,8 +1524,8 @@ the adaptive background colour is the launch navy too.
 mock-ups: the shop's navy with a soft diagonal sheen, the make's own mark
 large and faded behind the text, its badge and "MON VÉHICULE" across the
 top, the name, then MOTORISATION and ANNÉES as labelled fields (years only
-when the shop recorded them, kept left-to-right in Arabic), over a gold
-edge; "Voir les pièces compatibles" is the gold button under it. A car that
+when the shop recorded them, kept left-to-right in Arabic) — the gold edge it first had went on October 2;
+"Voir les pièces compatibles" is the gold button under it. A car that
 is not the principal one offers "Rendre principal" inside the pass, so every
 card in the carousel is the same height; the pass's tap area sits behind its
 content so that button is never a button inside a button. The three doors
@@ -1536,3 +1536,26 @@ onPale`). A drawn car and a night-time silhouette were both tried here and
 dropped. The empty basket became a page to start from: a new drawing
 (`EmptyBasketArt`), laid out from the top, with the car's compatible parts
 and the four best-stocked families.
+
+**October 2.** The catalogue opens on the families: search, then "Toutes
+les familles de pièces", then the shop's markdowns, then the car card
+("Pièces pour votre véhicule"), then the makes and the advice card.
+
+The empty basket and the empty order list are the shop artist's own
+drawings — a basket with a brake disc and a spark plug flying in, an open
+box with the AUTOMOTIVE name on its side. The files as delivered live in
+`assets/illustrations/*.svg`; react-native-svg reads neither CSS classes nor
+nested `<svg>`s, so `python3 scripts/inline-svg.py` turns each into
+`src/illustrations/drawn/<name>.ts` (styles written onto the shapes, nested
+viewports as transforms), drawn with `SvgXml`. Edit the .svg and rerun; never
+the .ts. `EmptyState scene` stands such a full scene on the page without the
+round halo.
+
+Signing in, up or out is a moment over the whole app
+(`components/auth-moment.tsx`): the navy washes in, a disc springs up with a
+ring opening behind it — gold with a tick and "Bienvenue, Prénom", or white
+with the door and "À bientôt" — and the navy lifts onto the screen the app
+has moved to underneath, in about a second and a half. It never takes a
+tap. The account store's `moment` drives it; `restore` never sets it, so
+opening the app signed in is not a sign-in. It replaces the welcome and
+signed-out toasts.

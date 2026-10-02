@@ -12,7 +12,6 @@ import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
 import { fieldProblem, isEmail, signupProblems, type SignupField } from '@/lib/account';
 import { useAccount } from '@/store/account';
-import { useToast } from '@/store/toast';
 
 type Mode = 'signin' | 'signup' | 'forgot';
 
@@ -31,7 +30,6 @@ export default function SignInScreen() {
   const params = useLocalSearchParams<{ mode?: Mode }>();
   const { t, rtl } = useI18n();
   const router = useRouter();
-  const toast = useToast((s) => s.show);
   const signIn = useAccount((s) => s.signIn);
   const signUp = useAccount((s) => s.signUp);
 
@@ -61,8 +59,7 @@ export default function SignInScreen() {
         : 'state.serverBody';
 
   const done = () => {
-    const account = useAccount.getState().account;
-    toast({ message: t('auth.welcome', { name: account?.name.split(/\s+/)[0] ?? '' }), tone: 'success' });
+    // The welcome is the moment drawn over the app (components/auth-moment).
     // Opened from a link there is nothing to go back to.
     if (router.canGoBack()) router.back();
     else router.replace('/compte');

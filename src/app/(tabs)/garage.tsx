@@ -166,7 +166,7 @@ export default function GarageScreen() {
  * the make's own mark large and faded behind the text, the make's badge and
  * "MON VÉHICULE" across the top, the name, then the two facts the shop holds
  * for it as labelled fields — the engine, and the years when it recorded
- * them (left out, never guessed, when it did not) — over a gold edge. The
+ * them (left out, never guessed, when it did not). The
  * action that matters, the parts that fit, is the gold button under it.
  *
  * The whole pass opens "Mes véhicules"; a car that is not the principal one
@@ -245,7 +245,6 @@ function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehic
           {years ? <Field label={t('look.fieldYears')} value={`\u2066${years}\u2069`} /> : null}
         </View>
 
-        <View style={styles.passEdge} pointerEvents="none" />
       </View>
 
       <PressScale
@@ -308,7 +307,6 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 10, lineHeight: 13, letterSpacing: 1.4, color: Brand.navy300, textTransform: 'uppercase' },
   fieldValue: { fontSize: 16, lineHeight: 21, color: Brand.white },
   passPressed: { backgroundColor: 'rgba(255,255,255,0.05)' },
-  passEdge: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 6, backgroundColor: Brand.gold500 },
   heroCta: {
     alignItems: 'center',
     justifyContent: 'center',

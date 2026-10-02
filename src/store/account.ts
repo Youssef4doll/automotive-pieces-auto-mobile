@@ -41,6 +41,13 @@ type AccountState = {
   deleteAccount: (password: string) => Promise<void>;
   /** Pull the account's orders into "Mes commandes". */
   syncOrders: () => Promise<void>;
+  /**
+   * The sign-in or sign-out that just happened on this phone, for the
+   * moment drawn over the app (components/auth-moment). Never set by
+   * `restore`: opening the app signed in is not a sign-in.
+   */
+  moment: { kind: 'in' | 'out'; name: string; at: number } | null;
+  clearMoment: () => void;
 };
 
 async function adopt(token: string, account: Account, set: (s: Partial<AccountState>) => void) {
@@ -53,6 +60,10 @@ async function adopt(token: string, account: Account, set: (s: Partial<AccountSt
   if (!checkout.details.customerName.trim() && !checkout.details.phone.trim()) {
     checkout.update({ customerName: account.name, email: account.email, phone: account.phone ?? '' });
   }
+}
+
+function firstName(name: string) {
+  return name.trim().split(/\s+/)[0] ?? '';
 }
 
 async function forgetLocally(set: (s: Partial<AccountState>) => void) {
@@ -68,6 +79,8 @@ export const useAccount = create<AccountState>()(
       status: 'unknown',
       account: null,
       token: null,
+      moment: null,
+      clearMoment: () => set({ moment: null }),
 
       restore: async () => {
         if (get().status !== 'unknown' && get().token) return;
@@ -92,6 +105,8 @@ export const useAccount = create<AccountState>()(
         await adopt(token, account, set);
         track('login');
         await claimAndSync(token, get);
+        // Welcomed once the phone's orders are the account's, as the screen moves on.
+        set({ moment: { kind: 'in', name: firstName(account.name), at: Date.now() } });
       },
 
       signUp: async (input) => {
@@ -99,12 +114,15 @@ export const useAccount = create<AccountState>()(
         await adopt(token, account, set);
         track('sign_up');
         await claimAndSync(token, get);
+        // Welcomed once the phone's orders are the account's, as the screen moves on.
+        set({ moment: { kind: 'in', name: firstName(account.name), at: Date.now() } });
       },
 
       signOut: async () => {
         const token = get().token;
         track('logout');
         await forgetLocally(set);
+        set({ moment: { kind: 'out', name: '', at: Date.now() } });
         // Revoked on the shop too; signing out offline still signs this phone out.
         if (token) await accountApi.signOut(token).catch(() => undefined);
       },

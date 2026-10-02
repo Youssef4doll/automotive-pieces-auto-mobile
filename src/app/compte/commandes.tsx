@@ -14,7 +14,7 @@ import { Text } from '@/components/ui/text';
 import { Brand, C, Elevation, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useLive } from '@/hooks/use-live';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
-import { ParcelArt } from '@/illustrations/empty-art';
+import { NoOrdersArt } from '@/illustrations/empty-art';
 import { formatDate, formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { useOrders, type PlacedOrder } from '@/store/orders';
@@ -68,7 +68,7 @@ export default function OrdersScreen() {
       <Stack.Screen options={{ title: t('account.orders') }} />
       <View style={styles.column}>
         {orders.length === 0 ? (
-          <EmptyState art={<ParcelArt size={112} />} title={t('orders.emptyTitle')} body={t('orders.emptyBody')}>
+          <EmptyState scene art={<NoOrdersArt width={240} />} title={t('orders.emptyTitle')} body={t('orders.emptyBody')}>
             <Button label={t('orders.shop')} onPress={() => router.navigate('/catalogue')} />
           </EmptyState>
         ) : (

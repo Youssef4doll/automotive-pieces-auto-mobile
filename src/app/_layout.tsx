@@ -12,6 +12,7 @@ import { I18nProvider, useI18n } from '@/i18n/provider';
 import { catalogueApi } from '@/api/catalogue';
 import { promotionsApi } from '@/api/promotions';
 import { shopApi } from '@/api/shop';
+import { AuthMoment } from '@/components/auth-moment';
 import { NotificationRouter } from '@/components/notification-router';
 import { Preloader } from '@/components/preloader';
 import { track } from '@/services/analytics';
@@ -124,6 +125,8 @@ function Shell({ rtl, backLabel, launching }: { rtl: boolean; backLabel: string;
       {/* Above every screen, so "Ajouté au panier" survives the navigation
           that follows it. */}
       <ToastHost />
+      {/* Over everything, toasts included: signing in or out is the moment. */}
+      <AuthMoment />
       {Platform.OS !== 'web' ? <NotificationRouter /> : null}
     </>
   );

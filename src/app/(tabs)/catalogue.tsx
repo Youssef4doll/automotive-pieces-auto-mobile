@@ -93,7 +93,6 @@ export default function CatalogueScreen() {
     >
       <View style={[styles.column, styles.top]}>
         <SearchLauncher />
-        <ForMyCar />
       </View>
 
       {families.status === 'failed' ? (
@@ -102,26 +101,6 @@ export default function CatalogueScreen() {
         <Empty title={t('catalog.noFamilies')} body={t('catalog.emptyWhy')} />
       ) : (
         <>
-          {/* The shop's own markdowns, while there are any. */}
-          {onSale.length > 0 && !filtering ? (
-            <View style={styles.section} testID="catalogue-deals">
-              <View style={[styles.column, styles.sectionHead, row]}>
-                <View style={[styles.dealMark, row]}>
-                  <Feather name="tag" size={IconSize.small} color={Brand.navy900} />
-                </View>
-                <Text style={[styles.title, styles.flex, align, { fontFamily: familyFor('heading', rtl) }]}>{t('catalog.onSaleTitle')}</Text>
-                <Text variant="hint">{t('catalog.partCount', { n: deals.status === 'loaded' ? deals.data.total : onSale.length })}</Text>
-              </View>
-              <Rail contentContainerStyle={[styles.rail, row]}>
-                {onSale.map((p) => (
-                  <View key={p.id} style={styles.dealTile}>
-                    <ProductTile product={p} />
-                  </View>
-                ))}
-              </Rail>
-            </View>
-          ) : null}
-
           {/* Every family, four across as round drawings in one white card —
               the version customers knew, back by request; the picture grid
               was bigger but showed four families a screen instead of sixteen. */}
@@ -182,6 +161,30 @@ export default function CatalogueScreen() {
                 </View>
               )}
             </View>
+          </View>
+
+          {/* The shop's own markdowns, while there are any. */}
+          {onSale.length > 0 && !filtering ? (
+            <View style={styles.section} testID="catalogue-deals">
+              <View style={[styles.column, styles.sectionHead, row]}>
+                <View style={[styles.dealMark, row]}>
+                  <Feather name="tag" size={IconSize.small} color={Brand.navy900} />
+                </View>
+                <Text style={[styles.title, styles.flex, align, { fontFamily: familyFor('heading', rtl) }]}>{t('catalog.onSaleTitle')}</Text>
+                <Text variant="hint">{t('catalog.partCount', { n: deals.status === 'loaded' ? deals.data.total : onSale.length })}</Text>
+              </View>
+              <Rail contentContainerStyle={[styles.rail, row]}>
+                {onSale.map((p) => (
+                  <View key={p.id} style={styles.dealTile}>
+                    <ProductTile product={p} />
+                  </View>
+                ))}
+              </Rail>
+            </View>
+          ) : null}
+
+          <View style={[styles.column, styles.section]}>
+            <ForMyCar />
           </View>
 
           <View style={[styles.column, styles.section]}>
