@@ -28,8 +28,11 @@ export type PlacedOrder = {
    */
   lead?: { name: string; families: (string | null)[] };
   /**
-   * Listed because the signed-in account owns it, not because this phone
-   * holds its token. Opened with the account session; removed on sign-out.
+   * The signed-in account owns it: placed while signed in, claimed into the
+   * account at sign-in, or listed from the account's other devices. Signing
+   * out takes it off this phone, token and all — it is the account's, and
+   * signing back in brings it back. Only orders placed as a guest and never
+   * claimed stay on a signed-out phone.
    */
   fromAccount?: boolean;
 };
@@ -49,7 +52,7 @@ type OrdersState = {
   ownToken: (ref: string) => Promise<string | null>;
   forget: (ref: string) => Promise<void>;
   mergeAccountOrders: (list: { ref: string; placedAt: string; total: number; itemCount: number }[]) => void;
-  dropAccountOrders: () => void;
+  dropAccountOrders: () => Promise<void>;
 };
 
 export const useOrders = create<OrdersState>()(
@@ -77,16 +80,22 @@ export const useOrders = create<OrdersState>()(
       ownToken: (ref) => secrets.get(tokenKey(ref)).catch(() => null),
 
       mergeAccountOrders: (list) => {
-        const local = get().orders;
+        const owned = new Set(list.map((o) => o.ref));
+        // An order this phone already lists becomes the account's too once
+        // the account holds it (a guest order claimed at sign-in).
+        const local = get().orders.map((o) => (owned.has(o.ref) && !o.fromAccount ? { ...o, fromAccount: true } : o));
         const known = new Set(local.map((o) => o.ref));
         const added = list
           .filter((o) => !known.has(o.ref))
           .map((o) => ({ ref: o.ref, placedAt: o.placedAt, total: o.total, itemCount: o.itemCount, fromAccount: true }));
-        if (!added.length) return;
         set({ orders: [...local, ...added].sort((a, b) => b.placedAt.localeCompare(a.placedAt)) });
       },
 
-      dropAccountOrders: () => set({ orders: get().orders.filter((o) => !o.fromAccount) }),
+      dropAccountOrders: async () => {
+        const all = get().orders;
+        set({ orders: all.filter((o) => !o.fromAccount) });
+        await Promise.all(all.filter((o) => o.fromAccount).map((o) => secrets.remove(tokenKey(o.ref)).catch(() => undefined)));
+      },
 
       forget: async (ref) => {
         await secrets.remove(tokenKey(ref));

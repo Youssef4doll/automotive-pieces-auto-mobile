@@ -120,12 +120,14 @@ try {
   });
   check(again.status === 422 && again.body?.reason === 'taken', 'api: an address with an account is refused as taken', again.body);
 
-  // ---- sign out: the account's rows go, this phone's own order stays
+  // ---- sign out: the phone is a guest's again — the claimed order and the details go with the account
   await tap(page, 'Se déconnecter');
   await page.waitForTimeout(1500);
   check(await says(page, 'Se connecter ou créer un compte'), 'sign-out: back to guest');
   await go(page, '/compte/commandes');
-  check(await says(page, ref), 'sign-out: the order placed on this phone is still listed');
+  check(!(await says(page, ref)), 'sign-out: the order the account now owns leaves this phone');
+  await go(page, '/compte');
+  check(!(await says(page, 'Compte Essai')), 'sign-out: the account’s name leaves the Compte tab');
 } catch (e) {
   check(false, 'phone A threw', String(e).split('\n')[0]);
 } finally {

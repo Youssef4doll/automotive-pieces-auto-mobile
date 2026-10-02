@@ -24,8 +24,9 @@ import { deviceStorage, secrets } from './storage';
  * orders this phone placed as a guest into the account (each proven by its
  * own order token — never by the e-mail), it lists the account's orders
  * from other devices here, and it fills an empty checkout with the account's
- * name, e-mail and phone. Signing out undoes the second, so a borrowed phone
- * does not keep somebody else's order list.
+ * name, e-mail and phone. Signing out undoes all three: every order the
+ * account owns (claimed ones included) and the checkout details leave the
+ * phone, so a borrowed phone keeps nothing of somebody else's.
  */
 const KEY = 'apa-account.session';
 
@@ -70,7 +71,10 @@ async function forgetLocally(set: (s: Partial<AccountState>) => void) {
   set({ status: 'guest', token: null, account: null });
   setAnalyticsAccount(undefined);
   await secrets.remove(KEY).catch(() => undefined);
-  useOrders.getState().dropAccountOrders();
+  // The phone goes back to a guest's: the account's orders and the
+  // account's name, e-mail, phone and address leave with it.
+  await useOrders.getState().dropAccountOrders();
+  useCheckout.getState().forget();
 }
 
 export const useAccount = create<AccountState>()(

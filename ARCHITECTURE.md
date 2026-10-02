@@ -1559,3 +1559,10 @@ has moved to underneath, in about a second and a half. It never takes a
 tap. The account store's `moment` drives it; `restore` never sets it, so
 opening the app signed in is not a sign-in. It replaces the welcome and
 signed-out toasts.
+
+Signing out leaves a guest's phone. Every order the account owns leaves
+it, token and all: orders placed while signed in (`fromAccount` set at
+`remember`), guest orders claimed at sign-in (marked when the account's
+list comes back), and those listed from other devices. The checkout's
+remembered name, e-mail, phone and address go too. Only a guest order that
+was never claimed stays. Signing back in brings the account's orders back.

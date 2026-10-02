@@ -89,6 +89,8 @@ export default function PaymentStep() {
           total: result.order.total,
           itemCount: result.order.items.reduce((n, i) => n + i.qty, 0),
           lead: { name: result.order.items[0]?.name ?? '', families: result.order.items.slice(0, 3).map((i) => i.familySlug) },
+          // Placed signed in, the shop filed it under the account.
+          fromAccount: Boolean(accountToken()),
         },
         result.token,
       );
