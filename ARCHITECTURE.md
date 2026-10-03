@@ -1655,15 +1655,14 @@ The tab bar now follows iOS 26's TabView, as Apple Music and Glovo do
   under the finger. The lens follows the finger and grows to ×1.16 while
   held. Letting go opens the tab it is over. A tap is still a tap.
 - **The material.** On iOS 26 and later, Apple's own glass draws everything:
-  `regular` for the bar and the search button, and `clear` with `isInteractive`
+  `regular` for the bar, and `clear` with `isInteractive`
   for the lens. Elsewhere the bar is frosted. On the web the frost is a
   backdrop blur, and on Android it is near-opaque because Android has no
   live blur. The lens is white glass with a warm-to-cool iridescent rim and
   a top shine, drawn in SVG, so it looks the same on Android and the web.
-- **Search.** Search is a round glass button beside the bar, on the trailing
-  side, mirrored in Arabic. It opens /recherche. Below 360pt across it steps
-  aside, because five labels and a sixth button do not fit there; the search
-  boxes on Accueil and Catalogue remain.
+- **Search.** For a short while search was a round glass button beside the
+  bar. The owner asked for the bar alone, so search stays in the boxes on
+  Accueil and Catalogue.
 
 The footprint is unchanged (`tabBarFootprint`): the lens stands proud by
 exactly the room already kept above the bar. The tabs now carry

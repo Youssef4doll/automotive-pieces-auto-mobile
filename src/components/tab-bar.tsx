@@ -1,9 +1,7 @@
-import { Feather } from '@expo/vector-icons';
 import type { Tabs } from 'expo-router';
-import { useRouter } from 'expo-router';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PanResponder, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { PanResponder, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   type SharedValue,
   useAnimatedStyle,
@@ -29,11 +27,6 @@ export const TOP = Spacing.one;
 const LIFT = TOP;
 const LENS_H = BAR + LIFT * 2;
 const LENS_MAX_W = 100;
-/** The search button beside the bar, and the space between them. */
-const SEARCH = BAR;
-const SEARCH_GAP = Spacing.two;
-/** Narrower than this, five labels and a search button do not fit: search stays in the screens. */
-const SEARCH_MIN_WIDTH = 360;
 /** How much the tab under the lens is magnified at rest, and how much the lens swells while it moves. */
 const MAGNIFY = 0.08;
 const SWELL = 1.12;
@@ -51,8 +44,7 @@ export function tabBarFootprint(insetBottom: number) {
 
 /**
  * The tab bar, in the manner of iOS 26's TabView: a floating capsule of
- * glass, a lens over the open tab, and search on its own round button beside
- * it — what Apple Music and Glovo do.
+ * glass and a lens over the open tab — what Apple Music and Glovo do.
  *
  * ## The lens
  *
@@ -77,22 +69,13 @@ export function tabBarFootprint(insetBottom: number) {
  * springs follow the phone's reduced-motion setting (Reanimated's default),
  * which leaves the lens jumping straight to its tab.
  *
- * ## Search
- *
- * Search is a button, not a tab: it opens the search screen over the tabs,
- * as the box on Accueil and Catalogue does. Below 360pt across, five labels
- * and a sixth button do not fit, and it steps aside — the boxes remain.
- *
  * It floats over the screens. Content scrolls on under it; every tab screen
  * keeps the bar's footprint clear at its end (useTabBarSpace,
  * `tabBarFootprint`), and the basket's checkout bar sits above it.
  */
 export function TabBar({ state, descriptors, navigation }: TabBarProps) {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
-  const { t, rtl } = useI18n();
-  const { width: screen } = useWindowDimensions();
-  const withSearch = screen >= SEARCH_MIN_WIDTH;
+  const { rtl } = useI18n();
   const [width, setWidth] = useState(0);
   const count = state.routes.length;
   const slot = width / count;
@@ -179,22 +162,9 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
     transform: [{ translateX: x.value }, { scale: grow.value }],
   }));
 
-  const search = withSearch ? (
-    <Pressable
-      accessibilityRole="search"
-      accessibilityLabel={t('tab.search')}
-      testID="tab-search"
-      onPress={() => router.push('/recherche')}
-      style={({ pressed }) => [styles.search, pressed && styles.searchPressed]}
-    >
-      <Skin round />
-      <Feather name="search" size={24} color={C.text} />
-    </Pressable>
-  ) : null;
-
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, GAP) }]}>
-      <View pointerEvents="box-none" style={[styles.line, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+      <View pointerEvents="box-none" style={styles.line}>
         <View ref={barRef} style={styles.bar} accessibilityRole="tablist" onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
           <Skin />
           {width ? (
@@ -228,7 +198,6 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
             })}
           </View>
         </View>
-        {search}
       </View>
     </View>
   );
@@ -303,15 +272,14 @@ function Tab({
   );
 }
 
-/** The bar's material, and the search button's. */
-function Skin({ round = false }: { round?: boolean }) {
+/** The bar's material. */
+function Skin() {
   const radius = { borderRadius: BAR / 2 };
   if (LIQUID_GLASS) {
     return (
       <GlassView
         pointerEvents="none"
         glassEffectStyle="regular"
-        isInteractive={round}
         style={[StyleSheet.absoluteFill, radius]}
       />
     );
@@ -375,11 +343,11 @@ const styles = StyleSheet.create({
     paddingTop: TOP,
   },
   line: {
+    flexDirection: 'row',
     width: '100%',
-    maxWidth: 620,
+    maxWidth: 560,
     alignSelf: 'center',
     alignItems: 'center',
-    gap: SEARCH_GAP,
   },
   bar: {
     flex: 1,
@@ -444,18 +412,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: { fontSize: 12, lineHeight: 15, color: C.text },
-  search: {
-    width: SEARCH,
-    height: SEARCH,
-    borderRadius: SEARCH / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Brand.navy950,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-  },
-  searchPressed: { transform: [{ scale: 0.92 }] },
   badge: {
     position: 'absolute',
     top: -4,

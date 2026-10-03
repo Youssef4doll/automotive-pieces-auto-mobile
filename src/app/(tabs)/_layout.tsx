@@ -15,9 +15,8 @@ import { useCartCount } from '@/store/cart';
  * something that works.
  *
  * Search is not a tab. It is the box at the top of Accueil and Catalogue,
- * and — on phones 360pt across or more — a round glass button beside the
- * bar, as iOS 26 sets search apart. A sixth tab would push every label
- * under the width a 320pt phone can set them at.
+ * one tap from anywhere a customer starts, and a sixth tab would push every
+ * label under the width a 320pt phone can set them at.
  *
  * The basket's badge is the number of parts, counting quantities — what the
  * customer will find inside — hidden at zero rather than showing a "0"
