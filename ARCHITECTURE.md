@@ -1638,3 +1638,33 @@ SMS never opens the back office.
 
 `e2e/reach.mjs` drives all of it from the screens (with `SHOTS=dir` for
 pictures); the website's `scripts/e2e-reach.mjs` checks the rules at the API.
+
+## 26. The glass bar and its lens (October 3, 2026)
+
+The tab bar now follows iOS 26's TabView, as Apple Music and Glovo do
+(components/tab-bar):
+
+- **The lens.** The open tab sits under a lens 4pt taller than the bar
+  above and below, and a little wider than its slot, so it stands out of
+  the capsule. The tab under it is magnified (×1.08 at rest). Every tab is
+  magnified by how much of the lens is over it, so the lens reads as a
+  magnifier as it crosses the bar.
+- **The transition.** Picking a tab springs the lens there. It swells to
+  ×1.12 on the way and settles when it lands. Reduce Motion makes it jump.
+- **Sliding.** A sideways drag of more than 10pt takes the bar from the tab
+  under the finger. The lens follows the finger and grows to ×1.16 while
+  held. Letting go opens the tab it is over. A tap is still a tap.
+- **The material.** On iOS 26 and later, Apple's own glass draws everything:
+  `regular` for the bar and the search button, and `clear` with `isInteractive`
+  for the lens. Elsewhere the bar is frosted. On the web the frost is a
+  backdrop blur, and on Android it is near-opaque because Android has no
+  live blur. The lens is white glass with a warm-to-cool iridescent rim and
+  a top shine, drawn in SVG, so it looks the same on Android and the web.
+- **Search.** Search is a round glass button beside the bar, on the trailing
+  side, mirrored in Arabic. It opens /recherche. Below 360pt across it steps
+  aside, because five labels and a sixth button do not fit there; the search
+  boxes on Accueil and Catalogue remain.
+
+The footprint is unchanged (`tabBarFootprint`): the lens stands proud by
+exactly the room already kept above the bar. The tabs now carry
+`aria-selected` as well, which the web build needs to say which tab is open.

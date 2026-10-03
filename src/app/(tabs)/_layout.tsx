@@ -15,8 +15,9 @@ import { useCartCount } from '@/store/cart';
  * something that works.
  *
  * Search is not a tab. It is the box at the top of Accueil and Catalogue,
- * one tap from anywhere a customer starts, and a sixth tab would push every
- * label under the width a 320pt phone can set them at.
+ * and — on phones 360pt across or more — a round glass button beside the
+ * bar, as iOS 26 sets search apart. A sixth tab would push every label
+ * under the width a 320pt phone can set them at.
  *
  * The basket's badge is the number of parts, counting quantities — what the
  * customer will find inside — hidden at zero rather than showing a "0"
@@ -24,9 +25,10 @@ import { useCartCount } from '@/store/cart';
  *
  * ## The bar
  *
- * Drawn by components/tab-bar: a white rounded bar lifted off the bottom
- * edge, a pale pill sliding to the open tab behind its icon and label. The
- * active tab is still three signals, never colour alone — see there.
+ * Drawn by components/tab-bar: a glass capsule lifted off the bottom edge,
+ * and a lens over the open tab that magnifies what it passes over, travels
+ * on a spring and can be slid along the bar. The active tab is still three
+ * signals, never colour alone — see there.
  *
  * ## The icons
  *
