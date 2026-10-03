@@ -132,6 +132,11 @@ export type Order = {
   returns?: ReturnRequest[];
   /** For a delivered order: what can still be returned. Null before delivery. */
   returnOptions?: ReturnOptions | null;
+  /**
+   * "Demander à la boutique" about this order, oldest first, each with the
+   * shop's written answer when there is one. Absent on older servers.
+   */
+  questions?: { id: string; body: string; photoCount: number; createdAt: string; reply: string | null; repliedAt: string | null; handled: boolean }[];
 };
 
 export type OrderInput = {

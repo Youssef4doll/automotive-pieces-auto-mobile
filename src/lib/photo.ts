@@ -29,7 +29,15 @@ export async function pickPhoto(from: 'camera' | 'library'): Promise<PickedPhoto
   const result = from === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
   if (result.canceled || !result.assets[0]) return null;
   const asset = result.assets[0];
-  return shrink(asset.uri, asset.width, asset.height);
+  try {
+    return await shrink(asset.uri, asset.width, asset.height);
+  } catch {
+    // Some pictures (a HEIC the manipulator cannot read, a cloud photo still
+    // downloading) cannot be shrunk on this phone. The picture itself is
+    // still the customer's answer: send it as taken rather than dropping it
+    // without a word — the shop checks size and type on arrival anyway.
+    return { uri: asset.uri, width: asset.width, height: asset.height };
+  }
 }
 
 async function shrink(uri: string, width: number, height: number): Promise<PickedPhoto> {
@@ -77,9 +85,15 @@ export async function pickAvatar(): Promise<string | null> {
   const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: 'images', quality: 1, allowsEditing: true, aspect: [1, 1] });
   if (result.canceled || !result.assets[0]) return null;
   const asset = result.assets[0];
-  const context = ImageManipulator.manipulate(asset.uri);
-  context.resize(asset.width >= asset.height ? { height: 320 } : { width: 320 });
-  const image = await context.renderAsync();
-  const saved = await image.saveAsync({ compress: 0.8, format: SaveFormat.JPEG, base64: true });
-  return saved.base64 ? `data:image/jpeg;base64,${saved.base64}` : saved.uri;
+  try {
+    const context = ImageManipulator.manipulate(asset.uri);
+    context.resize(asset.width >= asset.height ? { height: 320 } : { width: 320 });
+    const image = await context.renderAsync();
+    const saved = await image.saveAsync({ compress: 0.8, format: SaveFormat.JPEG, base64: true });
+    return saved.base64 ? `data:image/jpeg;base64,${saved.base64}` : saved.uri;
+  } catch {
+    // The same fallback as pickPhoto: the chosen picture, as chosen, rather
+    // than a tap that seems to do nothing.
+    return asset.uri;
+  }
 }

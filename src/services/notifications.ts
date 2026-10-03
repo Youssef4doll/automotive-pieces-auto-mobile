@@ -98,6 +98,8 @@ export function routeFor(data: unknown): string | null {
   if (typeof d.ref === 'string' && /^[A-Z0-9-]{3,32}$/i.test(d.ref)) return `/suivi/${encodeURIComponent(d.ref)}`;
   if (typeof d.slug === 'string' && /^[a-z0-9-]{1,200}$/.test(d.slug)) return `/produit/${d.slug}`;
   if (typeof d.engine === 'string' && /^[a-z0-9]{10,40}$/i.test(d.engine)) return `/garage/vehicule/${d.engine}`;
+  // The shop answered a question that was not about an order.
+  if (typeof d.question === 'string' && /^[a-z0-9]{10,40}$/i.test(d.question)) return '/compte/questions';
   return null;
 }
 

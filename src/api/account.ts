@@ -13,8 +13,32 @@ export type SignedInDevice = {
   current: boolean;
 };
 
-/** The signed-in customer, as the shop lets the app see them. */
-export type Account = { name: string; email: string; phone: string | null; createdAt: string };
+/**
+ * The signed-in customer, as the shop lets the app see them. The last three
+ * are newer than some servers: absent means a password account, a number
+ * never proved by code, and not staff.
+ */
+export type Account = {
+  name: string;
+  /** Null for an account opened with a phone code. */
+  email: string | null;
+  phone: string | null;
+  /** The number this account signs in with by code ("+21698765432"). */
+  verifiedPhone?: string | null;
+  /** False for an account that only ever signed in with a code. */
+  hasPassword?: boolean;
+  /** An ADMIN: "Espace boutique" belongs on its account screen. */
+  staff?: boolean;
+  createdAt: string;
+};
+
+/** The staff session an admin's password sign-in brings with it. */
+export type StaffGrant = { token: string; admin: { name: string; email: string | null } };
+
+/** A right code: signed in, or — for a number with no account — a ticket to open one. */
+export type CodeResult = { token: string; account: Account } | { ticket: string; needsAccount: true };
+
+type Locale = 'fr' | 'en' | 'ar';
 
 export type AccountOrder = { ref: string; status: OrderStatus; placedAt: string; total: number; itemCount: number };
 
@@ -25,7 +49,7 @@ export type AccountOrder = { ref: string; status: OrderStatus; placedAt: string;
  */
 export const accountApi = {
   signIn: (email: string, password: string) =>
-    send<{ token: string; account: Account }>('/api/v1/auth/session', {
+    send<{ token: string; account: Account; staff?: StaffGrant }>('/api/v1/auth/session', {
       method: 'POST',
       body: { email: email.trim(), password, device: deviceName() },
     }),
@@ -37,6 +61,37 @@ export const accountApi = {
     }),
 
   signOut: (token: string) => send<{ ok: true }>('/api/v1/auth/session', { method: 'DELETE', token }),
+
+  /** Text a sign-in code to this number. The same answer whether or not it has an account. */
+  sendCode: (phone: string, locale: Locale) =>
+    send<{ sent: true; expiresIn: number }>('/api/v1/auth/phone/code', { method: 'POST', body: { phone, locale } }),
+
+  /** The code, typed back. */
+  verifyCode: (phone: string, code: string) =>
+    send<CodeResult>('/api/v1/auth/phone/verify', { method: 'POST', body: { phone, code: code.trim(), device: deviceName() } }),
+
+  /** Open an account on a number just proved — a name, and an e-mail only if they want one. */
+  signUpWithTicket: (ticket: string, name: string, email: string) =>
+    send<{ token: string; account: Account }>('/api/v1/auth/phone/signup', {
+      method: 'POST',
+      body: { ticket, name: name.trim(), email: email.trim(), device: deviceName() },
+    }),
+
+  /** Signed in: text a code to a number to sign in with from now on. */
+  sendLinkCode: (token: string, phone: string, locale: Locale) =>
+    send<{ sent: true }>('/api/v1/account/phone/code', { method: 'POST', token, body: { phone, locale } }),
+
+  /** …and the code, which links the number. */
+  linkPhone: (token: string, phone: string, code: string) =>
+    send<{ account: Account }>('/api/v1/account/phone', { method: 'POST', token, body: { phone, code: code.trim() } }),
+
+  /** No password to re-enter: a code to the account's number, to confirm deleting it. */
+  sendConfirmCode: (token: string, locale: Locale) =>
+    send<{ sent: true; to: string }>('/api/v1/account/confirm-code', { method: 'POST', token, body: { locale } }),
+
+  /** Every order of the account reaches this phone as it moves, while it stays signed in. */
+  registerPush: (token: string, pushToken: string, locale: Locale) =>
+    send<{ ok: true }>('/api/v1/account/push', { method: 'POST', token, body: { token: pushToken, locale } }),
 
   /** Sends the website's reset e-mail. The same answer whether or not the address has an account. */
   requestReset: (email: string) =>
@@ -63,8 +118,9 @@ export const accountApi = {
   changePassword: (token: string, current: string, next: string) =>
     send<{ signedOut: number }>('/api/v1/account/password', { method: 'POST', token, body: { current, next } }),
 
-  remove: (token: string, password: string) =>
-    send<{ deleted: true }>('/api/v1/account', { method: 'DELETE', token, body: { password } }),
+  /** The password — or, for an account without one, the code from `sendConfirmCode`. */
+  remove: (token: string, proof: { password: string } | { code: string }) =>
+    send<{ deleted: true }>('/api/v1/account', { method: 'DELETE', token, body: proof }),
 
   orders: (token: string, signal?: AbortSignal) => send<AccountOrder[]>('/api/v1/account/orders', { token, signal }),
 

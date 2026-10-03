@@ -272,7 +272,7 @@ export default function HomeScreen() {
           </View>
 
 
-          {/* Always there: the photo goes to the shop's inbox (/demande-photo). */}
+          {/* Always there: the photo goes to the shop's inbox (/demande). */}
           <View style={[styles.column, styles.adviceWrap]}>
             <AdviceCard />
           </View>

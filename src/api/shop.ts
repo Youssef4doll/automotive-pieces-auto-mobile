@@ -37,6 +37,8 @@ export type ShopSettings = {
     whatsapp: string | null;
     hours: string | null;
   };
+  /** Whether a sign-in code can be sent by SMS. Absent from an older shop: e-mail only. */
+  auth?: { phoneCode: boolean };
   governorates: string[];
   grandTunis: string[];
 };

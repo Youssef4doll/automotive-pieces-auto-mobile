@@ -16,6 +16,8 @@ import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
 import { passwordProblem, PASSWORD_MIN } from '@/lib/account';
 import { formatDate } from '@/lib/format';
+import { tunisianDigits } from '@/lib/checkout';
+import { useShopSettings } from '@/hooks/use-shop-settings';
 import { accountToken, useAccount } from '@/store/account';
 import { useToast } from '@/store/toast';
 
@@ -34,6 +36,8 @@ export default function SecurityScreen() {
   const { t, rtl } = useI18n();
   const status = useAccount((s) => s.status);
   const signOut = useAccount((s) => s.signOut);
+  // An account opened with a phone code has no password to change.
+  const hasPassword = useAccount((s) => s.account?.hasPassword !== false);
   const toast = useToast((s) => s.show);
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
   const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
@@ -88,19 +92,23 @@ export default function SecurityScreen() {
       <Stack.Screen options={{ title: t('security.title') }} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <View style={styles.column}>
-          <View style={styles.section}>
-            <Text style={[styles.heading, align, { fontFamily: familyFor('heading', rtl) }]}>{t('security.password')}</Text>
-            <Text variant="hint" style={align}>
-              {t('security.passwordWhy')}
-            </Text>
-            <PasswordCard
-              onChanged={(n) => {
-                toast({ message: n > 0 ? t('security.changedOthers', { n }) : t('security.changed'), tone: 'success' });
-                refresh();
-              }}
-              onLapsed={lapsed}
-            />
-          </View>
+          <PhoneSection onLapsed={lapsed} />
+
+          {hasPassword ? (
+            <View style={styles.section}>
+              <Text style={[styles.heading, align, { fontFamily: familyFor('heading', rtl) }]}>{t('security.password')}</Text>
+              <Text variant="hint" style={align}>
+                {t('security.passwordWhy')}
+              </Text>
+              <PasswordCard
+                onChanged={(n) => {
+                  toast({ message: n > 0 ? t('security.changedOthers', { n }) : t('security.changed'), tone: 'success' });
+                  refresh();
+                }}
+                onLapsed={lapsed}
+              />
+            </View>
+          ) : null}
 
           <View style={styles.section}>
             <Text style={[styles.heading, align, { fontFamily: familyFor('heading', rtl) }]}>{t('security.devices')}</Text>
@@ -158,6 +166,158 @@ export default function SecurityScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+/**
+ * Signing in with a code by SMS: which number does it (only a number proved
+ * with a code ever does — a typed one proves nothing), and the way to add or
+ * change it, code and all. Offered only when the shop can send texts; an
+ * account that already has a number says so either way.
+ */
+function PhoneSection({ onLapsed }: { onLapsed: (f: ApiFailure) => Promise<boolean> }) {
+  const { t, rtl, locale } = useI18n();
+  const account = useAccount((s) => s.account);
+  const setAccount = useAccount((s) => s.setAccount);
+  const toast = useToast((s) => s.show);
+  const settings = useShopSettings();
+  const canText = settings.status === 'loaded' && settings.data.auth?.phoneCode === true;
+  const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
+  const [open, setOpen] = useState(false);
+  const [phone, setPhone] = useState(account?.phone ?? '');
+  const [code, setCode] = useState('');
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<DictKey | null>(null);
+  const verified = account?.verifiedPhone ?? null;
+  const shown = verified ? `+216 ${verified.slice(4, 6)} ${verified.slice(6, 9)} ${verified.slice(9)}` : null;
+
+  if (!verified && !canText) return null;
+
+  const fail = async (err: unknown) => {
+    const f: ApiFailure = err instanceof ApiError ? err.failure : { kind: 'offline' };
+    if (await onLapsed(f)) return;
+    setError(
+      f.kind === 'invalid' && f.field === 'phone'
+        ? f.reason === 'taken'
+          ? 'security.phoneTaken'
+          : f.reason === 'same'
+            ? 'security.phoneSame'
+            : 'auth.err.phone'
+        : f.kind === 'invalid' && f.field === 'code'
+          ? f.reason === 'too_many' || f.reason === 'expired'
+            ? `auth.err.code.${f.reason}`
+            : 'auth.err.code.wrong'
+          : f.kind === 'rateLimited'
+            ? 'auth.err.rateLimited'
+            : f.kind === 'offline' || f.kind === 'timeout'
+              ? 'state.offlineBody'
+              : 'state.serverBody',
+    );
+  };
+
+  const send = async () => {
+    const token = accountToken();
+    const digits = tunisianDigits(phone);
+    if (!token) return;
+    if (!digits) return setError('auth.err.phone');
+    setError(null);
+    setBusy(true);
+    try {
+      await accountApi.sendLinkCode(token, digits, locale);
+      setSent(true);
+      setCode('');
+    } catch (err) {
+      await fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const link = async () => {
+    const token = accountToken();
+    const digits = tunisianDigits(phone);
+    if (!token || !digits || code.length !== 6) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const { account: next } = await accountApi.linkPhone(token, digits, code);
+      setAccount(next);
+      setOpen(false);
+      setSent(false);
+      toast({ message: t('security.phoneLinked'), tone: 'success' });
+    } catch (err) {
+      await fail(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={styles.section} testID="security-phone">
+      <Text style={[styles.heading, align, { fontFamily: familyFor('heading', rtl) }]}>{t('security.phoneTitle')}</Text>
+      <Text variant="hint" style={align}>
+        {account?.hasPassword === false && shown
+          ? t('security.noPassword', { phone: shown })
+          : shown
+            ? t('security.phoneOn', { phone: shown })
+            : t('security.phoneOff')}
+      </Text>
+      {canText ? (
+        open ? (
+          <View style={styles.card}>
+            <View style={styles.form}>
+              <FormField
+                label={t('auth.phoneNumber')}
+                value={phone}
+                onChangeText={(v) => {
+                  setPhone(v);
+                  setSent(false);
+                }}
+                keyboardType="phone-pad"
+                prefix="+216"
+                placeholder="22 334 455"
+                maxLength={30}
+                ltr
+              />
+              {sent ? (
+                <FormField
+                  label={t('auth.code')}
+                  value={code}
+                  onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
+                  keyboardType="number-pad"
+                  autoComplete="one-time-code"
+                  textContentType="oneTimeCode"
+                  maxLength={6}
+                  ltr
+                  onSubmitEditing={() => void link()}
+                />
+              ) : null}
+              {error ? (
+                <Text variant="hint" tone={C.danger} style={align}>
+                  {t(error)}
+                </Text>
+              ) : null}
+              {sent ? (
+                <Button label={t('auth.verify')} onPress={() => void link()} loading={busy} disabled={code.length !== 6} />
+              ) : (
+                <Button label={t('auth.sendCode')} icon="message-square" onPress={() => void send()} loading={busy} />
+              )}
+            </View>
+          </View>
+        ) : (
+          <Button
+            label={t(verified ? 'security.phoneChange' : 'security.phoneAdd')}
+            icon="smartphone"
+            variant="secondary"
+            onPress={() => {
+              setOpen(true);
+              setError(null);
+            }}
+          />
+        )
+      ) : null}
+    </View>
   );
 }
 

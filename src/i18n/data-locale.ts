@@ -12,6 +12,11 @@ export function setDataLocale(locale: Locale) {
   current = locale;
 }
 
+/** The app's language, for code with no React context (sign-in codes, push wording). */
+export function appLocale(): Locale {
+  return current;
+}
+
 /** A category's name in the customer's language, or the shop's own when there is no translation. */
 export function categoryName(slug: string | null | undefined, name: string): string {
   if (current === 'fr' || !slug) return name;

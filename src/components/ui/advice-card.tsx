@@ -10,7 +10,7 @@ import { Text } from './text';
 
 /**
  * "Besoin d'un conseil ?" — the way out for a customer who cannot name the
- * part: a photo to the shop's inbox (/demande-photo), always there, since it
+ * part: a photo to the shop's inbox (/demande, photo first), always there, since it
  * promises nothing but a person looking at it.
  *
  * Drawn like the app's other quiet cards rather than as a banner: a pale
@@ -30,7 +30,7 @@ export function AdviceCard({ title = 'look.advice', onPale = false }: { title?: 
       accessibilityRole="button"
       accessibilityLabel={`${t(title)} ${t('look.adviceWhy')}`}
       accessibilityHint={t('look.adviceCta')}
-      onPress={() => router.push('/demande-photo')}
+      onPress={() => router.push({ pathname: '/demande', params: { photo: '1' } })}
       testID="advice-card"
       style={({ pressed }) => [styles.card, onPale && styles.white, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.pressed]}
     >

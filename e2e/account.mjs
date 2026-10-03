@@ -82,6 +82,8 @@ try {
   await tap(page, 'Se connecter ou créer un compte', { exact: false });
   await page.waitForTimeout(1200);
   check(await says(page, 'vous pouvez commander sans'), 'sign-in: says the account is optional');
+  // A code by SMS comes first when the shop can send one; this suite is about e-mail and password.
+  if (await page.getByTestId('auth-method-email').count()) await page.getByTestId('auth-method-email').click();
   await tap(page, 'Pas encore de compte ? Créer un compte');
   await page.waitForTimeout(800);
   await page.getByLabel('Nom et prénom', { exact: true }).fill('nom@exemple.tn');
@@ -140,6 +142,7 @@ const phoneB = await open({ width: 390 });
 try {
   const { page } = phoneB;
   await go(page, '/compte/connexion');
+  if (await page.getByTestId('auth-method-email').count()) await page.getByTestId('auth-method-email').click();
   await page.getByLabel('Adresse e-mail', { exact: true }).fill(email);
   await page.getByLabel('Mot de passe', { exact: true }).fill('mauvais-mot');
   await page.getByRole('button', { name: 'Se connecter' }).last().click();

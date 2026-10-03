@@ -3,10 +3,12 @@ import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 
 import { staffApi, type Dashboard } from '@/api/staff';
+import { Feather } from '@expo/vector-icons';
 import { Card, MenuRow, StatusPill, staffStyles } from '@/components/staff/kit';
+import { Button } from '@/components/ui/button';
 import { Failed, Loading } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
-import { Brand, C, familyFor, Spacing, Tap } from '@/constants/theme';
+import { Brand, C, familyFor, IconSize, Spacing, Tap } from '@/constants/theme';
 import { useLive } from '@/hooks/use-live';
 import { useI18n } from '@/i18n/provider';
 import { formatDT } from '@/lib/format';
@@ -51,13 +53,33 @@ export default function StaffHome() {
           }
         >
           <Text variant="screenTitle">{t('staff.hello', { name: dash.data.admin.name })}</Text>
+
+          {/* What customers cannot see until it is filled in: no number means
+              no WhatsApp or call button anywhere, no address no pickup. */}
+          {dash.data.missing?.length ? (
+            <Card style={styles.setup}>
+              <View style={[styles.setupHead, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+                <Feather name="alert-circle" size={IconSize.medium} color={Brand.navy950} />
+                <Text variant="rowTitle" style={{ flex: 1, textAlign: rtl ? 'right' : 'left' }}>
+                  {t('staff.setup.title')}
+                </Text>
+              </View>
+              {dash.data.missing.map((k) => (
+                <Text key={k} variant="body" tone={C.text} style={{ textAlign: rtl ? 'right' : 'left' }}>
+                  {`• ${t(`staff.setup.${k}`)}`}
+                </Text>
+              ))}
+              <Button label={t('staff.setup.cta')} icon="edit-2" onPress={() => router.push('/gestion/boutique')} testID="staff-setup" />
+            </Card>
+          ) : null}
+
           <Periods data={dash.data} />
 
           <Card>
             <Text variant="label" tone={C.textMuted}>
               {t('staff.todo')}
             </Text>
-            {dash.data.pendingCount + dash.data.outOfStock + dash.data.lowStockCount + (dash.data.returns?.requested ?? 0) === 0 ? (
+            {dash.data.pendingCount + dash.data.outOfStock + dash.data.lowStockCount + (dash.data.returns?.requested ?? 0) + (dash.data.messagesWaiting ?? 0) === 0 ? (
               <Text variant="body">{t('staff.allClear')}</Text>
             ) : null}
             {dash.data.pendingCount > 0 ? (
@@ -65,6 +87,13 @@ export default function StaffHome() {
                 icon="clock"
                 label={t('staff.pendingN', { n: dash.data.pendingCount })}
                 onPress={() => router.push({ pathname: '/gestion/commandes', params: { status: 'PENDING' } })}
+              />
+            ) : null}
+            {dash.data.messagesWaiting ? (
+              <MenuRow
+                icon="message-square"
+                label={t('staff.messagesN', { n: dash.data.messagesWaiting })}
+                onPress={() => router.push('/gestion/messages')}
               />
             ) : null}
             {dash.data.returns?.requested ? (
@@ -94,6 +123,7 @@ export default function StaffHome() {
 
           <Card>
             <MenuRow icon="file-text" label={t('staff.menu.orders')} onPress={() => router.push('/gestion/commandes')} />
+            <MenuRow icon="message-square" label={t('staff.menu.messages')} onPress={() => router.push('/gestion/messages')} />
             <MenuRow icon="rotate-ccw" label={t('staff.returns')} onPress={() => router.push('/gestion/retours')} />
             <MenuRow icon="package" label={t('staff.menu.stock')} onPress={() => router.push('/gestion/stock')} />
             <MenuRow icon="image" label={t('staff.menu.families')} onPress={() => router.push('/gestion/familles')} />
@@ -190,6 +220,8 @@ function Periods({ data }: { data: Dashboard }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
+  setup: { backgroundColor: C.cautionSurface, borderColor: Brand.gold500, gap: Spacing.two },
+  setupHead: { alignItems: 'center', gap: Spacing.two },
   periods: { backgroundColor: Brand.navy900, borderRadius: 18, paddingHorizontal: Spacing.three },
   period: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
   periodRule: { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.12)' },

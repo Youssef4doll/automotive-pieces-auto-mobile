@@ -17,6 +17,7 @@ import { useAccount } from '@/store/account';
 import { useCheckout } from '@/store/checkout';
 import { useGarage } from '@/store/garage';
 import { useOrders } from '@/store/orders';
+import { unreadAnswers, useQuestions } from '@/store/questions';
 import { useStaff } from '@/store/staff';
 import { useProfilePhoto } from '@/store/profile-photo';
 import { useToast } from '@/store/toast';
@@ -58,6 +59,8 @@ export default function AccountScreen() {
     const picked = await pickAvatar().catch(() => null);
     if (picked) setPhoto(picked);
   };
+  const questions = useQuestions((s) => s.questions);
+  const unread = unreadAnswers(questions);
   const staffSignedIn = useStaff((s) => s.status === 'signedIn');
   const restoreStaff = useStaff((s) => s.restore);
   const accountStatus = useAccount((s) => s.status);
@@ -76,7 +79,7 @@ export default function AccountScreen() {
 
   // Signed in, the account speaks; otherwise whatever the checkout remembers.
   const name = signedIn && account ? account.name : details.customerName.trim();
-  const contactLine = signedIn && account ? account.email : details.email.trim() || details.phone.trim();
+  const contactLine = signedIn && account ? (account.email ?? (account.phone ? `+216 ${account.phone}` : '')) : details.email.trim() || details.phone.trim();
   const hasDetails = Boolean(name || details.phone || details.address);
   const initials = name
     ? name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
@@ -143,23 +146,33 @@ export default function AccountScreen() {
             <Row icon="lock" label={t('security.row')} value={t('security.rowHint')} onPress={() => router.push('/compte/securite')} />
           ) : null}
           <Row icon="rotate-ccw" label={t('returns.title')} onPress={() => router.push('/garanties')} />
+          {questions.length ? (
+            <Row
+              icon="message-square"
+              label={t('account.questions')}
+              value={unread ? t('account.questionsNew', { n: unread }) : String(questions.length)}
+              onPress={() => router.push('/compte/questions')}
+            />
+          ) : null}
           <Row icon="help-circle" label={t('account.helpContact')} onPress={() => router.push('/aide')} />
           <Row icon="settings" label={t('account.settings')} onPress={() => router.push('/compte/parametres')} last />
         </View>
 
-        {/* The shop's own door lives in Paramètres, out of the customer's
-            menu. Once a member of staff is signed in on this phone it is
-            shown here too, as their way back. */}
-        {staffSignedIn ? (
-        <View style={styles.staff}>
-          <Row
-            icon="briefcase"
-            label={t('staff.entry')}
-            value={staffSignedIn ? t('staff.connected') : t('staff.entryHint')}
-            onPress={() => router.push('/gestion')}
-            last
-          />
-        </View>
+        {/* The shop's own door, for the shop only: it appears when the
+            account signed in here is an admin (its password sign-in opened
+            the staff session too), or a staff session is live on this phone.
+            A customer never sees it. The shop checks the role on every
+            request behind it regardless. */}
+        {account?.staff || staffSignedIn ? (
+          <View style={styles.staff}>
+            <Row
+              icon="briefcase"
+              label={t('staff.entry')}
+              value={staffSignedIn ? t('staff.connected') : t('staff.entryHint')}
+              onPress={() => router.push('/gestion')}
+              last
+            />
+          </View>
         ) : null}
 
         {signedIn ? (

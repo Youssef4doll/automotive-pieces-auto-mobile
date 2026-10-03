@@ -7,6 +7,7 @@ import { C, IconSize, Radius, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
 import { mayNotify, pushAvailable, pushToken } from '@/services/notifications';
 import { useNotify } from '@/store/notify';
+import { registerAccountPush } from '@/store/account';
 import { useOrders } from '@/store/orders';
 import { Button } from './button';
 import { Text } from './text';
@@ -44,6 +45,9 @@ export function OrderNotify({ orderRef, auto = false }: { orderRef: string; auto
       if (!key) return setProblem('failed');
       await ordersApi.subscribe(orderRef, key, push, locale);
       setOrder(orderRef, true);
+      // Signed in: now that notifications are allowed, every order of the
+      // account reaches this phone, not just this one.
+      void registerAccountPush();
     } catch {
       if (ask) setProblem('failed');
     } finally {

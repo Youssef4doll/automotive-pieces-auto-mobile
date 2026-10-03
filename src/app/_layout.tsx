@@ -14,6 +14,7 @@ import { promotionsApi } from '@/api/promotions';
 import { shopApi } from '@/api/shop';
 import { AuthMoment } from '@/components/auth-moment';
 import { NotificationRouter } from '@/components/notification-router';
+import { OrderWatch } from '@/components/order-watch';
 import { Preloader } from '@/components/preloader';
 import { track } from '@/services/analytics';
 import { installCrashReporting } from '@/services/crash';
@@ -127,6 +128,8 @@ function Shell({ rtl, backLabel, launching }: { rtl: boolean; backLabel: string;
       <ToastHost />
       {/* Over everything, toasts included: signing in or out is the moment. */}
       <AuthMoment />
+      {/* Orders that moved and answers that came, said while the app is open. */}
+      <OrderWatch />
       {Platform.OS !== 'web' ? <NotificationRouter /> : null}
     </>
   );

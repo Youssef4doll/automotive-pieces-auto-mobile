@@ -16,7 +16,7 @@ import { useGarage } from '@/store/garage';
  * "Comment trouver votre pièce ?" — the four ways in, as a list where each
  * row goes straight down its path, for anybody who would rather read than swipe the
  * home screen's arc. The fourth ("je ne sais pas comment ça s'appelle") sends
- * a photo to the shop's inbox (/demande-photo).
+ * a photo to the shop's inbox (/demande, photo first).
  */
 type Way = 'car' | 'part' | 'ref' | 'photo';
 
@@ -40,7 +40,7 @@ export default function FindScreen() {
     if (way === 'car') return active ? router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } }) : router.push('/garage/ajouter');
     if (way === 'part') return router.navigate('/catalogue');
     if (way === 'ref') return router.push({ pathname: '/recherche', params: { mode: 'reference' } });
-    router.push('/demande-photo');
+    router.push({ pathname: '/demande', params: { photo: '1' } });
   };
 
   return (

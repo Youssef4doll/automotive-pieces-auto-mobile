@@ -2,6 +2,7 @@ import { Redirect, Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
+import { accountApi } from '@/api/account';
 import { ApiError } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
@@ -21,31 +22,59 @@ import { useToast } from '@/store/toast';
  * It says what goes and what stays before it asks. Orders stay with the
  * shop, detached, because an invoice has to be kept; saying so here is the
  * difference between a deletion and a surprise.
+ *
+ * An account opened with a phone code has no password to re-enter: it
+ * confirms with a fresh code sent to its number instead.
  */
 export default function DeleteAccountScreen() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const toast = useToast((s) => s.show);
   const status = useAccount((s) => s.status);
+  const token = useAccount((s) => s.token);
+  const byCode = useAccount((s) => s.account?.hasPassword === false);
   const deleteAccount = useAccount((s) => s.deleteAccount);
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
+  const [sentTo, setSentTo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<DictKey | null>(null);
 
   if (status === 'guest') return <Redirect href="/compte" />;
 
+  const sendCode = async () => {
+    if (!token) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const { to } = await accountApi.sendConfirmCode(token, locale);
+      setSentTo(to);
+    } catch (err) {
+      const f = err instanceof ApiError ? err.failure : ({ kind: 'offline' } as const);
+      setError(f.kind === 'rateLimited' ? 'auth.err.rateLimited' : f.kind === 'offline' || f.kind === 'timeout' ? 'state.offlineBody' : 'state.serverBody');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const submit = async () => {
     setError(null);
     setBusy(true);
     try {
-      await deleteAccount(password);
+      await deleteAccount(byCode ? { code } : { password });
       toast({ message: t('auth.deleteDone'), tone: 'neutral' });
       if (router.canGoBack()) router.dismissTo('/compte');
       else router.replace('/compte');
     } catch (err) {
       const f = err instanceof ApiError ? err.failure : ({ kind: 'offline' } as const);
       setError(
-        f.kind === 'invalid'
+        f.kind === 'invalid' && f.field === 'code'
+          ? f.reason === 'too_many'
+            ? 'auth.err.code.too_many'
+            : f.reason === 'expired'
+              ? 'auth.err.code.expired'
+              : 'auth.err.code.wrong'
+          : f.kind === 'invalid'
           ? 'auth.err.wrongPassword'
           : f.kind === 'forbidden'
             ? 'auth.err.admin'
@@ -67,25 +96,46 @@ export default function DeleteAccountScreen() {
           <Text variant="body">{t('auth.deleteWhat')}</Text>
           <Text variant="body">{t('auth.deleteKept')}</Text>
           <Text variant="rowTitle">{t('auth.deleteFinal')}</Text>
-          <FormField
-            label={t('auth.password')}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="current-password"
-            textContentType="password"
-            maxLength={72}
-            ltr
-            onSubmitEditing={submit}
-          />
+          {byCode ? (
+            sentTo ? (
+              <FormField
+                label={t('delete.code')}
+                hint={t('delete.codeLead', { phone: sentTo })}
+                value={code}
+                onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 6))}
+                keyboardType="number-pad"
+                autoComplete="one-time-code"
+                textContentType="oneTimeCode"
+                maxLength={6}
+                ltr
+                onSubmitEditing={submit}
+              />
+            ) : null
+          ) : (
+            <FormField
+              label={t('auth.password')}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="current-password"
+              textContentType="password"
+              maxLength={72}
+              ltr
+              onSubmitEditing={submit}
+            />
+          )}
           {error ? (
             <Text variant="hint" tone={C.danger} accessibilityLiveRegion="assertive">
               {t(error)}
             </Text>
           ) : null}
-          <Button label={t('auth.deleteSubmit')} variant="danger" onPress={submit} loading={busy} disabled={!password} />
+          {byCode && !sentTo ? (
+            <Button label={t('delete.sendCode')} variant="secondary" icon="message-square" onPress={() => void sendCode()} loading={busy} />
+          ) : (
+            <Button label={t('auth.deleteSubmit')} variant="danger" onPress={submit} loading={busy} disabled={byCode ? code.length !== 6 : !password} />
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

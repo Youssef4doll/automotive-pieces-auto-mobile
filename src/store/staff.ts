@@ -25,6 +25,8 @@ type StaffState = {
   name: string | null;
   restore: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  /** The staff session an admin's own sign-in brought (account store) — no second door. */
+  adopt: (token: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
   /** The shop refused the token: forget it without asking the shop again. */
   expire: () => void;
@@ -61,6 +63,11 @@ export const useStaff = create<StaffState>()((set, get) => ({
     });
     await secrets.set(KEY, token);
     set({ status: 'signedIn', token, name: admin.name });
+  },
+
+  adopt: async (token, name) => {
+    await secrets.set(KEY, token);
+    set({ status: 'signedIn', token, name });
   },
 
   signOut: async () => {

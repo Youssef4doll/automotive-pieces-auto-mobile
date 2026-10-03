@@ -24,7 +24,7 @@ const ALL_ROUTES = [
   `/produit/${fits}`, `/produit/${misfit}`, '/pieces-compatibles',
   '/garage/ajouter', '/garage/ajouter/bmw', '/garage/vin', '/garage/vehicules', '/trouver',
   '/compte/commandes', '/compte/parametres', '/compte/adresses', '/compte/retrouver', '/compte/connexion', '/bienvenue',
-  '/aide', '/commande/livraison',
+  '/aide', '/commande/livraison', '/demande', '/demande?photo=1', '/compte/questions',
 ];
 // ONLY=/catalogue,/panier re-checks a few screens after a fix.
 const ROUTES = process.env.ONLY ? ALL_ROUTES.filter((r) => process.env.ONLY.split(',').includes(r)) : ALL_ROUTES;

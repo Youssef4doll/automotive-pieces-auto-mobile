@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import { C, Spacing } from '@/constants/theme';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
+import { useAccount } from '@/store/account';
 import { useStaff } from '@/store/staff';
 import { staffStyles } from '@/components/staff/kit';
 
@@ -23,7 +24,12 @@ export default function StaffSignIn() {
   const { t } = useI18n();
   const router = useRouter();
   const signIn = useStaff((s) => s.signIn);
-  const [email, setEmail] = useState('');
+  // An admin signed in to their own account (by code, which never opens the
+  // shop's space) only has the password left to give.
+  const [email, setEmail] = useState(() => {
+    const account = useAccount.getState().account;
+    return account?.staff ? (account.email ?? '') : '';
+  });
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<DictKey | null>(null);

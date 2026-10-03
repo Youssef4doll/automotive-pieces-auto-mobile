@@ -51,7 +51,8 @@ export const FormField = forwardRef<
       <View style={prefix ? [styles.prefixed, focused && styles.inputFocused, error ? styles.inputError : null] : undefined}>
       {prefix ? (
         <Text style={[styles.prefix, { fontFamily: familyFor('bodySemi', false) }]} accessibilityElementsHidden importantForAccessibility="no">
-          {prefix}
+          {/* Isolated left-to-right: in Arabic "+216" otherwise reads "216+". */}
+          {`\u2066${prefix}\u2069`}
         </Text>
       ) : null}
       <TextInput

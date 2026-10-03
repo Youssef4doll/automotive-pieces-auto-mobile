@@ -275,7 +275,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                 {product.fitment === 'UNKNOWN' ? (
                   <Pressable
                     accessibilityRole="button"
-                    onPress={() => router.push({ pathname: '/demande-photo', params: { sku: product.sku } })}
+                    onPress={() => router.push({ pathname: '/demande', params: { sku: product.sku } })}
                     hitSlop={6}
                     style={styles.fitLink}
                   >

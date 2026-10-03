@@ -7,6 +7,7 @@ import { ApiError } from '@/api/client';
 import { ordersApi, type Order, type OrderStatus } from '@/api/orders';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
+import { QuestionThread } from '@/components/ui/question-thread';
 import { ShopContact } from '@/components/ui/shop-contact';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { arrivalWindow, sameDay } from '@/lib/arrival';
@@ -21,6 +22,7 @@ import { formatDate, formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { useCart } from '@/store/cart';
 import { useOrders } from '@/store/orders';
+import { useQuestions } from '@/store/questions';
 import { useToast } from '@/store/toast';
 import { track } from '@/services/analytics';
 import { OrderNotify } from '@/components/ui/order-notify';
@@ -125,6 +127,11 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
   };
   const canBuyAgain = order.items.some((i) => i.slug);
 
+  // An answer shown here is an answer read: "Mes questions" stops calling it new.
+  useEffect(() => {
+    for (const q of order.questions ?? []) if (q.repliedAt) useQuestions.getState().answered(q.id, q.repliedAt);
+  }, [order.questions]);
+
   // Cancel, while the shop has not confirmed it yet (POST …/cancel).
   const tokenFor = useOrders((s) => s.tokenFor);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -217,17 +224,25 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
         <OrderReturns order={order} onChanged={onRefresh} />
         {!cancelled && order.status !== 'DELIVERED' ? <OrderNotify orderRef={order.ref} /> : null}
 
-        {/* A question about this order: the shop's channels, with the
-            reference written in; and, while nothing has started, a way out. */}
-        {!cancelled ? (
-          <View style={styles.help}>
-            <Text variant="rowTitle">{t('track.help')}</Text>
-            <ShopContact message={t('track.whatsappMsg', { ref: order.ref })} from="order" />
-            {order.status === 'PENDING' ? (
-              <Button label={t('track.cancel')} variant="danger" onPress={() => setConfirmCancel(true)} />
-            ) : null}
-          </View>
-        ) : null}
+        {/* A question about this order: asked in the app — always there,
+            whatever the shop has published — with the answers under it; the
+            shop's WhatsApp and phone when it has them; and, while nothing has
+            started, a way out. */}
+        <View style={styles.help} testID="order-questions">
+          <Text variant="rowTitle">{t('track.help')}</Text>
+          {order.questions?.map((q) => <QuestionThread key={q.id} q={q} />)}
+          <Button
+            label={t('track.askShop')}
+            icon="message-square"
+            variant={order.questions?.length ? 'secondary' : 'primary'}
+            onPress={() => router.push({ pathname: '/demande', params: { order: order.ref } })}
+          />
+          {!order.questions?.length ? <Text variant="hint">{t('track.askHint')}</Text> : null}
+          <ShopContact message={t('track.whatsappMsg', { ref: order.ref })} from="order" />
+          {order.status === 'PENDING' ? (
+            <Button label={t('track.cancel')} variant="danger" onPress={() => setConfirmCancel(true)} />
+          ) : null}
+        </View>
 
         <Text variant="sectionTitle" style={styles.sectionTitle}>
           {t('track.items')}

@@ -40,6 +40,7 @@ export function Button({
   loading = false,
   icon,
   style,
+  testID,
 }: {
   label: string;
   onPress: () => void;
@@ -49,11 +50,13 @@ export function Button({
   /** A leading Feather glyph, for the few buttons whose verb is clearer with one. */
   icon?: React.ComponentProps<typeof Feather>['name'];
   style?: ViewStyle;
+  testID?: string;
 }) {
   const { rtl } = useI18n();
 
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
       disabled={disabled || loading}

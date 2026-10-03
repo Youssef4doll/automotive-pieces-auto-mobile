@@ -1566,3 +1566,75 @@ it, token and all: orders placed while signed in (`fromAccount` set at
 list comes back), and those listed from other devices. The checkout's
 remembered name, e-mail, phone and address go too. Only a guest order that
 was never claimed stays. Signing back in brings the account's orders back.
+
+## 25. Reaching the shop, being told, signing in by SMS (October 3, 2026)
+
+**Why there seemed to be "no way to reach the shop".** WhatsApp, call and
+e-mail buttons have been in the app since September (Aide & contact, every
+order, a part to check), and collection in store at checkout. Each appears
+only once the shop has filled in that detail — the binding rule: no
+placeholder number that rings nobody. Production's WhatsApp, phone and
+address are still empty, so none showed. The staff dashboard now opens on
+"À compléter pour vos clients" (the website's `missing`) with the way to
+fill them in (Espace boutique → Paramètres); the moment they are, the
+buttons and the pickup option appear by themselves (`e2e/reach.mjs` checks
+both sides).
+
+**"Demander à la boutique" (`/demande`)** is the way that never depends on
+a number: a question, a photo or both, the car, the part (`?sku=`) or the
+order (`?order=`, its own token sent along so the shop sees the real order),
+a name and a number to be called back on. It lands in the shop's inbox; the
+shop answers in writing or calls back. The old photo request
+(`/demande-photo`) is a door to it, photo first. Each question returns a
+token kept in the Keychain (`store/questions`), the key to read the answer.
+Answers show in **Mes questions** (`/compte/questions`, a row on Compte with
+the count of new answers), and on the order's page under "Une question sur
+cette commande ?" (`QuestionThread`), which now always offers "Demander à la
+boutique" beside WhatsApp/call (when published) and Annuler. Aide & contact
+leads with "Poser une question" and "Envoyer une photo de la pièce".
+
+A photo the phone cannot shrink (a HEIC, a cloud photo) is now sent as taken
+rather than dropped without a word (`lib/photo`) — the "adding an image does
+nothing" report.
+
+**Staff: Messages** (`/gestion/messages`, `[id]`): the inbox, waiting first;
+a message with its photos, the order (one tap, when proved), call or WhatsApp
+the customer's number, a written answer for app questions (the customer gets
+it under their question, with a push when their phone allows), mark handled.
+
+**Being told.** Three layers, each honest about where it works:
+- push to a signed-in phone for every order of the account: the session
+  keeps the push token (`registerAccountPush`, after sign-in and whenever
+  notifications are allowed — never asked for at sign-in);
+- push for one order ("Me prévenir", unchanged) and for a question's answer
+  ("Me prévenir quand la boutique répond" on `/demande`, asked right there);
+- **the order watch** (`components/order-watch`): while the app is open — on
+  coming to the foreground and every 90 s — it re-reads the orders still on
+  their way and the unanswered questions, and says "CMD-1176 : Confirmée" or
+  "La boutique vous a répondu" in a toast with "Voir". It needs nothing from
+  the shop, so it works in Expo Go and on the web; where push is live and
+  allowed, it stays quiet. It remembers the last status seen and only speaks
+  about a change.
+
+Push itself still needs a build tied to an EAS project: run `eas init` once
+(it writes `extra.eas.projectId` into app.json) and make a development or
+store build; Expo Go on Android cannot receive remote push at all.
+
+**Signing in by SMS** (`components/phone-sign-in`, on `/compte/connexion`):
+"Code par SMS" first when the shop can send texts (`settings.auth.phoneCode`),
+"E-mail" one tap away. Number → code (the phone offers to fill it from the
+SMS; the sixth digit submits) → for a number with no account, a name and an
+optional e-mail. Wrong / expired / too many tries each said plainly; resend
+after 60 s. The account may have no e-mail and no password: Compte shows its
+number; Connexion et sécurité shows "Connexion par SMS" (add or change the
+number, by code) and no password card; deleting it takes a code to its
+number. Only a number proved by code signs in — never one merely typed.
+
+**Espace boutique** is gone from Paramètres. It appears on Compte only for
+an admin (`account.staff`): their password sign-in brings the staff session
+with it, so there is no second door; signing out ends both. An admin signed
+in by code finds the door asking for the password (e-mail filled in) — an
+SMS never opens the back office.
+
+`e2e/reach.mjs` drives all of it from the screens (with `SHOTS=dir` for
+pictures); the website's `scripts/e2e-reach.mjs` checks the rules at the API.

@@ -7,13 +7,16 @@ import { ApiError, type ApiFailure } from '@/api/client';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
 import { Text } from '@/components/ui/text';
-import { C, familyFor, MaxContentWidth, Spacing, Tap } from '@/constants/theme';
+import { PhoneSignIn } from '@/components/phone-sign-in';
+import { C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
+import { useShopSettings } from '@/hooks/use-shop-settings';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
 import { fieldProblem, isEmail, signupProblems, type SignupField } from '@/lib/account';
 import { useAccount } from '@/store/account';
 
 type Mode = 'signin' | 'signup' | 'forgot';
+type Method = 'phone' | 'email';
 
 /**
  * Sign in, create an account, or ask for a new password — one screen, three
@@ -25,6 +28,10 @@ type Mode = 'signin' | 'signup' | 'forgot';
  *
  * A new password is chosen on the website's reset page, from the e-mailed
  * link — one reset flow for both front doors, not two.
+ *
+ * When the shop can send texts, a code by SMS comes first (components/
+ * phone-sign-in): no password to remember, and a number with no account
+ * opens one on the way. The e-mail and password stay one tap away.
  */
 export default function SignInScreen() {
   const params = useLocalSearchParams<{ mode?: Mode }>();
@@ -34,6 +41,11 @@ export default function SignInScreen() {
   const signUp = useAccount((s) => s.signUp);
 
   const [mode, setMode] = useState<Mode>(params.mode === 'signup' || params.mode === 'forgot' ? params.mode : 'signin');
+  const settings = useShopSettings();
+  const phoneCode = settings.status === 'loaded' && settings.data.auth?.phoneCode === true;
+  const [chosen, setChosen] = useState<Method | null>(params.mode === 'signup' || params.mode === 'forgot' ? 'email' : null);
+  // Phone first when the shop can text a code; until the settings answer, e-mail.
+  const method: Method = chosen ?? (phoneCode ? 'phone' : 'email');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -111,7 +123,7 @@ export default function SignInScreen() {
     }
   };
 
-  const title = mode === 'signup' ? t('auth.signUp') : mode === 'forgot' ? t('auth.forgotTitle') : t('auth.signIn');
+  const title = mode === 'signup' && method === 'email' ? t('auth.signUp') : mode === 'forgot' && method === 'email' ? t('auth.forgotTitle') : t('auth.signIn');
   const err = (f: SignupField) => (errors[f] ? t(errors[f]!) : null);
 
   return (
@@ -119,99 +131,131 @@ export default function SignInScreen() {
       <Stack.Screen options={{ title }} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <View style={styles.column}>
-          <Text variant="body">{mode === 'forgot' ? t('auth.forgotWhy') : t('auth.why')}</Text>
+          {/* Whichever way they sign in: what an account is for, and that it is optional. */}
+          <Text variant="body" style={{ textAlign: rtl ? 'right' : 'left' }}>
+            {mode === 'forgot' && method === 'email' ? t('auth.forgotWhy') : t('auth.why')}
+          </Text>
 
-          {mode === 'signup' ? (
-            <FormField
-              label={t('auth.name')}
-              value={name}
-              onChangeText={setName}
-              autoComplete="name"
-              textContentType="name"
-              maxLength={80}
-              error={err('name')}
-            />
+          {phoneCode ? (
+            <View style={[styles.switch, { flexDirection: rtl ? 'row-reverse' : 'row' }]} accessibilityRole="tablist">
+              {(['phone', 'email'] as const).map((m) => (
+                <Pressable
+                  key={m}
+                  accessibilityRole="tab"
+                  aria-selected={method === m}
+                  onPress={() => {
+                    setChosen(m);
+                    setError(null);
+                    setErrors({});
+                  }}
+                  style={[styles.switchItem, method === m && styles.switchOn]}
+                  testID={`auth-method-${m}`}
+                >
+                  <Text style={[styles.switchText, { fontFamily: familyFor('bodySemi', rtl) }, method === m && styles.switchTextOn]}>
+                    {t(m === 'phone' ? 'auth.byPhone' : 'auth.byEmail')}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           ) : null}
 
-          <FormField
-            label={t('auth.email')}
-            placeholder="nom@exemple.tn"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="email"
-            textContentType={mode === 'signup' ? 'emailAddress' : 'username'}
-            maxLength={200}
-            error={err('email')}
-            ltr
-            onSubmitEditing={() => (mode === 'forgot' ? submit() : passwordRef.current?.focus())}
-          />
+          {method === 'phone' ? (
+            <PhoneSignIn onDone={done} />
+          ) : (
+            <>
+              {mode === 'signup' ? (
+                <FormField
+                  label={t('auth.name')}
+                  value={name}
+                  onChangeText={setName}
+                  autoComplete="name"
+                  textContentType="name"
+                  maxLength={80}
+                  error={err('name')}
+                />
+              ) : null}
 
-          {mode === 'signup' ? (
-            <FormField
-              label={t('auth.phone')}
-              placeholder="22 334 455"
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              textContentType="telephoneNumber"
-              maxLength={30}
-              error={err('phone')}
-              ltr
-            />
-          ) : null}
+              <FormField
+                label={t('auth.email')}
+                placeholder="nom@exemple.tn"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                textContentType={mode === 'signup' ? 'emailAddress' : 'username'}
+                maxLength={200}
+                error={err('email')}
+                ltr
+                onSubmitEditing={() => (mode === 'forgot' ? submit() : passwordRef.current?.focus())}
+              />
 
-          {mode !== 'forgot' ? (
-            <FormField
-              ref={passwordRef}
-              label={t('auth.password')}
-              hint={mode === 'signup' ? t('auth.passwordHint') : null}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-              textContentType={mode === 'signup' ? 'newPassword' : 'password'}
-              maxLength={72}
-              error={err('password')}
-              ltr
-              onSubmitEditing={submit}
-            />
-          ) : null}
+              {mode === 'signup' ? (
+                <FormField
+                  label={t('auth.phone')}
+                  placeholder="22 334 455"
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                  textContentType="telephoneNumber"
+                  maxLength={30}
+                  error={err('phone')}
+                  ltr
+                />
+              ) : null}
 
-          {error ? (
-            <Text variant="hint" tone={C.danger} accessibilityLiveRegion="assertive">
-              {t(error)}
-            </Text>
-          ) : null}
-          {sent ? (
-            <Text variant="body" tone={C.success} accessibilityLiveRegion="polite">
-              {t('auth.forgotSent')}
-            </Text>
-          ) : null}
+              {mode !== 'forgot' ? (
+                <FormField
+                  ref={passwordRef}
+                  label={t('auth.password')}
+                  hint={mode === 'signup' ? t('auth.passwordHint') : null}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  textContentType={mode === 'signup' ? 'newPassword' : 'password'}
+                  maxLength={72}
+                  error={err('password')}
+                  ltr
+                  onSubmitEditing={submit}
+                />
+              ) : null}
 
-          <Button
-            label={mode === 'signup' ? t('auth.signUp') : mode === 'forgot' ? t('auth.forgotSend') : t('auth.signIn')}
-            onPress={submit}
-            loading={busy}
-          />
+              {error ? (
+                <Text variant="hint" tone={C.danger} accessibilityLiveRegion="assertive">
+                  {t(error)}
+                </Text>
+              ) : null}
+              {sent ? (
+                <Text variant="body" tone={C.success} accessibilityLiveRegion="polite">
+                  {t('auth.forgotSent')}
+                </Text>
+              ) : null}
 
-          <View style={styles.links}>
-            {mode === 'signin' ? (
-              <>
-                <Link label={t('auth.forgot')} onPress={() => switchTo('forgot')} rtl={rtl} />
-                <Link label={t('auth.noAccount')} onPress={() => switchTo('signup')} rtl={rtl} />
-              </>
-            ) : mode === 'signup' ? (
-              <Link label={t('auth.haveAccount')} onPress={() => switchTo('signin')} rtl={rtl} />
-            ) : (
-              <Link label={t('auth.back')} onPress={() => switchTo('signin')} rtl={rtl} />
-            )}
-          </View>
+              <Button
+                label={mode === 'signup' ? t('auth.signUp') : mode === 'forgot' ? t('auth.forgotSend') : t('auth.signIn')}
+                onPress={submit}
+                loading={busy}
+              />
+
+              <View style={styles.links}>
+                {mode === 'signin' ? (
+                  <>
+                    <Link label={t('auth.forgot')} onPress={() => switchTo('forgot')} rtl={rtl} />
+                    <Link label={t('auth.noAccount')} onPress={() => switchTo('signup')} rtl={rtl} />
+                  </>
+                ) : mode === 'signup' ? (
+                  <Link label={t('auth.haveAccount')} onPress={() => switchTo('signin')} rtl={rtl} />
+                ) : (
+                  <Link label={t('auth.back')} onPress={() => switchTo('signin')} rtl={rtl} />
+                )}
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -239,5 +283,10 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   links: { gap: Spacing.one, alignItems: 'center' },
+  switch: { padding: 4, gap: 4, borderRadius: Radius.pill, backgroundColor: C.surface },
+  switchItem: { flex: 1, minHeight: Tap.min, alignItems: 'center', justifyContent: 'center', borderRadius: Radius.pill },
+  switchOn: { backgroundColor: C.background, ...Elevation.resting },
+  switchText: { fontSize: 15, color: C.textMuted },
+  switchTextOn: { color: C.text },
   link: { minHeight: Tap.min, justifyContent: 'center', paddingHorizontal: Spacing.two },
 });

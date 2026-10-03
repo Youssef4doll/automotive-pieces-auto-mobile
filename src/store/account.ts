@@ -6,7 +6,11 @@ import { ApiError } from '@/api/client';
 import { setAnalyticsAccount, track } from '@/services/analytics';
 import { useCheckout } from './checkout';
 import { useOrders } from './orders';
+import { useQuestions } from './questions';
 import { deviceStorage, secrets } from './storage';
+import { useStaff } from './staff';
+import { appLocale } from '@/i18n/data-locale';
+import { pushAvailable, pushToken } from '@/services/notifications';
 
 /**
  * The customer signed in on this phone — optional, never required to buy.
@@ -37,9 +41,17 @@ type AccountState = {
   restore: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (input: { name: string; email: string; phone: string; password: string }) => Promise<void>;
+  /**
+   * The SMS code, typed back. Signed in when the number has an account;
+   * otherwise the ticket that opens one (`signUpWithTicket`).
+   */
+  signInWithCode: (phone: string, code: string) => Promise<{ ticket: string } | null>;
+  signUpWithTicket: (ticket: string, name: string, email: string) => Promise<void>;
   signOut: () => Promise<void>;
-  /** Password re-entered; throws the shop's refusal for the screen to show. */
-  deleteAccount: (password: string) => Promise<void>;
+  /** The password re-entered, or the code for an account without one; throws the shop's refusal. */
+  deleteAccount: (proof: { password: string } | { code: string }) => Promise<void>;
+  /** The shop answered with the account as it is now (a number just linked). */
+  setAccount: (account: Account) => void;
   /** Pull the account's orders into "Mes commandes". */
   syncOrders: () => Promise<void>;
   /**
@@ -59,8 +71,23 @@ async function adopt(token: string, account: Account, set: (s: Partial<AccountSt
   // customer has already filled in is theirs and is left alone.
   const checkout = useCheckout.getState();
   if (!checkout.details.customerName.trim() && !checkout.details.phone.trim()) {
-    checkout.update({ customerName: account.name, email: account.email, phone: account.phone ?? '' });
+    checkout.update({ customerName: account.name, email: account.email ?? '', phone: account.phone ?? '' });
   }
+  void registerAccountPush();
+}
+
+/**
+ * This phone, signed in, hears about every order of the account (the shop
+ * keeps the push token on the session). Only when notifications are
+ * already allowed — permission is asked where it means something (an
+ * order's "Me prévenir"), never at sign-in — and only where push can work.
+ */
+export async function registerAccountPush() {
+  const token = useAccount.getState().token;
+  if (!token || !pushAvailable) return;
+  const push = await pushToken({ ask: false }).catch(() => null);
+  if (!push) return;
+  await accountApi.registerPush(token, push, appLocale()).catch(() => undefined);
 }
 
 function firstName(name: string) {
@@ -69,11 +96,15 @@ function firstName(name: string) {
 
 async function forgetLocally(set: (s: Partial<AccountState>) => void) {
   set({ status: 'guest', token: null, account: null });
+  // The shop's staff session came with the account's sign-in; it goes with it.
+  const staff = useStaff.getState();
+  if (staff.status === 'signedIn') await staff.signOut().catch(() => undefined);
   setAnalyticsAccount(undefined);
   await secrets.remove(KEY).catch(() => undefined);
   // The phone goes back to a guest's: the account's orders and the
   // account's name, e-mail, phone and address leave with it.
   await useOrders.getState().dropAccountOrders();
+  await useQuestions.getState().dropAccountQuestions();
   useCheckout.getState().forget();
 }
 
@@ -99,14 +130,18 @@ export const useAccount = create<AccountState>()(
           const { account } = await accountApi.me(token);
           set({ account });
           void get().syncOrders();
+          void registerAccountPush();
         } catch (err) {
           if (err instanceof ApiError && err.failure.kind === 'unauthorized') await forgetLocally(set);
         }
       },
 
       signIn: async (email, password) => {
-        const { token, account } = await accountApi.signIn(email, password);
+        const { token, account, staff } = await accountApi.signIn(email, password);
         await adopt(token, account, set);
+        // An admin's own sign-in opens the shop's space too: "Espace boutique"
+        // simply appears on their account screen.
+        if (staff) await useStaff.getState().adopt(staff.token, staff.admin.name);
         track('login');
         await claimAndSync(token, get);
         // Welcomed once the phone's orders are the account's, as the screen moves on.
@@ -122,6 +157,26 @@ export const useAccount = create<AccountState>()(
         set({ moment: { kind: 'in', name: firstName(account.name), at: Date.now() } });
       },
 
+      signInWithCode: async (phone, code) => {
+        const result = await accountApi.verifyCode(phone, code);
+        if ('ticket' in result) return { ticket: result.ticket };
+        await adopt(result.token, result.account, set);
+        track('login', { method: 'phone' });
+        await claimAndSync(result.token, get);
+        set({ moment: { kind: 'in', name: firstName(result.account.name), at: Date.now() } });
+        return null;
+      },
+
+      signUpWithTicket: async (ticket, name, email) => {
+        const { token, account } = await accountApi.signUpWithTicket(ticket, name, email);
+        await adopt(token, account, set);
+        track('sign_up', { method: 'phone' });
+        await claimAndSync(token, get);
+        set({ moment: { kind: 'in', name: firstName(account.name), at: Date.now() } });
+      },
+
+      setAccount: (account) => set({ account }),
+
       signOut: async () => {
         const token = get().token;
         track('logout');
@@ -131,10 +186,10 @@ export const useAccount = create<AccountState>()(
         if (token) await accountApi.signOut(token).catch(() => undefined);
       },
 
-      deleteAccount: async (password) => {
+      deleteAccount: async (proof) => {
         const token = get().token;
         if (!token) throw new ApiError({ kind: 'unauthorized' }, 'not signed in');
-        await accountApi.remove(token, password);
+        await accountApi.remove(token, proof);
         track('account_deleted');
         await forgetLocally(set);
         useCheckout.getState().forget();

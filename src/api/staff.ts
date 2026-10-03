@@ -24,6 +24,48 @@ export type Dashboard = {
   lowStock: { id: string; name: string; stockQty: number; lowStockThreshold: number }[];
   /** Return requests waiting on the shop. Absent from an older shop. */
   returns?: { requested: number; approved: number; received: number };
+  /** Questions and messages nobody has dealt with yet. Absent from an older shop. */
+  messagesWaiting?: number;
+  /** Contact details the shop has not filled in, so customers do not see them. */
+  missing?: ('whatsapp' | 'phone' | 'address' | 'email')[];
+};
+
+/** One line of the shop's inbox. */
+export type MessageRow = {
+  id: string;
+  name: string;
+  phone: string | null;
+  subject: string;
+  excerpt: string;
+  status: 'NEW' | 'HANDLED';
+  orderRef: string | null;
+  createdAt: string;
+  replied: boolean;
+  /** Asked from the app: a written answer reaches the asker there. */
+  inApp: boolean;
+  photoCount: number;
+};
+
+export type MessageDetail = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  subject: string;
+  body: string;
+  status: 'NEW' | 'HANDLED';
+  orderRef: string | null;
+  productSku: string | null;
+  vehicle: string | null;
+  createdAt: string;
+  handledAt: string | null;
+  reply: string | null;
+  repliedAt: string | null;
+  signedIn: boolean;
+  inApp: boolean;
+  /** Only an order the asker proved is theirs; otherwise see `orderRef`. */
+  order: { id: string; ref: string; status: string } | null;
+  photoIds: string[];
 };
 
 export type ReturnStatus = 'REQUESTED' | 'APPROVED' | 'REFUSED' | 'RECEIVED' | 'RESOLVED' | 'CANCELLED';
@@ -238,6 +280,14 @@ export const staffApi = {
   moveReturn: (id: string, move: ReturnMove) => call<ReturnDetail>(`/returns/${id}`, { method: 'POST', body: move }),
   /** A customer's photo: served to staff only, so it is fetched with the session rather than linked. */
   returnPhotoUrl: (photoId: string) => `/api/v1/admin/returns/photos/${photoId}`,
+
+  messages: (filter: 'new' | 'all', signal?: AbortSignal) =>
+    call<{ waiting: number; messages: MessageRow[] }>(`/messages${qs({ filter })}`, { signal }),
+  message: (id: string, signal?: AbortSignal) => call<MessageDetail>(`/messages/${id}`, { signal }),
+  /** A written answer (app questions), or marking it dealt with / open again. */
+  answerMessage: (id: string, input: { reply: string } | { status: 'NEW' | 'HANDLED' }) =>
+    call<MessageDetail>(`/messages/${id}`, { method: 'POST', body: input }),
+  messagePhotoUrl: (id: string, photoId: string) => `/api/v1/admin/messages/${id}/photos/${photoId}`,
 
   settings: (signal?: AbortSignal) => call<Setting[]>('/settings', { signal }),
   saveSettings: (patch: Record<string, string>) => call<Setting[]>('/settings', { method: 'PATCH', body: patch }),

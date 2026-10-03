@@ -110,8 +110,9 @@ try {
     await go('/', 1500);
   } else check(false, 'misfit: an incompatible part exists in the data');
 
-  // ---- photo request: a real photo into the shop's inbox
-  await go('/demande-photo', 2000);
+  // ---- photo request (the old /demande-photo, now "Demander à la boutique" photo first): a real photo into the shop's inbox
+  await go('/demande-photo', 2500);
+  check(page.url().includes('/demande') && page.url().includes('photo=1'), 'photo: the old door opens "Demander à la boutique", photo first', page.url());
   const chooser = page.waitForEvent('filechooser', { timeout: 8000 });
   await page.getByRole('button', { name: 'Choisir une photo' }).click();
   await (await chooser).setFiles(new URL('./fixtures/part.png', import.meta.url).pathname);
@@ -125,7 +126,7 @@ try {
   await page.getByLabel('Votre téléphone', { exact: true }).fill('20 445 566');
   await page.getByRole('button', { name: 'Envoyer à la boutique' }).click();
   await page.waitForTimeout(3000);
-  check((await says(page, 'Photo envoyée')) && (await says(page, '20 445 566')), 'photo: sent, and the call-back number is repeated');
+  check((await says(page, 'Question envoyée')) && (await says(page, '20 445 566')), 'photo: sent, and the call-back number is repeated');
 
   // ---- search: what fits first, and only what fits
   await go('/recherche?q=filtre', 3500);
