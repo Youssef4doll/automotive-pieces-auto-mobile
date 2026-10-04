@@ -26,6 +26,7 @@ import { EmptyBasketArt } from '@/illustrations/empty-art';
 import { catalogueApi } from '@/api/catalogue';
 import { PressScale } from '@/components/ui/press-scale';
 import { useResource } from '@/hooks/use-resource';
+import { useAccount } from '@/store/account';
 import { useGarage } from '@/store/garage';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 
@@ -57,6 +58,8 @@ export default function CartScreen() {
   const { state, retry, hydrated } = useCartQuote();
   const quote = quoteOf(state);
   const lines = items.length;
+  // Ordering takes an account: a guest is sent to sign in, and comes back to the checkout.
+  const guest = useAccount((s) => s.status) !== 'signedIn';
   useFocusEffect(
     useCallback(() => {
       track('view_cart', { lines });
@@ -149,9 +152,25 @@ export default function CartScreen() {
       />
 
       <StickyBar inTabs>
+        {guest ? (
+          <Text variant="hint" style={[styles.signInWhy, { textAlign: rtl ? 'right' : 'left' }]}>
+            {t('cart.signInWhy')}
+          </Text>
+        ) : null}
         <Button
-          label={quote ? `${t('cart.checkout')} · ${formatDT(quote.total)}` : t('cart.checkout')}
-          onPress={() => router.push('/commande/livraison')}
+          label={
+            guest
+              ? t('cart.signInToOrder')
+              : quote
+                ? `${t('cart.checkout')} · ${formatDT(quote.total)}`
+                : t('cart.checkout')
+          }
+          icon={guest ? 'log-in' : undefined}
+          onPress={() =>
+            guest
+              ? router.push({ pathname: '/compte/connexion', params: { then: 'checkout' } })
+              : router.push('/commande/livraison')
+          }
           disabled={!canCheckout}
           loading={stale}
         />
@@ -408,6 +427,7 @@ function EmptyCart({ bottom }: { bottom: number }) {
 }
 
 const styles = StyleSheet.create({
+  signInWhy: { paddingBottom: Spacing.two },
   root: { flex: 1, backgroundColor: C.background },
   list: {
     width: '100%',

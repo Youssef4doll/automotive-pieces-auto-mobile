@@ -54,34 +54,19 @@ const phoneA = await open({ width: 390 });
 try {
   const { page } = phoneA;
 
-  // ---- a guest order on phone A
+  // ---- a guest: browsing, a cart — and no order without an account
+  await go(page, '/compte');
+  check(await says(page, 'Se connecter ou créer un compte'), 'compte: a guest is offered an account');
+  check(!(await says(page, 'Mes commandes')) && !(await says(page, 'Adresses')), 'compte: a guest has no orders or addresses');
   await go(page, `/produit/${part.slug}`);
   await page.getByRole('button', { name: /Ajouter au panier/ }).first().click();
   await page.waitForTimeout(800);
   await go(page, '/panier', 3000);
-  await page.getByRole('button', { name: /Passer la commande/ }).click();
-  await page.waitForTimeout(1800);
-  await page.getByLabel('Nom et prénom', { exact: true }).fill('Compte Essai');
-  await page.getByLabel('Téléphone', { exact: true }).fill('20 333 444');
-  await tapLabel(page, 'Gouvernorat');
-  await tap(page, 'Ariana');
-  // Greater Tunis and Nabeul ask for the delegation (lib/delegations).
-  await tapLabel(page, 'Délégation');
-  await tap(page, 'La Soukra');
-  await page.getByLabel('Adresse', { exact: true }).fill('5 rue du Compte, Ariana');
-  await tap(page, 'Continuer');
-  await page.waitForTimeout(3000);
-  await page.getByRole('button', { name: /Confirmer la commande/ }).click();
-  await page.waitForTimeout(4500);
-  ref = (await text(page)).match(/CMD-\d+/)?.[0] ?? null;
-  check(Boolean(ref), 'guest: the order is placed', ref);
-
-  // ---- the account row, and the sign-up form's own checks
-  await go(page, '/compte');
-  check(await says(page, 'Se connecter ou créer un compte'), 'compte: a guest is offered an account, optionally');
-  await tap(page, 'Se connecter ou créer un compte', { exact: false });
-  await page.waitForTimeout(1200);
-  check(await says(page, 'vous pouvez commander sans'), 'sign-in: says the account is optional');
+  check(await says(page, 'Se connecter pour commander'), 'cart: a guest is asked to sign in to order');
+  await page.getByRole('button', { name: /Se connecter pour commander/ }).click();
+  await page.waitForTimeout(1500);
+  check(new URL(page.url()).pathname === '/compte/connexion', 'cart: … which opens the sign-in', page.url());
+  check(await says(page, 'Il faut un compte pour commander'), 'sign-in: says ordering takes an account');
   // A code by SMS comes first when the shop can send one; this suite is about e-mail and password.
   if (await page.getByTestId('auth-method-email').count()) await page.getByTestId('auth-method-email').click();
   await tap(page, 'Pas encore de compte ? Créer un compte');
@@ -104,15 +89,31 @@ try {
   await page.getByLabel('Mot de passe', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Créer un compte' }).last().click();
   check(await shows(page, 'Bienvenue, Compte'), 'sign-up: welcomed by name');
+  await page.waitForTimeout(1500);
+  check(new URL(page.url()).pathname === '/commande/livraison', 'sign-up from the cart: straight on to the checkout', page.url());
+  await page.getByLabel('Nom et prénom', { exact: true }).fill('Compte Essai');
+  await page.getByLabel('Téléphone', { exact: true }).fill('20 333 444');
+  await tapLabel(page, 'Gouvernorat');
+  await tap(page, 'Ariana');
+  // Greater Tunis and Nabeul ask for the delegation (lib/delegations).
+  await tapLabel(page, 'Délégation');
+  await tap(page, 'La Soukra');
+  await page.getByLabel('Adresse', { exact: true }).fill('5 rue du Compte, Ariana');
+  await tap(page, 'Continuer');
+  await page.waitForTimeout(3000);
+  await page.getByRole('button', { name: /Confirmer la commande/ }).click();
+  await page.waitForTimeout(4500);
+  ref = (await text(page)).match(/CMD-\d+/)?.[0] ?? null;
+  check(Boolean(ref), 'signed in: the order is placed', ref);
   await go(page, '/compte');
   check((await says(page, 'Compte Essai')) && (await says(page, email)), 'compte: shows the account', await text(page).then((t) => t.slice(0, 120)));
   check(await says(page, 'Supprimer mon compte'), 'compte: deletion is one tap away');
 
-  // ---- the guest order joined the account (proof: the phone's order token)
+  // ---- the order is the account's
   const signIn = await api('/auth/session', { method: 'POST', body: JSON.stringify({ email, password }) });
   const token = signIn.body?.data?.token;
   const listed = await api('/account/orders', { headers: { authorization: `Bearer ${token}` } });
-  check(listed.body?.data?.some((o) => o.ref === ref), 'claim: the guest order now belongs to the account', listed.body);
+  check(listed.body?.data?.some((o) => o.ref === ref), 'account: the order placed signed in belongs to it', listed.body);
   await api('/auth/session', { method: 'DELETE', headers: { authorization: `Bearer ${token}` } });
 
   // ---- the same address again is refused, by the shop

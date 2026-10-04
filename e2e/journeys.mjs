@@ -1,4 +1,4 @@
-import { APP_URL, addBmw, open, tap, tapLabel } from './lib/drive.mjs';
+import { APP_URL, addBmw, open, tap, tapLabel, testAccount } from './lib/drive.mjs';
 
 /**
  * The eight people the redesign brief asked the app to serve, walked end to
@@ -45,8 +45,8 @@ const check = (cond, what, detail) => (cond ? pass(what, detail) : fail(what, de
 const bodyText = (page) => page.evaluate(() => document.body.innerText);
 const says = (text, phrase) => text.toLowerCase().includes(phrase.toLowerCase());
 
-async function journey(name, fn) {
-  const session = await open({ width: 390 });
+async function journey(name, fn, { token = null } = {}) {
+  const session = await open({ width: 390, token });
   try {
     await fn(session);
   } catch (e) {
@@ -176,7 +176,7 @@ await journey('7/8 order, track, again', async ({ page }) => {
   await page.waitForTimeout(1500);
   const badge = await page.evaluate(() => [...document.querySelectorAll('[aria-label*="dans le panier"]')].map((e) => e.getAttribute('aria-label'))[0] ?? null);
   check(Boolean(badge), '7 again: the parts are back in the basket', badge);
-});
+}, { token: (await testAccount('Test Journées')).token });
 
 // The order API, attacked from outside.
 {

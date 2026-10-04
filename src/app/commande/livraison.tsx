@@ -16,6 +16,7 @@ import { useShopSettings } from '@/hooks/use-shop-settings';
 import { checkoutProblems, deliveryDelay, type CheckoutField } from '@/lib/checkout';
 import { formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
+import { useAccount } from '@/store/account';
 import { useCart } from '@/store/cart';
 import { useCheckout } from '@/store/checkout';
 import { track } from '@/services/analytics';
@@ -38,9 +39,13 @@ import { DELEGATIONS, otherGovernorateIn } from '@/lib/delegations';
 export default function DeliveryStep() {
   const { t } = useI18n();
   const settings = useShopSettings();
+  const account = useAccount((s) => s.status);
   useEffect(() => {
     track('begin_checkout', { lines: useCart.getState().items.length });
   }, []);
+
+  // Ordering takes an account; a link or a back gesture that lands a guest here goes to sign in first.
+  if (account === 'guest') return <Redirect href={{ pathname: '/compte/connexion', params: { then: 'checkout' } }} />;
 
   return (
     <>

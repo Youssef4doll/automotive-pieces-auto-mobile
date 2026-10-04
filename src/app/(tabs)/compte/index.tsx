@@ -16,13 +16,11 @@ import { localeMeta, locales } from '@/i18n/locales';
 import { useI18n } from '@/i18n/provider';
 import { pickAvatar } from '@/lib/photo';
 import { useAccount } from '@/store/account';
-import { useCheckout } from '@/store/checkout';
 import { useGarage } from '@/store/garage';
 import { useOrders } from '@/store/orders';
 import { unreadAnswers, useQuestions } from '@/store/questions';
 import { useStaff } from '@/store/staff';
 import { useProfilePhoto } from '@/store/profile-photo';
-import { useToast } from '@/store/toast';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 
 /**
@@ -30,11 +28,9 @@ import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
  *
  * Signed in, the profile at the top is the account, and the foot of the
  * list holds "Se déconnecter" and "Supprimer mon compte" — one tap from the
- * tab, as both stores require. As a guest, it is whoever the customer told
- * the checkout they are, remembered on this phone ("Invité" with nothing
- * remembered); a quiet row offers an account, optionally, and the red line
- * at the foot is what a guest can actually do — forget the details this
- * phone keeps.
+ * tab, as both stores require. Signed out, it is "Invité" and nobody else:
+ * ordering takes an account, so a guest has no orders, addresses or details
+ * here, and the row at the top is the way in.
  *
  * Every row opens something real: the orders placed or recovered here, the
  * active car, the garage, the saved delivery address, the shop's contact
@@ -52,11 +48,7 @@ export default function AccountScreen() {
   const orders = useOrders((s) => s.orders);
   const vehicles = useGarage((s) => s.vehicles);
   const active = useGarage((s) => s.active);
-  const details = useCheckout((s) => s.details);
-  const forget = useCheckout((s) => s.forget);
-  const toast = useToast((s) => s.show);
   const settings = useShopSettings();
-  const [confirming, setConfirming] = useState(false);
   const [photoSheet, setPhotoSheet] = useState(false);
   const photo = useProfilePhoto((s) => s.photo);
   const setPhoto = useProfilePhoto((s) => s.set);
@@ -84,13 +76,10 @@ export default function AccountScreen() {
     restoreStaff();
   }, [restoreStaff]);
 
-  // Signed in, the account speaks; otherwise whatever the checkout remembers.
-  const name = signedIn && account ? account.name : details.customerName.trim();
-  const contactLine =
-    signedIn && account
-      ? (account.email ?? (account.phone ? `+216 ${account.phone}` : ''))
-      : details.email.trim() || details.phone.trim();
-  const hasDetails = Boolean(name || details.phone || details.address);
+  // Signed in, the account speaks. Signed out, nobody: "Invité", with no
+  // name or number — not even ones a checkout once remembered.
+  const name = signedIn && account ? account.name : '';
+  const contactLine = signedIn && account ? (account.email ?? (account.phone ? `+216 ${account.phone}` : '')) : '';
   const initials = name
     ? name
         .split(/\s+/)
@@ -146,12 +135,15 @@ export default function AccountScreen() {
         ) : null}
 
         <View style={styles.list}>
-          <Row
-            icon="file-text"
-            label={t('account.orders')}
-            value={orders.length ? String(orders.length) : null}
-            onPress={() => router.push('/compte/commandes')}
-          />
+          {/* Orders and addresses are the account's: a guest has neither. */}
+          {signedIn ? (
+            <Row
+              icon="file-text"
+              label={t('account.orders')}
+              value={orders.length ? String(orders.length) : null}
+              onPress={() => router.push('/compte/commandes')}
+            />
+          ) : null}
           {/* One row for the cars: the one the app answers for, and how many
               are saved. Two rows opening the same garage read as a bug. */}
           <Row
@@ -164,7 +156,7 @@ export default function AccountScreen() {
             }
             onPress={() => router.navigate('/garage')}
           />
-          <Row icon="map-pin" label={t('account.addresses')} onPress={() => router.push('/compte/adresses')} />
+          {signedIn ? <Row icon="map-pin" label={t('account.addresses')} onPress={() => router.push('/compte/adresses')} /> : null}
           {signedIn ? (
             <Row
               icon="lock"
@@ -234,12 +226,6 @@ export default function AccountScreen() {
               </Text>
             </Pressable>
           </View>
-        ) : hasDetails ? (
-          <Pressable accessibilityRole="button" onPress={() => setConfirming(true)} style={styles.danger}>
-            <Text style={{ fontFamily: familyFor('bodySemi', rtl), fontSize: 15, color: C.danger, textAlign: 'center' }}>
-              {t('account.clearData')}
-            </Text>
-          </Pressable>
         ) : null}
 
         {settings.status === 'loaded' ? (
@@ -303,22 +289,6 @@ export default function AccountScreen() {
         </View>
       </BottomSheet>
 
-      <BottomSheet visible={confirming} onClose={() => setConfirming(false)} title={t('account.clearData')}>
-        <View style={styles.sheet}>
-          <Text variant="body">{t('account.clearConfirm')}</Text>
-          <Button
-            label={t('account.clearData')}
-            variant="danger"
-            onPress={() => {
-              forget();
-              clearPhoto();
-              setConfirming(false);
-              toast({ message: t('account.forgetDetailsDone'), tone: 'neutral' });
-            }}
-          />
-          <Button label={t('garage.cancel')} variant="secondary" onPress={() => setConfirming(false)} />
-        </View>
-      </BottomSheet>
     </ScrollView>
   );
 }

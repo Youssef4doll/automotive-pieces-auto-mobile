@@ -166,6 +166,26 @@ try {
   const listed = await page.evaluate(() => [...document.querySelectorAll('[aria-label]')].map((e) => e.getAttribute('aria-label')).filter((l) => /\d+ pièces?\b/.test(l ?? '')));
   check(listed.length > 0 && listed.every((l) => /frein/i.test(l)), 'catalogue: the filter narrows the families', listed);
 
+  // ---- a maker: its mark, its families with its own counts, and a family opened on it
+  const topBrand = (await (await fetch(`${SHOP}/api/v1/catalogue/brands`)).json()).data[0];
+  const brandPage = (await (await fetch(`${SHOP}/api/v1/catalogue/brands/${topBrand.slug}`)).json()).data;
+  check(
+    brandPage.families.length > 0 && brandPage.families.reduce((n, f) => n + f.productCount, 0) === brandPage.brand.productCount,
+    'brand api: its families add up to its parts',
+    brandPage.families.map((f) => `${f.slug}:${f.productCount}`),
+  );
+  await go(`/marque/${topBrand.slug}`);
+  const brandTiles = await page.locator('[data-testid="brand-families"] [role="button"]').count();
+  check(brandTiles === brandPage.families.length, 'brand: one tile per family it has parts in', { brandTiles, families: brandPage.families.length });
+  check(await says(page, `Toutes les pièces ${topBrand.name}`), 'brand: then all its parts');
+  await page.locator('[data-testid="brand-families"] [role="button"]').first().click();
+  await page.waitForTimeout(2500);
+  check(
+    page.url().includes(`/famille/${brandPage.families[0].slug}`) && page.url().includes(`brand=${topBrand.slug}`),
+    'brand: a family opens with the maker chosen',
+    page.url(),
+  );
+
   // ---- four ways
   await go('/trouver');
   await tap(page, "J'ai la référence");

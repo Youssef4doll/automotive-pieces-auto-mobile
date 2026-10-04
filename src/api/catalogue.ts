@@ -32,6 +32,9 @@ export type Family = {
 
 export type PartsBrand = { id: string; name: string; slug: string; logoUrl: string | null; productCount: number };
 
+/** A family on a maker's page: only that maker's parts are counted. */
+export type BrandFamily = { id: string; name: string; slug: string; imageUrl: string | null; productCount: number };
+
 export const catalogueApi = {
   families: (signal?: AbortSignal) =>
     get<Family[]>('/api/v1/catalogue/families', { signal }).then((list) =>
@@ -43,6 +46,12 @@ export const catalogueApi = {
     ),
   /** The parts makers with something on sale, most parts first. */
   brands: (signal?: AbortSignal) => get<PartsBrand[]>('/api/v1/catalogue/brands', { signal }),
+  /** One maker's page: the maker, and the families it has parts in, each with its count. */
+  brand: (slug: string, signal?: AbortSignal) =>
+    get<{ brand: PartsBrand; families: BrandFamily[] }>(`/api/v1/catalogue/brands/${encodeURIComponent(slug)}`, { signal }).then((page) => ({
+      ...page,
+      families: page.families.map((f) => ({ ...f, name: categoryName(f.slug, f.name) })),
+    })),
 };
 
 /**

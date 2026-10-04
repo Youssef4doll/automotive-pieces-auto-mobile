@@ -24,6 +24,14 @@ import { pushAvailable, pushToken } from '@/services/notifications';
  * signs the phone out quietly; no connection keeps it signed in, because a
  * tunnel is not a reason to lose your account.
  *
+ * Ordering takes an account (October 2026, the owner's call, as Glovo
+ * does): the cart sends a guest to sign in first. So a phone nobody is signed
+ * in on holds no one's name, number or orders — and `restore` makes sure of
+ * it: opening the app with no session clears whatever an earlier one, or the
+ * guest checkout of older versions, left behind. Orders a guest placed before
+ * then are kept out of sight, with their keys, and join the account at the
+ * next sign-in.
+ *
  * Signing in does three things beyond storing the token: it brings the
  * orders this phone placed as a guest into the account (each proven by its
  * own order token — never by the e-mail), it lists the account's orders
@@ -94,6 +102,29 @@ function firstName(name: string) {
   return name.trim().split(/\s+/)[0] ?? '';
 }
 
+/** Resolves once a persisted store has read its saved state back — a reset before that would be undone by it. */
+function hydrated(store: { persist: { hasHydrated: () => boolean; onFinishHydration: (fn: () => void) => () => void } }) {
+  return new Promise<void>((resolve) => {
+    if (store.persist.hasHydrated()) return resolve();
+    const off = store.persist.onFinishHydration(() => {
+      off();
+      resolve();
+    });
+  });
+}
+
+/**
+ * A phone with no session holds nobody's details: no checkout name, number
+ * or address, no account's orders or questions. Guest orders from before
+ * accounts were required stay stored, unseen, to be claimed at sign-in.
+ */
+async function clearGuestTraces() {
+  await Promise.all([hydrated(useCheckout), hydrated(useOrders), hydrated(useQuestions)]);
+  useCheckout.getState().forget();
+  await useOrders.getState().dropAccountOrders();
+  await useQuestions.getState().dropAccountQuestions();
+}
+
 async function forgetLocally(set: (s: Partial<AccountState>) => void) {
   set({ status: 'guest', token: null, account: null });
   // The shop's staff session came with the account's sign-in; it goes with it.
@@ -122,6 +153,7 @@ export const useAccount = create<AccountState>()(
         const token = await secrets.get(KEY).catch(() => null);
         if (!token) {
           set({ status: 'guest', account: null, token: null });
+          await clearGuestTraces();
           return;
         }
         set({ status: 'signedIn', token });

@@ -18,7 +18,7 @@ import { useI18n } from '@/i18n/provider';
 import { useCart } from '@/store/cart';
 import { useCheckout } from '@/store/checkout';
 import { useGarage, vehicleLabel } from '@/store/garage';
-import { accountToken } from '@/store/account';
+import { accountToken, useAccount } from '@/store/account';
 import { useOrders } from '@/store/orders';
 import { track } from '@/services/analytics';
 
@@ -49,6 +49,7 @@ export default function PaymentStep() {
   const clearCart = useCart((s) => s.clear);
   const active = useGarage((s) => s.active);
   const remember = useOrders((s) => s.remember);
+  const account = useAccount((s) => s.status);
   const { state, retry } = useCartQuote(details.deliveryMethod);
   const quote = quoteOf(state);
   const [placing, setPlacing] = useState(false);
@@ -57,6 +58,7 @@ export default function PaymentStep() {
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   if (items.length === 0 && !placing) return <Redirect href="/panier" />;
+  if (account === 'guest' && !placing) return <Redirect href={{ pathname: '/compte/connexion', params: { then: 'checkout' } }} />;
 
   const place = async () => {
     setError(null);

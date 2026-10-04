@@ -1,4 +1,4 @@
-import { APP_URL, addBmw, open, scrollTo, tap } from './lib/drive.mjs';
+import { APP_URL, addBmw, open, scrollTo, tap, testAccount } from './lib/drive.mjs';
 import { inspect } from './lib/inspect.mjs';
 
 /**
@@ -83,8 +83,10 @@ for (const width of VIEWPORTS) {
 // The buying screens, each measured the same way as the home screen. A part
 // goes in the basket first, so the basket and checkout are measured full.
 
+// Signed in: ordering takes an account, and a guest's checkout is the sign-in.
+const buyer = await testAccount('Mesure Écrans');
 for (const width of SCREEN_VIEWPORTS) {
-  const { browser, page, errors } = await open({ width });
+  const { browser, page, errors } = await open({ width, token: buyer.token });
   try {
     await addBmw(page);
     const screens = [

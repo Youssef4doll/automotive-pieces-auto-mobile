@@ -23,7 +23,7 @@ export const CHROMIUM = process.env.CHROMIUM_PATH ?? '/opt/pw-browsers/chromium'
  * welcome shows. Every other suite starts past it — it would otherwise stand
  * in front of the home screen each suite is there to test.
  */
-export async function open({ width = 390, height = 844, locale = 'fr-FR', firstLaunch = false } = {}) {
+export async function open({ width = 390, height = 844, locale = 'fr-FR', firstLaunch = false, token = null } = {}) {
   const browser = await chromium.launch({ executablePath: CHROMIUM });
   const context = await browser.newContext({
     viewport: { width, height },
@@ -40,6 +40,14 @@ export async function open({ width = 390, height = 844, locale = 'fr-FR', firstL
         }
       } catch {}
     });
+  }
+  if (token) {
+    // Signed in from the first frame: the session where the web build keeps it (store/storage `secrets`).
+    await context.addInitScript((t) => {
+      try {
+        if (!localStorage.getItem('apa-account.session')) localStorage.setItem('apa-account.session', t);
+      } catch {}
+    }, token);
   }
   const page = await context.newPage();
   const errors = [];
@@ -200,4 +208,28 @@ export async function addBmw(page) {
   await page.waitForTimeout(500);
   await tap(page, '116i');
   await page.waitForTimeout(1600);
+}
+
+/**
+ * One customer account for a suite's orders, made through the shop's API.
+ *
+ * Ordering takes an account (store/account), so a suite that places an
+ * order opens its phone with `open({ token })`. One account per run, shared
+ * by every phone in it: the shop allows a handful of sign-ups an hour from
+ * one address, and the suites are not what that limit is for.
+ */
+let suiteAccount = null;
+export async function testAccount(name = 'Client Essai') {
+  if (suiteAccount) return suiteAccount;
+  const shop = process.env.SHOP_URL ?? 'http://localhost:3000';
+  const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@exemple.tn`;
+  const res = await fetch(`${shop}/api/v1/auth/signup`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name, email, phone: '20111222', password: 'Piston-bleu-42' }),
+  });
+  const body = await res.json().catch(() => null);
+  if (!res.ok || !body?.data?.token) throw new Error(`test account: sign-up refused (${res.status} ${JSON.stringify(body)})`);
+  suiteAccount = { token: body.data.token, email, name };
+  return suiteAccount;
 }

@@ -46,10 +46,17 @@ export default function FamilyScreen() {
   const { t, rtl } = useI18n();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { family, familyName, subcategory: initialSubcategory } = useLocalSearchParams<{
+  const {
+    family,
+    familyName,
+    subcategory: initialSubcategory,
+    brand: initialBrand,
+  } = useLocalSearchParams<{
     family: string;
     familyName?: string;
     subcategory?: string;
+    /** Opened from a maker's page: that maker already chosen. */
+    brand?: string;
   }>();
 
   const engineId = useGarage((s) => s.active?.engineId);
@@ -60,7 +67,7 @@ export default function FamilyScreen() {
   const [sorting, setSorting] = useState(false);
   const [inStock, setInStock] = useState(false);
   const [onSale, setOnSale] = useState(false);
-  const [brand, setBrand] = useState<string | null>(null);
+  const [brand, setBrand] = useState<string | null>(initialBrand ?? null);
   const filtered = sort !== 'relevance' || inStock || onSale || Boolean(brand);
 
   const loadFamilies = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);

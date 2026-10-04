@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { APP_URL, open, tap, tapLabel } from './lib/drive.mjs';
+import { APP_URL, open, tap, tapLabel, testAccount } from './lib/drive.mjs';
 
 /**
  * Reaching the shop, and being reached — end to end:
@@ -78,7 +78,8 @@ const settingsBefore = (await api('/admin/settings', { token: staff })).json?.da
 const before = (key) => settingsBefore.find?.((r) => r.key === key)?.value ?? '';
 
 // ---- phone A: a guest asks about their order, and is answered
-const phoneA = await open({ width: 390 });
+// Ordering takes an account: phone A is a signed-in customer.
+const phoneA = await open({ width: 390, token: (await testAccount('Question Essai')).token });
 let ref = null;
 try {
   const { page } = phoneA;

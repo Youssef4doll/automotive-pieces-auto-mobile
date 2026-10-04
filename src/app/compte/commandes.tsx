@@ -17,6 +17,7 @@ import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { NoOrdersArt } from '@/illustrations/empty-art';
 import { formatDate, formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
+import { useAccount } from '@/store/account';
 import { useOrders, type PlacedOrder } from '@/store/orders';
 
 /**
@@ -34,6 +35,7 @@ import { useOrders, type PlacedOrder } from '@/store/orders';
 export default function OrdersScreen() {
   const { t } = useI18n();
   const router = useRouter();
+  const signedIn = useAccount((s) => s.status) === 'signedIn';
   const orders = useOrders((s) => s.orders);
   const tokenFor = useOrders((s) => s.tokenFor);
   const refreshControl = usePullRefresh();
@@ -67,7 +69,12 @@ export default function OrdersScreen() {
     <ScrollView style={styles.root} contentContainerStyle={styles.scroll} refreshControl={refreshControl}>
       <Stack.Screen options={{ title: t('account.orders') }} />
       <View style={styles.column}>
-        {orders.length === 0 ? (
+        {!signedIn ? (
+          // Orders are the account's; signed out there are none to show.
+          <EmptyState scene art={<NoOrdersArt width={240} />} title={t('orders.signInTitle')} body={t('orders.signInBody')}>
+            <Button label={t('auth.row')} icon="log-in" onPress={() => router.push('/compte/connexion')} />
+          </EmptyState>
+        ) : orders.length === 0 ? (
           <EmptyState scene art={<NoOrdersArt width={240} />} title={t('orders.emptyTitle')} body={t('orders.emptyBody')}>
             <Button label={t('orders.shop')} onPress={() => router.navigate('/catalogue')} />
           </EmptyState>
@@ -82,7 +89,8 @@ export default function OrdersScreen() {
             />
           ))
         )}
-        <FindRow onPress={() => router.push('/compte/retrouver')} />
+        {/* Recovering an order puts it on this phone: an account's thing. */}
+        {signedIn ? <FindRow onPress={() => router.push('/compte/retrouver')} /> : null}
       </View>
     </ScrollView>
   );

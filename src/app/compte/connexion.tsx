@@ -34,7 +34,8 @@ type Method = 'phone' | 'email';
  * opens one on the way. The e-mail and password stay one tap away.
  */
 export default function SignInScreen() {
-  const params = useLocalSearchParams<{ mode?: Mode }>();
+  // `then=checkout`: sent from the cart, which needs an account; signed in, the order goes on.
+  const params = useLocalSearchParams<{ mode?: Mode; then?: string }>();
   const { t, rtl } = useI18n();
   const router = useRouter();
   const signIn = useAccount((s) => s.signIn);
@@ -72,8 +73,12 @@ export default function SignInScreen() {
 
   const done = () => {
     // The welcome is the moment drawn over the app (components/auth-moment).
+    // From the cart, the checkout comes next — in place of this screen, so
+    // "back" from it is the cart. Only that one destination: the parameter
+    // never names a path.
+    if (params.then === 'checkout') router.replace('/commande/livraison');
     // Opened from a link there is nothing to go back to.
-    if (router.canGoBack()) router.back();
+    else if (router.canGoBack()) router.back();
     else router.replace('/compte');
   };
 

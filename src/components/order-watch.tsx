@@ -8,6 +8,7 @@ import { ordersApi, type OrderStatus } from '@/api/orders';
 import { questionsApi } from '@/api/questions';
 import { useI18n } from '@/i18n/provider';
 import { mayNotify, pushAvailable } from '@/services/notifications';
+import { useAccount } from '@/store/account';
 import { useOrders } from '@/store/orders';
 import { useQuestions } from '@/store/questions';
 import { deviceStorage } from '@/store/storage';
@@ -65,9 +66,10 @@ export function OrderWatch() {
           useToast.getState().show({ message, tone: 'neutral', action: { label: tRef.current('watch.open'), onPress: open } });
 
         const seen = useSeen.getState();
-        const orders = useOrders
-          .getState()
-          .orders.filter((o) => Date.now() - Date.parse(o.placedAt) < RECENT_MS && !DONE.includes(seen.statuses[o.ref]))
+        // Orders are the account's: signed out, there are none to watch.
+        const signedIn = useAccount.getState().status === 'signedIn';
+        const orders = (signedIn ? useOrders.getState().orders : [])
+          .filter((o) => Date.now() - Date.parse(o.placedAt) < RECENT_MS && !DONE.includes(seen.statuses[o.ref]))
           .slice(0, 10);
         for (const o of orders) {
           const key = await useOrders.getState().tokenFor(o.ref);

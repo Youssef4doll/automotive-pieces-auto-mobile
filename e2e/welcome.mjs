@@ -22,7 +22,7 @@ const says = async (page, s) => (await text(page)).toLowerCase().includes(s.toLo
     check(await says(page, 'pas encore vérifié'), 'step 1: says the shop may not have checked a part yet');
     check(await says(page, 'payez à la livraison'), 'step 1: cash on delivery, the one way to pay');
     await tap(page, 'Commencer');
-    check(await says(page, 'Seulement si vous le voulez'), 'step 2: the account is optional');
+    check(await says(page, 'Pour commander, il faut un compte'), 'step 2: an account is what ordering takes');
     const order = await page.evaluate(() =>
       [...document.querySelectorAll('[role="button"]')].map((b) => b.textContent?.trim()).filter(Boolean),
     );

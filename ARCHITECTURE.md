@@ -1689,3 +1689,47 @@ Accueil and Catalogue.
 use, which opens a sheet of the three languages. Paramètres held only the
 language and the version number, so it is gone: the version sits at the foot
 of Compte, and /compte/parametres redirects to /compte for old links.
+
+## 27. An account to order; a maker's page (October 4, 2026)
+
+**Ordering takes an account.** The owner chose this, as Glovo does.
+- **For a guest:** browsing, the cart, the garage and questions to the shop
+  still work without one. The cart's button reads "Se connecter pour
+  commander" and opens the sign-in with `then=checkout`. Once signed in or
+  signed up there, the checkout replaces the sign-in screen, so "back" from
+  it is the cart.
+- **The checkout steps:** `/commande/livraison` and `/commande/paiement`
+  send a guest to the same sign-in, so a link or a back gesture cannot get
+  around it.
+- **The shop's API** still accepts a guest order, as the website's own
+  checkout does. The rule is the app's.
+
+**A phone with nobody signed in holds nobody's details.**
+- **Compte:** it says "Invité" and nothing more, with no name or number
+  remembered by a checkout. There is no "Mes commandes", no "Adresses", and
+  no "Effacer mes coordonnées", because there is nothing to clear.
+- **"Mes commandes" by link:** opened directly while signed out, it asks the
+  customer to sign in.
+- **The order watcher** only watches a signed-in phone's orders.
+- **On launch with no session,** `restore` clears what an earlier session or
+  an older version's guest checkout left behind: the checkout details, and
+  the account's orders and questions. It waits until those stores have read
+  their saved state back first, because a reset done before that would be
+  undone by it.
+- **Older guest orders:** orders placed as a guest before this change keep
+  their keys out of sight, and join the account at the next sign-in, which
+  claims each one with its own order token.
+
+**The maker's page** (`/marque/[brand]`) shows, from top to bottom:
+1. **The mark:** the one uploaded in the admin, else the real mark on
+   record, else the name set in type.
+2. **The name and how many parts the maker has on sale.**
+3. **Its families:** the catalogue's round pictures, each counting only this
+   maker's parts. A family opens with the maker already chosen
+   (`/famille/[family]?brand=`).
+4. **All its parts,** sortable.
+
+The families come from a new shop endpoint, `GET
+/api/v1/catalogue/brands/[slug]` (lib/data/catalog `getBrandFamilies`). It
+counts active parts grouped by top-level family and returns 404 for a slug
+that is not a parts maker with something on sale.
