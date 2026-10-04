@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -70,7 +70,6 @@ export default function GarageScreen() {
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
-      <Stack.Screen options={{ title: t('garage.title') }} />
       <View style={styles.column}>
         <Text variant="hint" tone={C.textMuted} style={{ textAlign: rtl ? 'right' : 'left' }}>
           {t('look.garageCount', { n: vehicles.length })}

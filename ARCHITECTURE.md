@@ -1639,31 +1639,53 @@ SMS never opens the back office.
 `e2e/reach.mjs` drives all of it from the screens (with `SHOTS=dir` for
 pictures); the website's `scripts/e2e-reach.mjs` checks the rules at the API.
 
-## 26. The glass bar and its lens (October 3, 2026)
+## 26. The tab bar: Apple's own on iOS 26, one drawn after it elsewhere (October 4, 2026)
 
-The tab bar now follows iOS 26's TabView, as Apple Music and Glovo do
-(components/tab-bar):
+**On iOS 26 and later the system draws the tab bar.** `app/(tabs)/_layout`
+renders `NativeTabs` (expo-router/unstable-native-tabs) when
+`isLiquidGlassAvailable()` says the phone has liquid glass. That is Apple's
+UITabBar: the glass, the selection that swells into a magnifying lens only
+while it moves and settles back when it lands, sliding along the bar, all
+behaving exactly as in Apple Music because it is the same control. Details:
 
-- **The lens.** The open tab sits under a lens 4pt taller than the bar
-  above and below, and a little wider than its slot, so it stands out of
-  the capsule. The tab under it is magnified (×1.08 at rest). Every tab is
-  magnified by how much of the lens is over it, so the lens reads as a
-  magnifier as it crosses the bar.
-- **The transition.** Picking a tab springs the lens there. It swells to
-  ×1.12 on the way and settles when it lands. Reduce Motion makes it jump.
-- **Sliding.** A sideways drag of more than 10pt takes the bar from the tab
-  under the finger. The lens follows the finger and grows to ×1.16 while
-  held. Letting go opens the tab it is over. A tap is still a tap.
-- **The material.** On iOS 26 and later, Apple's own glass draws everything:
-  `regular` for the bar, and `clear` with `isInteractive`
-  for the lens. Elsewhere the bar is frosted. On the web the frost is a
-  backdrop blur, and on Android it is near-opaque because Android has no
-  live blur. The lens is white glass with a warm-to-cool iridescent rim and
-  a top shine, drawn in SVG, so it looks the same on Android and the web.
-- **Search.** For a short while search was a round glass button beside the
-  bar. The owner asked for the bar alone, so search stays in the boxes on
-  Accueil and Catalogue.
+- The icons are the app's own drawings (illustrations/tab-icons), rendered to
+  PNG at 1x/2x/3x by `scripts/make-tab-icons.mjs` from the running web build
+  and shown with `renderingMode="original"`, so they keep the navy outline
+  and the gold fill on the open tab. SF Symbols were the alternative, but a
+  gold symbol on the glass measures 1.8:1, and the set would no longer match
+  the rest of the app. Re-run the script after changing a glyph.
+- The labels are Barlow, navy, and bold on the open tab.
+- The basket's badge is white on the shop's red600. iOS sets badge text in
+  white, and white on gold would not read.
+- `disableAutomaticContentInsets` is set on every tab, because each tab
+  screen keeps the bar's footprint clear itself (`useTabBarSpace`), exactly
+  as it does with the drawn bar.
 
-The footprint is unchanged (`tabBarFootprint`): the lens stands proud by
-exactly the room already kept above the bar. The tabs now carry
-`aria-selected` as well, which the web build needs to say which tab is open.
+**Elsewhere** (Android, the web, iOS before 26), components/tab-bar draws one
+after it:
+
+- **At rest:** a quiet navy-tinted pill inside the frosted capsule. It is no
+  bigger than the bar and has no glass.
+- **On a tab change:** the pill swells into a white glass lens with an
+  iridescent rim, 14% wider and 30% taller, and magnifies each tab it passes
+  over. It springs to the new tab and shrinks back into the pill as it lands,
+  about half a second in all.
+- **Sliding:** a sideways drag swells the lens under the finger and opens the
+  tab it is let go over.
+- **Reduce Motion** turns all of this into a jump.
+
+**The titles moved off the navigator.** The system bar draws no header, so
+Catalogue, Garage, Panier and Compte are now folders: `index.tsx` plus a
+`_layout.tsx` that renders `TabScreen` (components/tab-header), which draws
+the title (24pt, start-aligned) above a `<Slot />`. The URLs are unchanged.
+The drawn bar's navigator runs with `headerShown: false`, so the title is
+the same with either bar.
+
+**Search** is not on the bar. For a day it was a round glass button beside
+it; the owner asked for the five tabs alone. Search stays in the boxes on
+Accueil and Catalogue.
+
+**The language is on Compte.** It is a "Langue" row showing the language in
+use, which opens a sheet of the three languages. Paramètres held only the
+language and the version number, so it is gone: the version sits at the foot
+of Compte, and /compte/parametres redirects to /compte for old links.

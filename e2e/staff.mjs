@@ -64,9 +64,9 @@ const { page } = session;
 try {
   // ---- the door: no longer in the customer's menus (an admin's own sign-in
   // puts it on Compte — e2e/reach.mjs); typed in, it opens on its sign-in.
-  await page.goto(`${APP_URL}/compte/parametres`, { waitUntil: 'networkidle' });
+  await page.goto(`${APP_URL}/compte`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(2500);
-  check(!(await says(page, 'Espace boutique')), 'door: not offered in Paramètres to a customer');
+  check(!(await says(page, 'Espace boutique')), 'door: not offered on Compte to a customer');
   await page.goto(`${APP_URL}/gestion`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(2500);
   check(page.url().endsWith('/gestion/connexion'), 'door: signed out, the staff area opens on its sign-in', page.url());

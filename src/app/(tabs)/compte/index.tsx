@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -11,6 +12,7 @@ import { Text } from '@/components/ui/text';
 import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { NavCar } from '@/illustrations/vehicle';
+import { localeMeta, locales } from '@/i18n/locales';
 import { useI18n } from '@/i18n/provider';
 import { pickAvatar } from '@/lib/photo';
 import { useAccount } from '@/store/account';
@@ -36,12 +38,17 @@ import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
  *
  * Every row opens something real: the orders placed or recovered here, the
  * active car, the garage, the saved delivery address, the shop's contact
- * details (as far as the owner has published them), and the settings.
+ * details (as far as the owner has published them).
+ *
+ * The language is a row here, with the one in use beside it, and opens a
+ * sheet of the three — not a "Paramètres" screen that held nothing else. The
+ * app's version, which that screen also showed, sits at the foot.
  */
 export default function AccountScreen() {
   const tabBarSpace = useTabBarSpace();
-  const { t, rtl } = useI18n();
+  const { t, rtl, locale, setLocale, needsRestartForRTL } = useI18n();
   const router = useRouter();
+  const [languageSheet, setLanguageSheet] = useState(false);
   const orders = useOrders((s) => s.orders);
   const vehicles = useGarage((s) => s.vehicles);
   const active = useGarage((s) => s.active);
@@ -155,8 +162,13 @@ export default function AccountScreen() {
             />
           ) : null}
           <Row icon="help-circle" label={t('account.helpContact')} onPress={() => router.push('/aide')} />
-          <Row icon="settings" label={t('account.settings')} onPress={() => router.push('/compte/parametres')} last />
+          <Row icon="globe" label={t('lang.title')} value={localeMeta[locale].label} onPress={() => setLanguageSheet(true)} last />
         </View>
+        {needsRestartForRTL ? (
+          <Text variant="hint" style={styles.restart}>
+            {t('lang.rtlRestart')}
+          </Text>
+        ) : null}
 
         {/* The shop's own door, for the shop only: it appears when the
             account signed in here is an admin (its password sign-in opened
@@ -208,7 +220,43 @@ export default function AccountScreen() {
             {t('account.policies', { m: settings.data.warrantyMonths, d: settings.data.returnDays })}
           </Text>
         ) : null}
+        <Text variant="hint" tone={C.textFaint} style={styles.version}>
+          {`${t('app.name')} · ${Constants.expoConfig?.version ?? ''}`}
+        </Text>
       </View>
+
+      <BottomSheet visible={languageSheet} onClose={() => setLanguageSheet(false)} title={t('lang.title')}>
+        <View accessibilityRole="radiogroup" style={styles.languages}>
+          {locales.map((code, i) => {
+            const chosen = code === locale;
+            return (
+              <Pressable
+                key={code}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: chosen }}
+                aria-checked={chosen}
+                onPress={() => {
+                  setLocale(code);
+                  setLanguageSheet(false);
+                }}
+                style={({ pressed }) => [
+                  styles.language,
+                  { flexDirection: rtl ? 'row-reverse' : 'row' },
+                  i < locales.length - 1 && styles.rowRule,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text
+                  style={[styles.languageName, { fontFamily: familyFor(chosen ? 'bodySemi' : 'body', code === 'ar'), textAlign: rtl ? 'right' : 'left' }]}
+                >
+                  {localeMeta[code].label}
+                </Text>
+                {chosen ? <Feather name="check" size={IconSize.large} color={C.text} /> : null}
+              </Pressable>
+            );
+          })}
+        </View>
+      </BottomSheet>
 
       <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title={t('profile.photo')}>
         <View style={styles.sheet}>
@@ -325,6 +373,11 @@ const styles = StyleSheet.create({
   rowRule: { borderBottomWidth: Border.hairline, borderBottomColor: C.border },
   pressed: { backgroundColor: C.surface },
   value: { maxWidth: '40%' },
+  restart: { paddingTop: Spacing.two },
+  version: { textAlign: 'center', paddingTop: Spacing.two, paddingBottom: Spacing.two },
+  languages: { paddingBottom: Spacing.two },
+  language: { alignItems: 'center', gap: Spacing.three, minHeight: Tap.primary + Spacing.two },
+  languageName: { flex: 1, fontSize: 17, lineHeight: 24, color: C.text },
   danger: { marginTop: Spacing.four, minHeight: Tap.min, justifyContent: 'center' },
   accountActions: { marginTop: Spacing.two },
   signIn: {

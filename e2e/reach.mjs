@@ -203,8 +203,6 @@ try {
   await go(page, '/compte', 3000);
   check((await says(page, 'Sami Texto')) && (await says(page, `+216 ${digits}`)), 'compte: the account, by its number');
   check(!(await says(page, 'Espace boutique')), 'compte: no "Espace boutique" for a customer');
-  await go(page, '/compte/parametres', 2000);
-  check(!(await says(page, 'Espace boutique')), 'paramètres: no staff door either');
 
   await go(page, '/compte/securite', 3000);
   check((await says(page, 'Connexion par SMS')) && (await says(page, 'pas de mot de passe')), 'security: signs in by code; no password section');

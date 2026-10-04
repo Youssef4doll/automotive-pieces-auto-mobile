@@ -165,9 +165,11 @@ for (const width of SCREEN_VIEWPORTS) {
   const { browser, page, errors } = await open({ width: 390 });
   try {
     await addBmw(page);
-    // The language switcher lives in Compte › Paramètres.
-    await page.goto(`${APP_URL}/compte/parametres`, { waitUntil: 'networkidle' });
+    // The language is a row on Compte, opening a sheet of the three.
+    await page.goto(`${APP_URL}/compte`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(2000);
+    await tap(page, 'Langue');
+    await page.waitForTimeout(600);
     await tap(page, 'العربية');
     await page.waitForTimeout(1500);
     await page.goto(APP_URL, { waitUntil: 'networkidle' });

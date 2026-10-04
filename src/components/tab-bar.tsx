@@ -1,11 +1,11 @@
 import type { Tabs } from 'expo-router';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   type SharedValue,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withSequence,
   withSpring,
   withTiming,
@@ -23,19 +23,20 @@ type TabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tab
 export const BAR = 66;
 export const GAP = 12;
 export const TOP = Spacing.one;
-/** How far the lens stands proud of the bar, above and below — exactly TOP, so it never leaves the footprint. */
-const LIFT = TOP;
-const LENS_H = BAR + LIFT * 2;
-const LENS_MAX_W = 100;
-/** How much the tab under the lens is magnified at rest, and how much the lens swells while it moves. */
-const MAGNIFY = 0.08;
-const SWELL = 1.12;
-const HOLD = 1.16;
-const SPRING = { damping: 18, stiffness: 210, mass: 0.7 };
-const SETTLE = { damping: 13, stiffness: 190, mass: 0.6 };
-
-/** Apple's own material where the system has it (iOS 26 and later); asked once. */
-const LIQUID_GLASS = Platform.OS === 'ios' && isLiquidGlassAvailable();
+/** The pill's inset from the bar's edge, all round, at rest. */
+const INSET = 4;
+const PILL_H = BAR - INSET * 2;
+const PILL_MAX_W = 96;
+/** How far the pill swells into a lens while it moves: wider, and taller than the bar. */
+const SWELL_X = 0.14;
+const SWELL_Y = 0.3;
+/** How much the lens magnifies what it passes over, at full swell. */
+const MAGNIFY = 0.2;
+const SPRING = { damping: 20, stiffness: 260, mass: 0.7 };
+/** The lens's breath: out as it leaves, back into the pill as it lands — about half a second. */
+const SWELL_IN = { duration: 120 };
+const SWELL_OUT = { duration: 280 };
+const LANDING = 160;
 
 /** The bar's footprint over the bottom of the screen: what a screen ending under it must leave clear. */
 export function tabBarFootprint(insetBottom: number) {
@@ -43,23 +44,23 @@ export function tabBarFootprint(insetBottom: number) {
 }
 
 /**
- * The tab bar, in the manner of iOS 26's TabView: a floating capsule of
- * glass and a lens over the open tab — what Apple Music and Glovo do.
+ * The tab bar where the phone has no liquid glass — Android, the web, iOS
+ * before 26 — drawn after iOS 26's own (Apple Music): a floating frosted
+ * capsule. On iOS 26 and later the system draws the real one
+ * (app/(tabs)/_layout).
  *
- * ## The lens
+ * ## The pill, and the lens it becomes
  *
- * The open tab sits under a lens a little taller and wider than the bar, so
- * it stands out of it, with a rim that catches colour at its edge. Whatever
- * is under the lens is magnified: the open tab's icon and label at rest, and
- * each tab in turn as the lens passes over it. Picking a tab sends the lens
- * there on a spring, swelling as it travels and settling when it lands.
- * A finger can also take hold of the bar and slide: the lens follows it,
- * grows while held, and the tab it is let go over opens.
+ * At rest the open tab sits on a quiet pill inside the bar — no bigger than
+ * the bar, no glass. Only while the selection moves does the pill swell into
+ * a lens: white glass with a rim that catches colour, wider than its slot and
+ * taller than the bar, magnifying each tab it passes over. When it lands it
+ * shrinks back into the pill. A finger can also take hold of the bar and
+ * slide: the lens swells under it, follows it, and the tab it is let go over
+ * opens.
  *
- * Apple draws the lens and the bar where iOS has liquid glass
- * (expo-glass-effect); elsewhere the bar is frosted — blurred on the web,
- * near-opaque on Android, which has no live blur to lean on — and the lens is
- * white glass with an iridescent rim drawn in SVG.
+ * The bar is frosted — blurred on the web, near-opaque on Android, which has
+ * no live blur to lean on.
  *
  * ## Still said three ways
  *
@@ -81,25 +82,33 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
   const slot = width / count;
   // In Arabic the first tab is on the right: the lens counts from there.
   const visual = rtl ? count - 1 - state.index : state.index;
-  const lensW = slot ? Math.min(LENS_MAX_W, slot + 8) : LENS_MAX_W;
+  const lensW = slot ? Math.min(PILL_MAX_W, slot - 2) : PILL_MAX_W;
   const x = useSharedValue(0);
-  const grow = useSharedValue(1);
+  // 0 the pill at rest, 1 the lens in flight.
+  const grow = useSharedValue(0);
   const placed = useRef<{ slot: number } | null>(null);
   const barRef = useRef<View>(null);
   const barLeft = useRef(0);
   const dragging = useRef(false);
+  // A slide already sent the lens to the tab it opens: the tab change that follows must not send it again.
+  const released = useRef(false);
 
   const xFor = (v: number) => v * slot + (slot - lensW) / 2;
 
   useEffect(() => {
     if (!slot || dragging.current) return;
     const to = xFor(visual);
+    if (released.current) {
+      released.current = false;
+      placed.current = { slot };
+      return;
+    }
     if (!placed.current || placed.current.slot !== slot) {
       // The first measure — or a turned phone — places the lens; after that it travels.
       x.value = to;
     } else if (Math.abs(x.value - to) > 1) {
       x.value = withSpring(to, SPRING);
-      grow.value = withSequence(withTiming(SWELL, { duration: 140 }), withSpring(1, SETTLE));
+      grow.value = withSequence(withTiming(1, SWELL_IN), withDelay(LANDING, withTiming(0, SWELL_OUT)));
     }
     placed.current = { slot };
     // xFor reads slot and lensW, both listed.
@@ -128,11 +137,14 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
     const release = () => {
       dragging.current = false;
       const { slot: s, lensW: w, count: n, rtl: r, visual: v, open: go } = latest.current;
-      grow.set(withSpring(1, SETTLE));
+      grow.set(withDelay(LANDING, withTiming(0, SWELL_OUT)));
       if (!s) return;
       const over = Math.max(0, Math.min(n - 1, Math.round((x.get() + w / 2 - s / 2) / s)));
       x.set(withSpring(over * s + (s - w) / 2, SPRING));
-      if (over !== v) go(r ? n - 1 - over : over);
+      if (over !== v) {
+        released.current = true;
+        go(r ? n - 1 - over : over);
+      }
     };
     // The handlers run on touches, never during render; the compiler cannot tell.
     // eslint-disable-next-line react-hooks/refs
@@ -143,7 +155,7 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
         barRef.current?.measureInWindow((left) => {
           barLeft.current = left;
         });
-        grow.set(withSpring(HOLD, SETTLE));
+        grow.set(withTiming(1, SWELL_IN));
       },
       onPanResponderMove: (_, g) => {
         const { slot: s, lensW: w, count: n } = latest.current;
@@ -159,8 +171,10 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
   }, [x, grow]);
 
   const lens = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }, { scale: grow.value }],
+    transform: [{ translateX: x.value }, { scaleX: 1 + SWELL_X * grow.value }, { scaleY: 1 + SWELL_Y * grow.value }],
   }));
+  const pillFill = useAnimatedStyle(() => ({ opacity: 1 - grow.value }));
+  const glass = useAnimatedStyle(() => ({ opacity: grow.value }));
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, GAP) }]}>
@@ -169,7 +183,10 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
           <Skin />
           {width ? (
             <Animated.View pointerEvents="none" style={[styles.lens, { width: lensW }, lens]}>
-              <Lens width={lensW} />
+              <Animated.View style={[StyleSheet.absoluteFill, styles.pill, pillFill]} />
+              <Animated.View style={[StyleSheet.absoluteFill, glass]}>
+                <Lens width={lensW} />
+              </Animated.View>
             </Animated.View>
           ) : null}
           <View style={[styles.row, { flexDirection: rtl ? 'row-reverse' : 'row' }]} {...pan.panHandlers}>
@@ -203,7 +220,7 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
   );
 }
 
-/** One tab: magnified by however much of the lens is over it. */
+/** One tab: magnified by however much of the lens, in flight, is over it. */
 function Tab({
   label,
   accessibilityLabel,
@@ -239,7 +256,7 @@ function Tab({
     if (!slot) return {};
     const under = Math.max(0, 1 - Math.abs(x.value + lensW / 2 - (place * slot + slot / 2)) / slot);
     return {
-      transform: [{ scale: 1 + under * (MAGNIFY + (grow.value - 1) * 0.9) }],
+      transform: [{ scale: 1 + under * MAGNIFY * grow.value }],
     };
   });
 
@@ -274,36 +291,16 @@ function Tab({
 
 /** The bar's material. */
 function Skin() {
-  const radius = { borderRadius: BAR / 2 };
-  if (LIQUID_GLASS) {
-    return (
-      <GlassView
-        pointerEvents="none"
-        glassEffectStyle="regular"
-        style={[StyleSheet.absoluteFill, radius]}
-      />
-    );
-  }
-  return <View pointerEvents="none" style={[StyleSheet.absoluteFill, radius, styles.frost]} />;
+  return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: BAR / 2 }, styles.frost]} />;
 }
 
-/** The lens: Apple's clear glass where it exists, white glass with a rim of colour elsewhere. */
+/** The lens in flight: white glass with a rim of colour and a shine along its top. */
 function Lens({ width }: { width: number }) {
-  if (LIQUID_GLASS) {
-    return (
-      <GlassView
-        glassEffectStyle="clear"
-        isInteractive
-        tintColor="rgba(255,255,255,0.35)"
-        style={[StyleSheet.absoluteFill, { borderRadius: LENS_H / 2 }]}
-      />
-    );
-  }
-  const r = LENS_H / 2;
+  const r = PILL_H / 2;
   return (
     <>
       <View style={[StyleSheet.absoluteFill, styles.lensGlass, { borderRadius: r }]} />
-      <Svg pointerEvents="none" width={width} height={LENS_H} style={StyleSheet.absoluteFill}>
+      <Svg pointerEvents="none" width={width} height={PILL_H} style={StyleSheet.absoluteFill}>
         <Defs>
           {/* The rim: light split at the edge, warm on one side and cool on the other. */}
           <LinearGradient id="rim" x1="0" y1="0" x2="1" y2="0.35">
@@ -322,7 +319,7 @@ function Lens({ width }: { width: number }) {
           x={0.75}
           y={0.75}
           width={width - 1.5}
-          height={LENS_H - 1.5}
+          height={PILL_H - 1.5}
           rx={r - 0.75}
           fill="url(#shine)"
           stroke="url(#rim)"
@@ -370,7 +367,8 @@ const styles = StyleSheet.create({
         } as object)
       : { backgroundColor: 'rgba(244,246,250,0.97)', elevation: 10 }),
   },
-  lens: { position: 'absolute', top: -LIFT, left: 0, height: LENS_H },
+  lens: { position: 'absolute', top: INSET, left: 0, height: PILL_H },
+  pill: { borderRadius: PILL_H / 2, backgroundColor: 'rgba(15,35,82,0.08)' },
   lensGlass: {
     ...(Platform.OS === 'web'
       ? ({
@@ -380,12 +378,14 @@ const styles = StyleSheet.create({
           boxShadow: '0 6px 18px rgba(8,22,51,0.16), 0 1px 3px rgba(8,22,51,0.10), inset 0 -3px 8px rgba(15,35,82,0.05)',
         } as object)
       : {
+          // No elevation: an Android shadow does not fade with its view.
           backgroundColor: '#FFFFFF',
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: 'rgba(15,35,82,0.12)',
           shadowColor: Brand.navy950,
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.16,
           shadowRadius: 14,
-          elevation: 12,
         }),
   },
   row: {
