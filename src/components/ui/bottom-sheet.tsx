@@ -1,5 +1,7 @@
 import { Feather } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Border, C, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
@@ -27,10 +29,11 @@ import { Text } from './text';
  * short, low-contrast bar rather than the prominent pill that reads as
  * "pull me".
  *
- * `animationType` follows the system's Reduce Motion setting. A sheet that
- * slides is the clearest possible statement of where it came from and where
- * it will go, and for somebody who has asked their phone to stop moving
- * things it is exactly what they asked it not to do.
+ * The two halves move apart: the backdrop fades in place while only the
+ * sheet rises, on a spring, and both go back the same way before the modal
+ * closes. The Modal's own "slide" moved the backdrop with the sheet — a grey
+ * curtain wiping up the screen behind it. With Reduce Motion the sheet does
+ * not travel; it fades with the backdrop.
  */
 export function BottomSheet({
   visible,
@@ -46,29 +49,43 @@ export function BottomSheet({
   const insets = useSafeAreaInsets();
   const { t, rtl } = useI18n();
   const flat = useReduceMotion();
+  // Mounted through the closing animation, then gone.
+  const [shown, setShown] = useState(visible);
+  const progress = useSharedValue(0);
+  const [height, setHeight] = useState(600);
+
+  // Opening mounts it at once (adjusted during render, not in an effect).
+  if (visible && !shown) setShown(true);
+
+  useEffect(() => {
+    if (visible) {
+      progress.value = flat ? withTiming(1, { duration: 180 }) : withSpring(1, { damping: 22, stiffness: 240, mass: 0.8 });
+    } else {
+      progress.value = withTiming(0, { duration: 200, easing: Easing.in(Easing.cubic) }, (done) => {
+        if (done) runOnJS(setShown)(false);
+      });
+    }
+  }, [visible, flat, progress]);
+
+  const backdrop = useAnimatedStyle(() => ({ opacity: Math.min(1, progress.value) }));
+  const rise = useAnimatedStyle(() =>
+    flat ? { opacity: progress.value } : { transform: [{ translateY: (1 - progress.value) * height }] },
+  );
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType={flat ? 'fade' : 'slide'}
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
+    <Modal visible={shown} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       {/* The backdrop is a button, not decoration: tapping outside is how
           most people close a sheet, and a screen reader needs to be told
           that is available. */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('garage.cancel')}
-        onPress={onClose}
-        style={styles.backdrop}
-      />
+      <Animated.View style={[styles.backdrop, backdrop]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('garage.cancel')} onPress={onClose} style={StyleSheet.absoluteFill} />
+      </Animated.View>
 
       <View style={styles.dock} pointerEvents="box-none">
-        <View
+        <Animated.View
           accessibilityViewIsModal
-          style={[styles.sheet, { paddingBottom: insets.bottom + Spacing.three }]}
+          onLayout={(e) => setHeight(e.nativeEvent.layout.height + 40)}
+          style={[styles.sheet, { paddingBottom: insets.bottom + Spacing.three }, rise]}
         >
           <View style={styles.grabber} />
 
@@ -87,7 +104,7 @@ export function BottomSheet({
           </View>
 
           {children}
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
