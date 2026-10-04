@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -86,10 +86,17 @@ export default function AccountScreen() {
 
   // Signed in, the account speaks; otherwise whatever the checkout remembers.
   const name = signedIn && account ? account.name : details.customerName.trim();
-  const contactLine = signedIn && account ? (account.email ?? (account.phone ? `+216 ${account.phone}` : '')) : details.email.trim() || details.phone.trim();
+  const contactLine =
+    signedIn && account
+      ? (account.email ?? (account.phone ? `+216 ${account.phone}` : ''))
+      : details.email.trim() || details.phone.trim();
   const hasDetails = Boolean(name || details.phone || details.address);
   const initials = name
-    ? name.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('')
+    ? name
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase() ?? '')
+        .join('')
     : null;
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
@@ -139,18 +146,32 @@ export default function AccountScreen() {
         ) : null}
 
         <View style={styles.list}>
-          <Row icon="file-text" label={t('account.orders')} value={orders.length ? String(orders.length) : null} onPress={() => router.push('/compte/commandes')} />
+          <Row
+            icon="file-text"
+            label={t('account.orders')}
+            value={orders.length ? String(orders.length) : null}
+            onPress={() => router.push('/compte/commandes')}
+          />
           {/* One row for the cars: the one the app answers for, and how many
               are saved. Two rows opening the same garage read as a bug. */}
           <Row
             icon="car"
             label={t('account.vehicles')}
-            value={active ? `${active.makeName} ${active.modelName}${vehicles.length > 1 ? ` · ${vehicles.length}` : ''}` : t('account.noVehicle')}
+            value={
+              active
+                ? `${active.makeName} ${active.modelName}${vehicles.length > 1 ? ` · ${vehicles.length}` : ''}`
+                : t('account.noVehicle')
+            }
             onPress={() => router.navigate('/garage')}
           />
           <Row icon="map-pin" label={t('account.addresses')} onPress={() => router.push('/compte/adresses')} />
           {signedIn ? (
-            <Row icon="lock" label={t('security.row')} value={t('security.rowHint')} onPress={() => router.push('/compte/securite')} />
+            <Row
+              icon="lock"
+              label={t('security.row')}
+              value={t('security.rowHint')}
+              onPress={() => router.push('/compte/securite')}
+            />
           ) : null}
           <Row icon="rotate-ccw" label={t('returns.title')} onPress={() => router.push('/garanties')} />
           {questions.length ? (
@@ -162,7 +183,13 @@ export default function AccountScreen() {
             />
           ) : null}
           <Row icon="help-circle" label={t('account.helpContact')} onPress={() => router.push('/aide')} />
-          <Row icon="globe" label={t('lang.title')} value={localeMeta[locale].label} onPress={() => setLanguageSheet(true)} last />
+          <Row
+            icon="translate"
+            label={t('lang.title')}
+            value={localeMeta[locale].label}
+            onPress={() => setLanguageSheet(true)}
+            last
+          />
         </View>
         {needsRestartForRTL ? (
           <Text variant="hint" style={styles.restart}>
@@ -247,7 +274,10 @@ export default function AccountScreen() {
                 ]}
               >
                 <Text
-                  style={[styles.languageName, { fontFamily: familyFor(chosen ? 'bodySemi' : 'body', code === 'ar'), textAlign: rtl ? 'right' : 'left' }]}
+                  style={[
+                    styles.languageName,
+                    { fontFamily: familyFor(chosen ? 'bodySemi' : 'body', code === 'ar'), textAlign: rtl ? 'right' : 'left' },
+                  ]}
                 >
                   {localeMeta[code].label}
                 </Text>
@@ -300,7 +330,7 @@ function Row({
   onPress,
   last = false,
 }: {
-  icon: React.ComponentProps<typeof Feather>['name'] | 'car';
+  icon: React.ComponentProps<typeof Feather>['name'] | 'car' | 'translate';
   label: string;
   value?: string | null;
   onPress: () => void;
@@ -319,7 +349,14 @@ function Row({
         pressed && styles.pressed,
       ]}
     >
-      {icon === 'car' ? <NavCar size={IconSize.large} color={C.text} /> : <Feather name={icon} size={IconSize.large} color={C.text} />}
+      {icon === 'car' ? (
+        <NavCar size={IconSize.large} color={C.text} />
+      ) : icon === 'translate' ? (
+        // 文A, the sign every app uses for language.
+        <MaterialCommunityIcons name="translate" size={IconSize.large} color={C.text} />
+      ) : (
+        <Feather name={icon} size={IconSize.large} color={C.text} />
+      )}
       <Text variant="body" tone={C.text} style={styles.flex}>
         {label}
       </Text>
