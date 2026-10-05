@@ -29,6 +29,7 @@ import { useGarage } from '@/store/garage';
 import { useOnboarding } from '@/store/onboarding';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { Rail } from '@/components/ui/rail';
+import { useFindWays } from '@/components/find-ways';
 
 const LOGO = require('../../../assets/images/logo-lockup.png');
 
@@ -60,6 +61,7 @@ export default function HomeScreen() {
   const { t, rtl } = useI18n();
   const active = useGarage((s) => s.active);
   const vehicleLine = useVehicleLine();
+  const { ways, go } = useFindWays();
   // The hero photograph is 3:4; it is lifted so the part sits beside the
   // slogan and under the search, then fades into the navy below.
   const heroHeight = Math.round(Math.min(width, MaxContentWidth + 120) * 4 / 3);
@@ -150,7 +152,7 @@ export default function HomeScreen() {
 
             {/* Room for the photograph between the promise and the search, as
                 the reference leaves room for its car. */}
-            <View style={{ height: Math.round(heroHeight * 0.44) }} />
+            <View style={{ height: Math.round(heroHeight * 0.3) }} />
 
             {/* The main action, and the car it answers for, as one piece:
                 the search, and directly under it the line that says which
@@ -196,32 +198,44 @@ export default function HomeScreen() {
               </View>
               <Text style={[styles.vehicleAction, { fontFamily: familyFor('bodySemi', rtl) }]}>{active ? t('home.change') : t('look.choose')}</Text>
             </PressScale>
-
           </View>
+          <View style={styles.heroFoot} />
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/trouver')}
-            style={({ pressed }) => [styles.allWays, row, pressed && { opacity: 0.7 }]}
-          >
-            <Text variant="hint" tone={Brand.white}>
-              {t('look.find')}
-            </Text>
-            <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={Brand.white} />
-          </Pressable>
         </View>
 
         {/* The white sheet, pulled up over the road. */}
         <View style={[styles.sheet, { paddingBottom: tabBarSpace }]}>
           <View style={styles.column}>
             <View style={[styles.sectionHead, row]}>
-              <Text style={[styles.sectionTitle, { fontFamily: familyFor('heading', rtl) }]}>{t('look.browse')}</Text>
-              <Pressable accessibilityRole="button" onPress={() => router.navigate('/catalogue')} hitSlop={8} style={[styles.seeAll, row]}>
-                <Text variant="hint" tone={C.text}>
-                  {t('catalog.seeAll')}
+              <Text style={[styles.sectionTitle, styles.flex, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.find')}</Text>
+              <SeeAll onPress={() => router.push('/trouver')} />
+            </View>
+          </View>
+          <Rail contentContainerStyle={[styles.rail, styles.waysRail, row]}>
+            {ways.map((w) => (
+              <PressScale
+                key={w.key}
+                accessibilityRole="button"
+                accessibilityLabel={`${t(w.title)}. ${w.why}`}
+                onPress={() => go(w.key)}
+                style={styles.way}
+                pressedStyle={styles.wayPressed}
+                scaleTo={0.96}
+              >
+                <View style={styles.wayArt} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                  {w.art(84)}
+                </View>
+                <Text numberOfLines={2} style={[styles.wayTitle, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+                  {t(w.title)}
                 </Text>
-                <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={C.text} />
-              </Pressable>
+              </PressScale>
+            ))}
+          </Rail>
+
+          <View style={[styles.column, styles.familiesHead]}>
+            <View style={[styles.sectionHead, row]}>
+              <Text style={[styles.sectionTitle, styles.flex, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.browse')}</Text>
+              <SeeAll onPress={() => router.navigate('/catalogue')} />
             </View>
 
           </View>
@@ -279,6 +293,16 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+/** "Voir tout", underlined, as on Mon garage: a full-size target, no arrow. */
+function SeeAll({ onPress }: { onPress: () => void }) {
+  const { t, rtl } = useI18n();
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.seeAll, pressed && { opacity: 0.6 }]}>
+      <Text style={[styles.seeAllText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('catalog.seeAll')}</Text>
+    </Pressable>
   );
 }
 
@@ -365,7 +389,15 @@ const styles = StyleSheet.create({
   },
   sectionHead: { alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { fontSize: 20, lineHeight: 26, color: C.text },
-  seeAll: { alignItems: 'center', gap: 4, minHeight: Tap.min },
+  seeAll: { minHeight: Tap.min, minWidth: Tap.min, justifyContent: 'center' },
+  seeAllText: { fontSize: 15, lineHeight: 20, color: C.text, textDecorationLine: 'underline' },
+  heroFoot: { height: Spacing.five },
+  familiesHead: { marginTop: Spacing.three },
+  waysRail: { gap: Spacing.three, paddingBottom: Spacing.two },
+  way: { width: 132, gap: Spacing.two, padding: Spacing.two, paddingBottom: Spacing.three, borderRadius: Radius.card, backgroundColor: C.surface },
+  wayPressed: { backgroundColor: C.surfacePressed },
+  wayArt: { height: 92, alignItems: 'center', justifyContent: 'center' },
+  wayTitle: { fontSize: 14, lineHeight: 18, color: C.text, paddingHorizontal: Spacing.one, minHeight: 36 },
   rail: { gap: Spacing.two, paddingHorizontal: Spacing.four - 4, paddingTop: Spacing.two, paddingBottom: Spacing.one },
   cat: { width: 84, alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one, borderRadius: Radius.tile },
   catPressed: { backgroundColor: C.surface },

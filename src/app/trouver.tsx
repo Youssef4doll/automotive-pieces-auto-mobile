@@ -1,16 +1,13 @@
 import { Feather } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { PressScale } from '@/components/ui/press-scale';
 import { Text } from '@/components/ui/text';
 import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
-import { CarKey } from '@/illustrations/car-key';
-import { DiscArt, PhotoAdviceArt, ReferenceArt } from '@/illustrations/ways-art';
-import type { DictKey } from '@/i18n/dictionaries';
+import { useFindWays } from '@/components/find-ways';
 import { useI18n } from '@/i18n/provider';
-import { useGarage } from '@/store/garage';
 
 /**
  * "Comment trouver votre pièce ?" — the four ways in, as four tiles, each
@@ -22,40 +19,16 @@ import { useGarage } from '@/store/garage';
  * Two tiles a row on a phone, four on a wide screen. With a car in the
  * garage, the first tile names it, since that is where it leads.
  */
-type Way = 'car' | 'part' | 'ref' | 'photo';
-
 const GAP = Spacing.three;
 
 export default function FindScreen() {
   const { t, rtl } = useI18n();
-  const router = useRouter();
-  const active = useGarage((s) => s.active);
+  const { ways, go } = useFindWays();
   const [width, setWidth] = useState(0);
 
   const columns = width >= 600 ? 4 : 2;
   const tile = width ? (width - GAP * (columns - 1)) / columns : 0;
   const art = Math.min(tile - Spacing.three * 2, 150);
-
-  const ways: { key: Way; title: DictKey; why: string; art: React.ReactNode }[] = [
-    {
-      key: 'car',
-      title: 'look.find.car',
-      why: active ? t('look.forVehicle', { car: `${active.makeName} ${active.modelName}` }) : t('look.find.carWhy'),
-      art: <CarKey size={art * 0.92} />,
-    },
-    { key: 'part', title: 'look.find.part', why: t('look.find.partWhy'), art: <DiscArt width={art * 0.92} /> },
-    { key: 'ref', title: 'look.find.ref', why: t('look.find.refWhy'), art: <ReferenceArt width={art * 0.8} /> },
-    // Always offered: the photo goes to the shop's own inbox, so there is
-    // always somebody to answer it.
-    { key: 'photo', title: 'look.find.photo', why: t('look.find.photoWhy'), art: <PhotoAdviceArt width={art * 0.82} /> },
-  ];
-
-  const go = (way: Way) => {
-    if (way === 'car') return active ? router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } }) : router.push('/garage/ajouter');
-    if (way === 'part') return router.navigate('/catalogue');
-    if (way === 'ref') return router.push({ pathname: '/recherche', params: { mode: 'reference' } });
-    router.push({ pathname: '/demande', params: { photo: '1' } });
-  };
 
   const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
 
@@ -79,7 +52,7 @@ export default function FindScreen() {
                   scaleTo={0.97}
                 >
                   <View style={[styles.art, { height: art }]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                    {w.art}
+                    {w.art(art)}
                   </View>
                   <View style={styles.words}>
                     <Text style={[styles.title, align, { fontFamily: familyFor('heading', rtl) }]}>{t(w.title)}</Text>
