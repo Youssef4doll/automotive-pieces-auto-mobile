@@ -60,22 +60,23 @@ export default function GarageScreen() {
 
   // The principal first, then the others as they were added.
   const ordered = [active, ...vehicles.filter((v) => v.engineId !== active.engineId)];
-  // Four doors: what was ordered, this car's details, every car, the next car.
+  // The rows under the car: what was ordered, every car, the next car.
   const doors: { icon: React.ComponentProps<typeof Feather>['name']; label: string; hint: string; onPress: () => void; disabled?: boolean; accent?: boolean }[] = [
     { icon: 'package', label: t('account.orders'), hint: t('look.bento.ordersHint'), onPress: () => router.push('/compte/commandes') },
-    {
-      icon: 'info',
-      label: t('look.bento.info'),
-      hint: active.engineName,
-      onPress: () => router.push({ pathname: '/garage/vehicule/[engine]', params: { engine: active.engineId } }),
-    },
-    { icon: 'layers', label: t('look.myVehiclesTitle'), hint: t('look.garageCount', { n: vehicles.length }), onPress: () => router.push('/garage/vehicules') },
+    { icon: 'layers', label: t('look.myVehiclesTitle'), hint: t('look.myVehiclesHint'), onPress: () => router.push('/garage/vehicules') },
     { icon: 'plus', label: t('look.bento.add'), hint: t('look.find.carWhy'), onPress: () => router.push('/garage/ajouter'), disabled: isFull(), accent: true },
   ];
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
       <View style={styles.column}>
+        <View style={[row, styles.head]}>
+          <Text style={[styles.count, { fontFamily: familyFor('heading', rtl) }]}>{t('look.garageCount', { n: vehicles.length })}</Text>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/garage/vehicules')} hitSlop={8} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+            <Text style={[styles.seeAllText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('catalog.seeAll')}</Text>
+          </Pressable>
+        </View>
+
         {/* The car, as the space's centrepiece — and with several, a
             carousel of them, the principal first. */}
         {ordered.length > 1 ? (
@@ -106,8 +107,9 @@ export default function GarageScreen() {
           <HeroCard vehicle={active} principal onMakePrincipal={() => undefined} />
         )}
 
-        <View style={[styles.doors, row]}>
-          {doors.map((d) => (
+        <Text style={[styles.section, { textAlign: rtl ? 'right' : 'left', fontFamily: familyFor('heading', rtl) }]}>{t('look.garageShortcuts')}</Text>
+        <View style={styles.group}>
+          {doors.map((d, i) => (
             <PressScale
               key={d.label}
               accessibilityRole="button"
@@ -115,21 +117,22 @@ export default function GarageScreen() {
               accessibilityState={{ disabled: d.disabled }}
               disabled={d.disabled}
               onPress={d.onPress}
-              style={[styles.door, d.disabled && styles.disabled]}
-              pressedStyle={styles.pressed}
-              scaleTo={0.97}
+              style={[row, styles.door, i > 0 && styles.doorRule, d.disabled && styles.disabled]}
+              pressedStyle={styles.doorPressed}
+              scaleTo={0.99}
             >
               <View style={[styles.doorIcon, d.accent && styles.doorIconAccent]}>
-                <Feather name={d.icon} size={20} color={d.accent ? Brand.navy950 : Brand.white} />
+                <Feather name={d.icon} size={18} color={d.accent ? Brand.navy950 : Brand.white} />
               </View>
-              <View style={{ gap: 2 }}>
-                <Text style={[styles.doorLabel, { textAlign: rtl ? 'right' : 'left', fontFamily: familyFor('heading', rtl) }]} numberOfLines={2}>
+              <View style={[styles.flex, { gap: 2 }]}>
+                <Text style={[styles.doorLabel, { textAlign: rtl ? 'right' : 'left', fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={1}>
                   {d.label}
                 </Text>
-                <Text variant="hint" style={{ textAlign: rtl ? 'right' : 'left' }} numberOfLines={1}>
+                <Text variant="hint" style={{ textAlign: rtl ? 'right' : 'left' }} numberOfLines={2}>
                   {d.hint}
                 </Text>
               </View>
+              <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={18} color={C.textMuted} />
             </PressScale>
           ))}
         </View>
@@ -145,7 +148,7 @@ export default function GarageScreen() {
           </Text>
         ) : null}
 
-        <AdviceCard onPale />
+        <AdviceCard />
       </View>
     </ScrollView>
   );
@@ -172,7 +175,7 @@ function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehic
   return (
     <View style={styles.passWrap}>
       <View style={styles.pass}>
-        <Svg style={StyleSheet.absoluteFill} viewBox="0 0 340 210" preserveAspectRatio="none">
+        <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 340 210" preserveAspectRatio="none">
           <Defs>
             <LinearGradient id="pass" x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="1">
               <Stop offset="0" stopColor={Brand.navy700} />
@@ -235,17 +238,30 @@ function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehic
           {years ? <Field label={t('look.fieldYears')} value={`\u2066${years}\u2069`} /> : null}
         </View>
 
+        <View style={[styles.passActions, row]}>
+          <PressScale
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/pieces-compatibles', params: { engine: vehicle.engineId } })}
+            style={[styles.heroCta, row]}
+            pressedStyle={{ backgroundColor: Brand.gold600 }}
+          >
+            <Feather name="check-circle" size={18} color={C.onAccent} />
+            <Text style={[styles.heroCtaText, { fontFamily: familyFor('display', rtl) }]} numberOfLines={1}>
+              {t('look.bento.parts')}
+            </Text>
+          </PressScale>
+          <PressScale
+            accessibilityRole="button"
+            accessibilityLabel={t('look.bento.info')}
+            onPress={() => router.push({ pathname: '/garage/vehicule/[engine]', params: { engine: vehicle.engineId } })}
+            style={styles.passInfo}
+            pressedStyle={{ backgroundColor: 'rgba(255,255,255,0.28)' }}
+          >
+            <Feather name="info" size={20} color={Brand.white} />
+          </PressScale>
+        </View>
       </View>
 
-      <PressScale
-        accessibilityRole="button"
-        onPress={() => router.push({ pathname: '/pieces-compatibles', params: { engine: vehicle.engineId } })}
-        style={[styles.heroCta, row]}
-        pressedStyle={{ backgroundColor: Brand.gold600 }}
-      >
-        <Feather name="check-circle" size={18} color={C.onAccent} />
-        <Text style={[styles.heroCtaText, { fontFamily: familyFor('display', rtl) }]}>{t('home.seeCompatible')}</Text>
-      </PressScale>
     </View>
   );
 }
@@ -265,7 +281,7 @@ function Field({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.surface },
+  root: { flex: 1, backgroundColor: C.background },
   scroll: { paddingTop: Spacing.one },
   column: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', paddingHorizontal: Spacing.three, gap: Spacing.three },
   flex: { flex: 1, minWidth: 0 },
@@ -298,43 +314,37 @@ const styles = StyleSheet.create({
   fieldValue: { fontSize: 16, lineHeight: 21, color: Brand.white },
   passPressed: { backgroundColor: 'rgba(255,255,255,0.05)' },
   heroCta: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.two,
     minHeight: Tap.primary,
+    paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
     backgroundColor: Brand.gold500,
   },
-  heroCtaText: { fontSize: 16, color: C.onAccent },
-  doors: { flexWrap: 'wrap', gap: Spacing.two },
-  door: {
-    flexBasis: '47%',
-    flexGrow: 1,
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    backgroundColor: Brand.white,
-    ...Elevation.resting,
+  passActions: { alignItems: 'center', gap: Spacing.two, marginTop: Spacing.one },
+  passInfo: {
+    width: Tap.primary,
+    height: Tap.primary,
+    borderRadius: Tap.primary / 2,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  doorIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: Brand.navy900, alignItems: 'center', justifyContent: 'center' },
+  count: { fontSize: 18, lineHeight: 24, color: C.text },
+  seeAllText: { fontSize: 15, lineHeight: 20, color: C.text, textDecorationLine: 'underline' },
+  group: { borderRadius: Radius.card, backgroundColor: C.surface, overflow: 'hidden' },
+  door: { alignItems: 'center', gap: Spacing.three, minHeight: 68, paddingHorizontal: Spacing.three, paddingVertical: Spacing.three },
+  doorRule: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border },
+  doorPressed: { backgroundColor: C.surfacePressed },
+  doorIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: Brand.navy900, alignItems: 'center', justifyContent: 'center' },
   doorIconAccent: { backgroundColor: Brand.gold500 },
   doorLabel: { fontSize: 16, lineHeight: 21, color: C.text },
-  quick: { gap: Spacing.two },
-  quickItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.one,
-    paddingVertical: Spacing.three,
-    borderRadius: Radius.card,
-    backgroundColor: Brand.white,
-    ...Elevation.resting,
-  },
-  quickIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: Brand.gold500, alignItems: 'center', justifyContent: 'center' },
-  quickLabel: { fontSize: 13, lineHeight: 17, color: C.text, textAlign: 'center' },
+  heroCtaText: { fontSize: 16, color: C.onAccent },
   pressed: { backgroundColor: C.surface },
   disabled: { opacity: 0.45 },
-  head: { alignItems: 'center', justifyContent: 'space-between', paddingTop: Spacing.one },
+  head: { alignItems: 'baseline', justifyContent: 'space-between' },
   section: { fontSize: 18, lineHeight: 24, color: C.text },
   seeAll: { alignItems: 'center', gap: 4, minHeight: Tap.min },
   list: { gap: Spacing.two },
@@ -342,14 +352,4 @@ const styles = StyleSheet.create({
   dots: { justifyContent: 'center', gap: 6, paddingTop: Spacing.two },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.border },
   dotOn: { width: 18, backgroundColor: C.text },
-  manage: {
-    alignItems: 'center',
-    gap: Spacing.three,
-    minHeight: Tap.primary + Spacing.one,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    backgroundColor: Brand.white,
-    ...Elevation.resting,
-  },
-  manageIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
 });
