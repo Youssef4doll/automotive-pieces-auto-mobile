@@ -67,8 +67,12 @@ export default function FamilyScreen() {
   const [sorting, setSorting] = useState(false);
   const [inStock, setInStock] = useState(false);
   const [onSale, setOnSale] = useState(false);
+  // "Va sur ma voiture": only the parts the shop confirmed for the active
+  // car. Off without a car — there is nothing to be compatible with.
+  const [fitsOnly, setFitsOnly] = useState(false);
+  const fits = fitsOnly && Boolean(engineId);
   const [brand, setBrand] = useState<string | null>(initialBrand ?? null);
-  const filtered = sort !== 'relevance' || inStock || onSale || Boolean(brand);
+  const filtered = sort !== 'relevance' || inStock || onSale || fits || Boolean(brand);
 
   const loadFamilies = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(loadFamilies);
@@ -76,15 +80,15 @@ export default function FamilyScreen() {
     (page: number, signal: AbortSignal) =>
       productsApi.inFamily(
         family,
-        { engineId, subcategorySlug: subcategory ?? undefined, sort, inStock, onSale, brand: brand ?? undefined, page },
+        { engineId, subcategorySlug: subcategory ?? undefined, sort, inStock, onSale, fitsOnly: fits, brand: brand ?? undefined, page },
         signal,
       ),
-    [family, engineId, subcategory, sort, inStock, onSale, brand],
+    [family, engineId, subcategory, sort, inStock, onSale, fits, brand],
   );
   const loadProducts = useCallback((signal: AbortSignal) => loadPage(1, signal), [loadPage]);
   const products = useResource(loadProducts);
   // Every page after the first, as the grid's end comes into view.
-  const more = useMoreProducts(products, [family, engineId, subcategory, sort, inStock, onSale, brand].join('|'), loadPage);
+  const more = useMoreProducts(products, [family, engineId, subcategory, sort, inStock, onSale, fits, brand].join('|'), loadPage);
   const onSaleCount = products.status === 'loaded' ? (products.data.facets?.onSale ?? 0) : 0;
   // The brand chips stay put while a filtered page loads (adjusted during
   // render, not in an effect).
@@ -139,6 +143,16 @@ export default function FamilyScreen() {
         ) : null}
         <Rail style={styles.chipBar} contentContainerStyle={[styles.chips, row]}>
           <SortChip sort={sort} onPress={() => setSorting(true)} />
+          {engineId ? (
+            <Chip
+              label={t('catalog.fitsMine')}
+              selected={fits}
+              onPress={() => {
+                track('filter_applied', { family, filter: 'fits', value: !fits });
+                setFitsOnly((v) => !v);
+              }}
+            />
+          ) : null}
           <Chip label={t('catalog.inStock')} selected={inStock} onPress={() => setInStock((v) => !v)} />
           {/* Only when the shop has marked something down here: a filter
               that always empties the list is a promise the shop cannot keep. */}

@@ -137,6 +137,7 @@ export default function AskScreen() {
         result.token,
       );
       track('expert_request', { photos: photos.length, vehicle: Boolean(car), product: Boolean(sku), order: Boolean(result.order), text: Boolean(body.trim()) });
+      if (sku && car) track('fitment_question_sent', { sku, channel: 'in_app' });
       // Remember who they are for next time, as the checkout does.
       useCheckout.getState().update({ customerName: name.trim(), phone: phone.trim() });
       setSent({ order: result.order });

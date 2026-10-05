@@ -62,7 +62,24 @@ export type EventName =
   | 'return_withdrawn'
   /** An uncaught error the error screens never saw (services/crash). */
   | 'app_crash'
-  | 'update_downloaded';
+  | 'update_downloaded'
+  /** A filter chip or toggle on a list (family, value). */
+  | 'filter_applied'
+  /** The zero-result state rendered (query, car). */
+  | 'search_zero_results'
+  /** Pièces compatibles rendered, with both counts. */
+  | 'fitment_summary_seen'
+  /** A fit question sent to the shop (productId/sku, channel). */
+  | 'fitment_question_sent'
+  /** The delivery step done (governorate, method). */
+  | 'delivery_details_submitted'
+  /** The car's logbook saved (which fields are filled). */
+  | 'maintenance_saved'
+  /** A maintenance reminder shown, and tapped. */
+  | 'reminder_shown'
+  | 'reminder_tapped'
+  /** The notification permission answered (granted, context). */
+  | 'push_opt_in';
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 type Queued = { name: EventName; at: string; props?: Props };
@@ -118,11 +135,25 @@ export function track(name: EventName, props?: Props) {
     // An id per event and a running number per launch, so a report can drop
     // a batch that was sent twice and order events that share a millisecond.
     seq += 1;
-    queue.push({ name, at: new Date().toISOString(), props: { ...clean, eventId: randomId(), seq } });
+    let base: Props = {};
+    try {
+      base = Object.fromEntries(Object.entries(context()).filter(([, v]) => v !== undefined));
+    } catch {}
+    queue.push({ name, at: new Date().toISOString(), props: { ...base, ...clean, eventId: randomId(), seq } });
     if (queue.length > MAX_QUEUE) queue = queue.slice(-MAX_QUEUE);
     if (queue.length >= BATCH || IMMEDIATE.has(name)) void flush();
     else if (!timer) timer = setTimeout(() => void flush(), FLUSH_MS);
   } catch {}
+}
+
+/**
+ * What every event carries besides its own props — the language, the car the
+ * app is answering for, whether someone is signed in — read when the event
+ * is recorded. Set once by the root layout, so this file imports no store.
+ */
+let context: () => Props = () => ({});
+export function setAnalyticsContext(read: () => Props) {
+  context = read;
 }
 
 /** Called by the account store on sign-in and sign-out. */

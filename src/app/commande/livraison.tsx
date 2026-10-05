@@ -90,6 +90,7 @@ function DeliveryForm({ settings }: { settings: ShopSettings }) {
     setErrors(Object.fromEntries(Object.entries(problems).map(([k, v]) => [k, t(v)])));
     if (Object.keys(problems).length) return;
     update({ deliveryMethod: method });
+    track('delivery_details_submitted', { method, governorate: details.governorate, delegation: details.delegation || null });
     router.push('/commande/paiement');
   };
 

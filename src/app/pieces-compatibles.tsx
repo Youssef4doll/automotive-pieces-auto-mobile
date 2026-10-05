@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { SectionList, StyleSheet, View } from 'react-native';
 
 import { productsApi, type ProductPage } from '@/api/catalogue';
@@ -16,6 +16,7 @@ import { EmptyBay } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel } from '@/store/garage';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { track } from '@/services/analytics';
 import { ltr } from '@/lib/format';
 
 /**
@@ -68,6 +69,12 @@ export default function CompatiblePartsScreen() {
     [engineId],
   );
   const parts = useResource(load);
+  const fitCounts = parts.status === 'loaded' ? `${parts.data.fits.total}|${parts.data.likely.total}` : null;
+  useEffect(() => {
+    if (!fitCounts || !engineId) return;
+    const [confirmed, toConfirm] = fitCounts.split('|').map(Number);
+    track('fitment_summary_seen', { engineId, confirmed, toConfirm });
+  }, [fitCounts, engineId]);
   const refreshControl = usePullRefresh();
   const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
   // The shop's inbox, with the car attached by the request screen.

@@ -113,13 +113,16 @@ export default function SearchScreen() {
 
     const timer = setTimeout(
       () => {
+        const started = Date.now();
         searchApi
           .query(trimmed, { engineId, take: 30, submitted: isSubmit }, controller.signal)
           .then((data) => {
             if (controller.signal.aborted) return;
             setAnswer({ for: question, value: { status: 'loaded', data } });
             setLast(data);
-            track('search_query', { q: trimmed.slice(0, 80), results: data.products.length, vehicle: Boolean(engineId), submitted: isSubmit });
+            const empty = !data.products.length && !data.families.length && !data.brands.length;
+            track('search_query', { q: trimmed.slice(0, 80), results: data.products.length, vehicle: Boolean(engineId), submitted: isSubmit, latencyMs: Date.now() - started });
+            if (empty && (isSubmit || trimmed.length >= 4)) track('search_zero_results', { q: trimmed.slice(0, 80) });
           })
           .catch((err: unknown) => {
             if (controller.signal.aborted) return;

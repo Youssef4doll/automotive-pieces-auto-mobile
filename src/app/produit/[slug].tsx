@@ -305,6 +305,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                     accessibilityRole="button"
                     onPress={() => {
                       track('whatsapp_opened', { from: 'to_check', sku: product.sku });
+                      track('fitment_question_sent', { productId: product.id, sku: product.sku, channel: 'whatsapp' });
                       const text = t('product.whatsappCheck', { name: product.name, sku: product.sku, car: vehicleLabel(active) ?? '' });
                       void Linking.openURL(whatsappUrl(settings.contact.whatsapp!, text)).catch(() => undefined);
                     }}

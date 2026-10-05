@@ -186,10 +186,13 @@ export const productsApi = {
       sort?: ProductSort;
       inStock?: boolean;
       onSale?: boolean;
+      /** Only the parts confirmed for `engineId` (the shop's `fits=1`). */
+      fitsOnly?: boolean;
     } = {},
     signal?: AbortSignal,
   ) => {
     const params = new URLSearchParams({ family: familySlug });
+    if (options.fitsOnly && options.engineId) params.set('fits', '1');
     if (options.subcategorySlug) params.set('subcategory', options.subcategorySlug);
     if (options.brand) params.set('brand', options.brand);
     if (options.sort && options.sort !== 'relevance') params.set('sort', options.sort);

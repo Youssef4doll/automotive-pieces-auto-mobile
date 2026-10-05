@@ -1,10 +1,12 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { C, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
 import { careDue, type CareDue } from '@/lib/care';
+import { track } from '@/services/analytics';
 import { useGarage } from '@/store/garage';
 import { useVehicleCare } from '@/store/vehicle-care';
 import { Text } from './text';
@@ -36,13 +38,22 @@ export function CareDueStrip() {
   const active = useGarage((s) => s.active);
   const care = useVehicleCare((s) => (active ? s.byEngine[active.engineId] : undefined));
   const soon = careDue(care).filter(isSoon);
+  const shown = active && soon.length ? `${active.engineId}|${soon[0].kind}|${soon[0].overdue ? 1 : 0}` : null;
+  useEffect(() => {
+    if (!shown) return;
+    const [engineId, kind, overdue] = shown.split('|');
+    track('reminder_shown', { engineId, kind, overdue: overdue === '1' });
+  }, [shown]);
   if (!active || soon.length === 0) return null;
   const first = soon[0];
   return (
     <View style={styles.column}>
       <Pressable
         accessibilityRole="button"
-        onPress={() => router.push({ pathname: '/garage/vehicule/[engine]', params: { engine: active.engineId } })}
+        onPress={() => {
+          track('reminder_tapped', { engineId: active.engineId, kind: first.kind, overdue: Boolean(first.overdue) });
+          router.push({ pathname: '/garage/vehicule/[engine]', params: { engine: active.engineId } });
+        }}
         style={({ pressed }) => [
           styles.strip,
           { flexDirection: rtl ? 'row-reverse' : 'row', backgroundColor: first.overdue ? C.dangerSurface : C.cautionSurface },

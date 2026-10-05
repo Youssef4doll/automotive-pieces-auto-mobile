@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { track } from '@/services/analytics';
 
 /**
  * Notifications, the two kinds this app sends.
@@ -56,6 +57,7 @@ export async function mayNotify({ ask }: { ask: boolean }): Promise<boolean> {
   if (current?.granted) return true;
   if (!ask || current?.canAskAgain === false) return false;
   const asked = await Notifications.requestPermissionsAsync().catch(() => null);
+  track('push_opt_in', { granted: Boolean(asked?.granted) });
   return Boolean(asked?.granted);
 }
 

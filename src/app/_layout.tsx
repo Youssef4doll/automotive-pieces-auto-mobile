@@ -16,11 +16,13 @@ import { AuthMoment } from '@/components/auth-moment';
 import { NotificationRouter } from '@/components/notification-router';
 import { OrderWatch } from '@/components/order-watch';
 import { Preloader } from '@/components/preloader';
-import { track } from '@/services/analytics';
+import { setAnalyticsContext, track } from '@/services/analytics';
 import { installCrashReporting } from '@/services/crash';
 import { installNotificationHandler } from '@/services/notifications';
 import { useRemoteUpdates } from '@/services/updates';
 import { useAccount } from '@/store/account';
+import { useGarage } from '@/store/garage';
+import { appLocale } from '@/i18n/data-locale';
 
 SplashScreen.preventAutoHideAsync();
 /**
@@ -77,7 +79,13 @@ function App() {
   // Once per launch: is the saved account still signed in, and the funnel's first step.
   useEffect(() => {
     void useAccount.getState().restore();
-    track('app_open');
+    setAnalyticsContext(() => ({
+      locale: appLocale(),
+      engineId: useGarage.getState().active?.engineId ?? null,
+      signedIn: useAccount.getState().status === 'signedIn',
+    }));
+    // ms since the JavaScript started: how long the first screen took to mount.
+    track('app_open', { coldStart: true, ms: typeof performance !== 'undefined' ? Math.round(performance.now()) : null });
   }, []);
 
   const preloader = !launched ? (

@@ -18,6 +18,7 @@ import { useGarage } from '@/store/garage';
 import { useToast } from '@/store/toast';
 import { useVehicleCare } from '@/store/vehicle-care';
 import { ltr } from '@/lib/format';
+import { track } from '@/services/analytics';
 
 /**
  * One car: what the shop knows about its engine, and what its owner knows
@@ -108,6 +109,11 @@ export default function VehicleScreen() {
       } else denied = true;
     }
     saveCare(engine, { ...next, reminderIds });
+    track('maintenance_saved', {
+      engineId: engine,
+      fields: [next.mileageKm, next.oilChangeKm, next.oilIntervalKm, next.inspectionDue, next.insuranceDue].filter((v) => v !== undefined && v !== null).length,
+      remind,
+    });
     toast({ message: denied ? t('notify.denied') : reminderIds.length ? `${t('car.saved')} · ${t('car.remind.set')}` : t('car.saved'), tone: denied ? 'neutral' : 'success' });
   };
 
