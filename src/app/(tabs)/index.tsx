@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useState } from 'react';
 import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { catalogueApi, type Family } from '@/api/catalogue';
@@ -22,7 +22,7 @@ import { useVehicleLine } from '@/components/ui/vehicle-card';
 import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
-import { RENDERS } from '@/illustrations/renders';
+import { familyRender } from '@/illustrations/renders';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
@@ -31,6 +31,10 @@ import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { Rail } from '@/components/ui/rail';
 
 const LOGO = require('../../../assets/images/logo-lockup.png');
+const LINEUP = require('../../../assets/images/hero-lineup.webp');
+const STOREFRONT = require('../../../assets/images/hero-storefront.webp');
+/** Preview: which picture stands behind the slogan. */
+const HERO = 'storefront' as 'lineup' | 'storefront' | 'part';
 
 /**
  * Accueil — the reference's home, top to bottom, on the shop's data.
@@ -63,7 +67,6 @@ export default function HomeScreen() {
   // The hero photograph is 3:4; it is lifted so the part sits beside the
   // slogan and under the search, then fades into the navy below.
   const heroHeight = Math.round(Math.min(width, MaxContentWidth + 120) * 4 / 3);
-  const heroLift = Math.round(heroHeight * 0.06);
 
   // Light clock and battery over the night road; dark again on the white
   // screens. The tabs stay mounted, so this follows focus rather than mount.
@@ -98,32 +101,37 @@ export default function HomeScreen() {
       {focused ? <StatusBar style="light" /> : null}
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
         <View>
-          <View style={[styles.heroBg, { top: -heroLift }]} pointerEvents="none">
-            <Image
-              source={RENDERS.hero}
-              style={{ width: '100%', height: heroHeight, transform: rtl ? [{ scaleX: -1 }] : undefined }}
-              contentFit="cover"
-              contentPosition={rtl ? 'left center' : 'right center'}
-              accessibilityIgnoresInvertColors
-            />
-            {/* Into the navy: the photograph ends where the questions start. */}
-            <Svg style={StyleSheet.absoluteFill} width="100%" height={heroHeight}>
-              <Defs>
-                <LinearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={Brand.navy950} stopOpacity="0.55" />
-                  <Stop offset="0.3" stopColor={Brand.navy950} stopOpacity="0.05" />
-                  <Stop offset="0.72" stopColor={Brand.navy950} stopOpacity="0.15" />
-                  <Stop offset="0.94" stopColor={Brand.navy950} stopOpacity="1" />
-                </LinearGradient>
-                <LinearGradient id="side" x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="0">
-                  <Stop offset="0" stopColor={Brand.navy950} stopOpacity="0.5" />
-                  <Stop offset="0.5" stopColor={Brand.navy950} stopOpacity="0" />
-                </LinearGradient>
-              </Defs>
-              <Rect x="0" y="0" width="100%" height={heroHeight} fill="url(#side)" />
-              <Rect x="0" y="0" width="100%" height={heroHeight} fill="url(#fade)" />
-            </Svg>
-          </View>
+          {HERO === 'storefront' ? (
+            // The shop's own front, under the slogan: navy above it so the
+            // words stay on navy, and navy again where the search sits.
+            <View style={[styles.heroBg, { top: Math.round(heroHeight * 0.27) }]} pointerEvents="none">
+              <Image source={STOREFRONT} style={{ width: '100%', height: Math.round(heroHeight * 0.5) }} contentFit="cover" contentPosition="top center" accessibilityIgnoresInvertColors />
+              <Svg style={StyleSheet.absoluteFill} width="100%" height={Math.round(heroHeight * 0.5)}>
+                <Defs>
+                  <LinearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0" stopColor={Brand.navy950} stopOpacity="1" />
+                    <Stop offset="0.18" stopColor={Brand.navy950} stopOpacity="0.15" />
+                    <Stop offset="0.62" stopColor={Brand.navy950} stopOpacity="0.2" />
+                    <Stop offset="0.97" stopColor={Brand.navy950} stopOpacity="1" />
+                  </LinearGradient>
+                </Defs>
+                <Rect x="0" y="0" width="100%" height="100%" fill="url(#fade)" />
+              </Svg>
+            </View>
+          ) : (
+            // A studio light on the navy, where the picture stands.
+            <View style={[styles.heroBg, { top: Math.round(heroHeight * 0.18) }]} pointerEvents="none">
+              <Svg width="100%" height={Math.round(heroHeight * 0.6)}>
+                <Defs>
+                  <RadialGradient id="glow" cx="50%" cy="55%" rx="65%" ry="50%">
+                    <Stop offset="0" stopColor={Brand.navy600} stopOpacity="0.55" />
+                    <Stop offset="1" stopColor={Brand.navy950} stopOpacity="0" />
+                  </RadialGradient>
+                </Defs>
+                <Rect x="0" y="0" width="100%" height="100%" fill="url(#glow)" />
+              </Svg>
+            </View>
+          )}
 
           <View style={[styles.column, { paddingTop: insets.top + Spacing.three }]}>
             <View style={[styles.topRow, row]}>
@@ -150,7 +158,13 @@ export default function HomeScreen() {
 
             {/* Room for the photograph between the promise and the search, as
                 the reference leaves room for its car. */}
-            <View style={{ height: Math.round(heroHeight * 0.44) }} />
+            <View style={[styles.heroArt, { height: Math.round(heroHeight * 0.44) }]} pointerEvents="none">
+              {HERO === 'lineup' ? (
+                <Image source={LINEUP} style={{ width: width * 1.08, aspectRatio: 1600 / 533 }} contentFit="contain" accessibilityIgnoresInvertColors />
+              ) : HERO === 'part' ? (
+                <Image source={familyRender('suspension')} style={{ height: '92%', aspectRatio: 1 }} contentFit="contain" accessibilityIgnoresInvertColors />
+              ) : null}
+            </View>
 
             {/* The main action, and the car it answers for, as one piece:
                 the search, and directly under it the line that says which
@@ -286,6 +300,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.navy950 },
   flex: { flex: 1, minWidth: 0 },
   heroBg: { position: 'absolute', top: 0, left: 0, right: 0 },
+  heroArt: { alignItems: 'center', justifyContent: 'center', marginHorizontal: -Spacing.four },
   column: {
     width: '100%',
     maxWidth: MaxContentWidth,
