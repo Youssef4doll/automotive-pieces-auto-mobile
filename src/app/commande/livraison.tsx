@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import type { ShopSettings } from '@/api/shop';
+import { PhoneSignIn } from '@/components/phone-sign-in';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
@@ -44,8 +45,14 @@ export default function DeliveryStep() {
     track('begin_checkout', { lines: useCart.getState().items.length });
   }, []);
 
-  // Ordering takes an account; a link or a back gesture that lands a guest here goes to sign in first.
-  if (account === 'guest') return <Redirect href={{ pathname: '/compte/connexion', params: { then: 'checkout' } }} />;
+  // Ordering takes an account. Where the shop can text, a guest stays here:
+  // the number they type is confirmed by a code on "Continuer" and the
+  // account opens in their name (no detour, no password). Where it cannot,
+  // a guest signs in first.
+  const phoneCode = settings.status === 'loaded' && settings.data.auth?.phoneCode === true;
+  if (account === 'guest' && settings.status === 'loaded' && !phoneCode) {
+    return <Redirect href={{ pathname: '/compte/connexion', params: { then: 'checkout' } }} />;
+  }
 
   return (
     <>
@@ -85,13 +92,22 @@ function DeliveryForm({ settings }: { settings: ShopSettings }) {
   };
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
+  const guest = useAccount((s) => s.status === 'guest');
+  const [confirming, setConfirming] = useState(false);
+
+  const proceed = () => {
+    track('delivery_details_submitted', { method, governorate: details.governorate, delegation: details.delegation || null });
+    router.push('/commande/paiement');
+  };
+
   const next = () => {
     const problems = checkoutProblems({ ...details, deliveryMethod: method });
     setErrors(Object.fromEntries(Object.entries(problems).map(([k, v]) => [k, t(v)])));
     if (Object.keys(problems).length) return;
     update({ deliveryMethod: method });
-    track('delivery_details_submitted', { method, governorate: details.governorate, delegation: details.delegation || null });
-    router.push('/commande/paiement');
+    // A guest confirms the number first; signed in, straight on.
+    if (guest) setConfirming(true);
+    else proceed();
   };
 
   // Reached with an empty basket — a back gesture after an order, a stale
@@ -317,6 +333,24 @@ function DeliveryForm({ settings }: { settings: ShopSettings }) {
           ))}
         </ScrollView>
       </BottomSheet>
+
+      {/* The account, opened here: the number just typed, confirmed by SMS. */}
+      <BottomSheet visible={confirming} onClose={() => setConfirming(false)} title={t('checkout.confirmPhone')}>
+        <View style={styles.confirm}>
+          <Text variant="hint" style={{ textAlign: rtl ? 'right' : 'left' }}>
+            {t('checkout.confirmPhoneWhy')}
+          </Text>
+          {confirming ? (
+            <PhoneSignIn
+              preset={{ phone: details.phone, name: details.customerName, email: details.email }}
+              onDone={() => {
+                setConfirming(false);
+                proceed();
+              }}
+            />
+          ) : null}
+        </View>
+      </BottomSheet>
     </KeyboardAvoidingView>
   );
 }
@@ -362,6 +396,7 @@ function MethodCard({
 }
 
 const styles = StyleSheet.create({
+  confirm: { gap: Spacing.three, paddingBottom: Spacing.three },
   root: { flex: 1, backgroundColor: C.background },
   scroll: { paddingBottom: Spacing.five },
   column: {

@@ -30,6 +30,7 @@ import { useResource } from '@/hooks/use-resource';
 import { useAccount } from '@/store/account';
 import { useGarage } from '@/store/garage';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
+import { useShopSettings } from '@/hooks/use-shop-settings';
 
 /**
  * Panier.
@@ -61,6 +62,10 @@ export default function CartScreen() {
   const lines = items.length;
   // Ordering takes an account: a guest is sent to sign in, and comes back to the checkout.
   const guest = useAccount((s) => s.status) !== 'signedIn';
+  // Where the shop can text, a guest goes on to the delivery step and
+  // confirms their number there; elsewhere they sign in first.
+  const shopSettings = useShopSettings();
+  const phoneCode = shopSettings.status === 'loaded' && shopSettings.data.auth?.phoneCode === true;
   useFocusEffect(
     useCallback(() => {
       track('view_cart', { lines });
@@ -155,20 +160,20 @@ export default function CartScreen() {
       <StickyBar inTabs>
         {guest ? (
           <Text variant="hint" style={[styles.signInWhy, { textAlign: rtl ? 'right' : 'left' }]}>
-            {t('cart.signInWhy')}
+            {t(phoneCode ? 'cart.phoneWhy' : 'cart.signInWhy')}
           </Text>
         ) : null}
         <Button
           label={
-            guest
+            guest && !phoneCode
               ? t('cart.signInToOrder')
               : quote
                 ? `${t('cart.checkout')} · ${formatDT(quote.total)}`
                 : t('cart.checkout')
           }
-          icon={guest ? 'log-in' : undefined}
+          icon={guest && !phoneCode ? 'log-in' : undefined}
           onPress={() =>
-            guest
+            guest && !phoneCode
               ? router.push({ pathname: '/compte/connexion', params: { then: 'checkout' } })
               : router.push('/commande/livraison')
           }

@@ -27,17 +27,28 @@ const RESEND_AFTER_S = 60;
  *
  * Only shown when the shop can send texts (settings `auth.phoneCode`).
  */
-export function PhoneSignIn({ onDone }: { onDone: () => void }) {
+export function PhoneSignIn({
+  onDone,
+  preset,
+}: {
+  onDone: () => void;
+  /**
+   * From the checkout: the number, name and e-mail the delivery step already
+   * holds. The code goes out at once, and a number with no account is opened
+   * in that name without asking for it again.
+   */
+  preset?: { phone: string; name: string; email: string };
+}) {
   const { t, rtl, locale } = useI18n();
   const signInWithCode = useAccount((s) => s.signInWithCode);
   const signUpWithTicket = useAccount((s) => s.signUpWithTicket);
 
   const [step, setStep] = useState<'number' | 'code' | 'name'>('number');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState(preset?.phone ?? '');
   const [code, setCode] = useState('');
   const [ticket, setTicket] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [name, setName] = useState(preset?.name ?? '');
+  const [email, setEmail] = useState(preset?.email ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<DictKey | null>(null);
   const [fieldError, setFieldError] = useState<{ field: 'phone' | 'code' | 'name' | 'email'; key: DictKey } | null>(null);
@@ -77,6 +88,15 @@ export function PhoneSignIn({ onDone }: { onDone: () => void }) {
     }
   };
 
+  // From the checkout the number is already known: send the code straight away.
+  const autoSent = useRef(false);
+  useEffect(() => {
+    if (!preset || autoSent.current) return;
+    autoSent.current = true;
+    void sendCode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const verify = async (value = code) => {
     if (!digits || value.length !== 6 || busy) return;
     setError(null);
@@ -84,7 +104,19 @@ export function PhoneSignIn({ onDone }: { onDone: () => void }) {
     setBusy(true);
     try {
       const result = await signInWithCode(digits, value);
-      if (result) {
+      if (result && preset && name.trim().length >= 2 && (!email.trim() || isEmail(email))) {
+        // The checkout already has the name: open the account in it.
+        setTicket(result.ticket);
+        try {
+          await signUpWithTicket(result.ticket, name, email);
+          onDone();
+        } catch {
+          // An e-mail already taken, a name refused: the name step, filled
+          // in, says which — the code is spent, the ticket is not.
+          setStep('name');
+          setBusy(false);
+        }
+      } else if (result) {
         setTicket(result.ticket);
         setStep('name');
         setBusy(false);
