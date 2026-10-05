@@ -247,7 +247,7 @@ export function newIdempotencyKey() {
  * confidently offering a car it can no longer sell parts for. Not in v1.
  */
 const MAX_AGE_MS = 30_000;
-const cache = new Map<string, { data: unknown; at: number }>();
+const cache = new Map<string, { data: unknown; at: number; fromDisk?: boolean }>();
 const inFlight = new Map<string, Promise<unknown>>();
 
 /**
@@ -268,22 +268,38 @@ const restored = AsyncStorage.getItem(STATIC_KEY)
     if (!raw) return;
     const saved = JSON.parse(raw) as Record<string, { data: unknown; at: number }>;
     for (const [path, entry] of Object.entries(saved)) {
-      if (isStatic(path) && !cache.has(path) && Date.now() - entry.at < STATIC_MAX_AGE_MS) cache.set(path, entry);
+      if (isStatic(path) && !cache.has(path) && Date.now() - entry.at < STATIC_MAX_AGE_MS) cache.set(path, { ...entry, fromDisk: true });
     }
   })
   .catch(() => undefined);
 
 function persistStatic() {
   const saved: Record<string, { data: unknown; at: number }> = {};
-  for (const [path, entry] of cache) if (isStatic(path)) saved[path] = entry;
+  for (const [path, entry] of cache) if (isStatic(path)) saved[path] = { data: entry.data, at: entry.at };
   AsyncStorage.setItem(STATIC_KEY, JSON.stringify(saved)).catch(() => undefined);
 }
 
+/**
+ * Rung when a background re-read of the shop's furniture brings something
+ * different from what screens were shown (a new WhatsApp number, a new
+ * banner): api/refresh then re-reads every mounted screen — from this
+ * cache, so it costs no request — and the change shows at once instead of
+ * on the next visit.
+ */
+let staticChanged: () => void = () => undefined;
+export function onStaticChanged(listener: () => void) {
+  staticChanged = listener;
+}
+
 function fetchInto<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const before = cache.get(path);
   const pending = withRetries<T>(path, { signal })
     .then((data) => {
       cache.set(path, { data, at: Date.now() });
-      if (isStatic(path)) persistStatic();
+      if (isStatic(path)) {
+        persistStatic();
+        if (before && JSON.stringify(before.data) !== JSON.stringify(data)) staticChanged();
+      }
       return data;
     })
     .finally(() => {
@@ -302,7 +318,9 @@ export async function get<T>(path: string, options?: { signal?: AbortSignal; fre
   const hit = cache.get(path);
   if (!options?.fresh && hit) {
     const age = Date.now() - hit.at;
-    if (age < MAX_AGE_MS) return hit.data as T;
+    // An answer from a previous launch is always re-read behind the screen,
+    // however young: the shop may have changed it in between.
+    if (age < MAX_AGE_MS && !hit.fromDisk) return hit.data as T;
     if (fixed && age < STATIC_MAX_AGE_MS) {
       // Stale but usable: answer now, refresh behind it. No signal — the
       // screen that asked may be gone by the time the answer lands.

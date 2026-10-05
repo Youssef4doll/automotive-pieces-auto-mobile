@@ -1,6 +1,6 @@
 import { AppState, type AppStateStatus } from 'react-native';
 
-import { clearCache } from './client';
+import { clearCache, onStaticChanged } from './client';
 
 /**
  * "The shop may have changed — read it again."
@@ -32,6 +32,8 @@ function watchForeground() {
 
 export function onRefresh(listener: Listener) {
   watchForeground();
+  // A day-old answer refreshed behind a screen, and different: show it now.
+  onStaticChanged(() => void refreshAll({ hard: false }));
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
