@@ -146,10 +146,12 @@ Tunisian mobile data, often in a workshop with one bar. A spinner that runs
 for a minute before admitting defeat is worse than one that fails at twelve
 and offers "Réessayer" — by then the customer has decided the app is broken.
 
-**The cache is in memory only.** A garage picker that worked offline would
-need the vehicle tables on disk, kept in step with a shop that can add a make
-at any time, and the failure mode of getting that wrong is an app confidently
-offering a car it can no longer supply. Not in v1.
+**The cache is in memory, except the shop's furniture.** A garage picker that
+worked offline would need the vehicle tables on disk, kept in step with a shop
+that can add a make at any time, and the failure mode of getting that wrong is
+an app confidently offering a car it can no longer supply. Not in v1. Families,
+parts makers, the shop's settings and its promotions are the exception (§28):
+kept a day on disk, drawn at once, asked again behind the screen.
 
 ### The API, in the other repo
 
@@ -210,8 +212,9 @@ Conventions they set, which the rest of `/api/v1` should follow:
 
 ## 5. Language, and the RTL problem
 
-fr (default), en, ar. The device's language is used on first launch; the
-choice is then remembered.
+fr (default), en, ar. A first launch opens in Arabic on an Arabic phone and
+in French on any other — never English, which is one tap away in Compte →
+Langue and in the welcome screen's chips (§28). The choice is then remembered.
 
 **Strings that exist on the website are copied verbatim, not re-translated.**
 "Mon garage" is called "Mon garage" in both front doors or it is two features
@@ -1773,3 +1776,52 @@ The car's pass now holds its actions, as in the owner's reference: the gold
 véhicules, Ajouter un véhicule in gold). Then the care strip and "Besoin
 d'un conseil ?", now on the pale surface with the artist's phone drawing;
 that drawing replaces `AdviceArt` on the card everywhere it appears.
+
+
+## 28. The October 5 audit: one verdict, honest money, no waiting
+
+An outside audit scored the app 45/100 for launch readiness, most of it on
+things that did not need new screens. What changed, in both repos:
+
+**One fit verdict** (`lib/fit`). Four states — FITS, LIKELY, UNKNOWN,
+DOES_NOT_FIT — from the shop's verdict and its reason. LIKELY is a lead: an
+inferred (DERIVED) row, or the same engine code confirmed on another model.
+It is amber with "Probablement compatible — à confirmer" and never a green
+tick; the compatibility list used to tick the customer's engine green on an
+inferred row while the card above said "à vérifier". The card, the tile, the
+cart badge, the product page and the payment summary all read `fitState`.
+Amber words use `C.cautionText` (#8a6100, 5.5:1); the gold stays on icons.
+
+**Pièces compatibles** asks the shop for two lists (`fits=1`, and the new
+`likely=1`, lib/data/fitment `likelyFitWhere`): the confirmed parts, then
+"À confirmer avec la boutique" with a button to ask. The banner ticks only
+when something is confirmed and counts both. Saving a new car opens this
+page over the garage.
+
+**Money** is "89,000 DT" everywhere — three decimals, narrow-space
+thousands — in `formatDT`, `Price` and the website's `formatTND`.
+
+**Language.** French by default (Arabic on an Arabic phone), chips on the
+first welcome step, `<html lang dir>` on the web. Car and engine names are
+isolated left-to-right where shown (`ltr`), so Arabic keeps "1.5 dCi".
+
+**Checkout.** Each line on the payment step carries its verdict, and a note
+says how many are not confirmed and repeats the shop's own guarantee for an
+incompatible part. The address shows the delegation. "Passer la commande"
+and "Annuler" lock on the first tap with a ref.
+
+**Waiting.** The API was fast once warm (under 160 ms locally); the seconds
+the audit saw on order and cancel were SMTP sends awaited before the reply.
+They now go after it (website `lib/defer`, `after()`). Static data is cached
+(§4), and a product page starts loading on press-in.
+
+**Smaller.** Zero search results offer "Demander à la boutique" and "Envoyer
+une photo" with the query written in. Bought-together co-purchases pass a
+family/axle rule (website `lib/complements`). Events carry an id and a
+sequence number, and `product_viewed` fires once per opening. "Scanner ma
+carte grise" became "Saisir le VIN de ma carte grise".
+
+Not done here, because they need the owner or real data: confirming fitment
+rows, real product photos and brands, card payment, delivery dates promised
+per governorate, SMS on every status, and a smaller hero on Home (kept as
+chosen on October 5).
