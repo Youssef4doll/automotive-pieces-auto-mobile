@@ -13,8 +13,7 @@ what that became, and the rules it keeps.
 | A car (vehicle cards, garage hero, home vehicle line, picker) | the make's real mark in a white disc | `VehicleMake.logoUrl`, else `src/illustrations/marques.ts` |
 | A parts maker (brand strip, search) | the uploaded logo, else the real mark where on record, else the name in type | `Brand.logoUrl` / `marques.ts` |
 | Home hero | a drilled disc under a gold caliper on a dark studio floor | `assets/renders/hero.webp` |
-| The ways in | a disc, a magnifier, a phone framing a disc | `assets/renders/*.webp` |
-| The car key (garage, Mes véhicules, "Je connais ma voiture", error pages) and the carte grise (VIN screen, picker shortcut) | the shop artist's drawings | `assets/illustrations/*.svg` → `src/illustrations/drawn` |
+| The car key (garage, Mes véhicules, error pages), the carte grise (VIN screen, picker shortcut), and the four ways in on /trouver: key, brake disc, reference label, phone asking the shop (also on the photo request and Mes questions) | the shop artist's drawings | `assets/illustrations/*.svg` → `src/illustrations/drawn` |
 
 ## Why renders, and not stock photographs
 

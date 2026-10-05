@@ -14,7 +14,7 @@ import { Text } from '@/components/ui/text';
 import { Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { useI18n } from '@/i18n/provider';
-import { RENDERS } from '@/illustrations/renders';
+import { PhotoAdviceArt } from '@/illustrations/ways-art';
 import { tunisianDigits } from '@/lib/checkout';
 import { appendPhoto, pickPhoto, type PickedPhoto } from '@/lib/photo';
 import { track } from '@/services/analytics';
@@ -151,7 +151,7 @@ export default function AskScreen() {
       <View style={styles.sentRoot}>
         <Stack.Screen options={{ title: t('ask.title') }} />
         <EmptyState
-          art={<Image source={RENDERS.phone} style={{ width: 112, height: 112 }} contentFit="contain" />}
+          art={<PhotoAdviceArt width={112} />}
           title={t('ask.sentTitle')}
           body={[t('ask.sentBody', { phone: phone.trim() }), sent.order ? t('ask.sentOrder', { ref: sent.order }) : null].filter(Boolean).join('\n')}
         >

@@ -1751,3 +1751,15 @@ artist's drawings replace what stood in for them:
 
 `scripts/inline-svg.py` now also drops `<metadata>`, which holds the files'
 provenance record (C2PA), so it never ships in the bundle.
+
+**The four ways in, drawn (October 5).** "Comment trouver votre pièce ?"
+(`/trouver`) is now four tiles, two to a row on a phone and four on a wide
+screen, each with one of the artist's drawings (`illustrations/ways-art.tsx`):
+the key, a brake disc, a part label under a magnifier, a phone asking the
+shop. With a car in the garage the first tile says "Pour votre <car>". The
+old rows let a long title widen the card past the screen at 440 pt; a tile's
+words now wrap inside it. The disc is cut from the phone drawing, which holds
+it as a nested drawing (`assets/illustrations/disque-frein.svg`). The phone
+drawing also replaces the phone render on the photo request and "Mes
+questions"; `phone.webp` is gone. `inline-svg.py` now keeps clip paths and
+their ids, which the phone and the magnifier need.

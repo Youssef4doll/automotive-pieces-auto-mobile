@@ -35,13 +35,20 @@ def convert(path):
                         continue
                     el.set(k, v)
         el.attrib.pop('class', None)
-        el.attrib.pop('id', None)
+        if el.tag.split('}')[1] not in ('clipPath', 'linearGradient', 'radialGradient', 'mask'):
+            el.attrib.pop('id', None)  # ids only matter on what url(#…) points at
     for parent in root.iter():
         for i, ch in enumerate(list(parent)):
             # <metadata> is the file's provenance record (a C2PA manifest), kept
             # in the .svg as delivered; it draws nothing, so the app goes without.
-            if ch.tag in (f'{{{NS}}}defs', f'{{{NS}}}metadata'):
+            if ch.tag == f'{{{NS}}}metadata':
                 parent.remove(ch)
+            elif ch.tag == f'{{{NS}}}defs':
+                # The styles are written onto the shapes above; clip paths stay.
+                for st in ch.findall(f'{{{NS}}}style'):
+                    ch.remove(st)
+                if not len(ch):
+                    parent.remove(ch)
             elif ch.tag == f'{{{NS}}}svg':
                 x, y = float(ch.get('x', 0)), float(ch.get('y', 0))
                 vx, vy, vw, vh = map(float, ch.get('viewBox').split())

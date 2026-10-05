@@ -42,6 +42,4 @@ export const RENDERS = {
   hero: require('../../assets/renders/hero.webp') as ImageSourcePropType,
   /** "J'ai la référence": the magnifier. */
   magnifier: require('../../assets/renders/magnifier.webp') as ImageSourcePropType,
-  /** "Photo / Expert": a phone whose camera frames a brake disc. */
-  phone: require('../../assets/renders/phone.webp') as ImageSourcePropType,
 };

@@ -134,6 +134,7 @@ export const look = {
     'look.find.refWhy': "Le code sur l'ancienne pièce",
     'look.find.photo': "Je ne sais pas comment ça s'appelle",
     'look.find.photoWhy': 'Photo ou conseil de la boutique',
+    'look.findLead': 'Partez de ce que vous savez déjà.',
     'look.continue': 'Continuer',
   },
   en: {
@@ -260,6 +261,7 @@ export const look = {
     'look.find.refWhy': 'The code on the old part',
     'look.find.photo': "I don't know what it's called",
     'look.find.photoWhy': 'A photo, or advice from the shop',
+    'look.findLead': 'Start from what you already know.',
     'look.continue': 'Continue',
   },
   ar: {
@@ -386,6 +388,7 @@ export const look = {
     'look.find.refWhy': 'الرمز على القطعة القديمة',
     'look.find.photo': 'لا أعرف اسمها',
     'look.find.photoWhy': 'صورة أو نصيحة من المتجر',
+    'look.findLead': 'ابدأ بما تعرفه.',
     'look.continue': 'متابعة',
   },
 } as const;

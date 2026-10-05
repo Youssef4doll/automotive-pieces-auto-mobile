@@ -1,6 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect } from 'react';
-import { Image } from 'expo-image';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { questionsApi, type Question } from '@/api/questions';
@@ -12,7 +11,7 @@ import { Text } from '@/components/ui/text';
 import { C, Elevation, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useLive } from '@/hooks/use-live';
 import { useI18n } from '@/i18n/provider';
-import { RENDERS } from '@/illustrations/renders';
+import { PhotoAdviceArt } from '@/illustrations/ways-art';
 import { useQuestions, type AskedQuestion } from '@/store/questions';
 
 /**
@@ -60,7 +59,7 @@ export default function QuestionsScreen() {
       {asked.length === 0 ? (
         <View style={styles.empty}>
           <EmptyState
-            art={<Image source={RENDERS.phone} style={{ width: 112, height: 112 }} contentFit="contain" />}
+            art={<PhotoAdviceArt width={112} />}
             title={t('questions.emptyTitle')}
             body={t('questions.emptyBody')}
           >
