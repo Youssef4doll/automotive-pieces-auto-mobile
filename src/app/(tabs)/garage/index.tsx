@@ -15,7 +15,6 @@ import { MAKE_MARKS, markKey } from '@/illustrations/marques';
 import { AdviceCard } from '@/components/ui/advice-card';
 import { CareDueStrip } from '@/components/ui/care-due';
 import { CarKey } from '@/illustrations/car-key';
-import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { yearSpan } from '@/lib/format';
 import { useGarage, type SavedVehicle } from '@/store/garage';
@@ -61,19 +60,22 @@ export default function GarageScreen() {
 
   // The principal first, then the others as they were added.
   const ordered = [active, ...vehicles.filter((v) => v.engineId !== active.engineId)];
-  const small: { icon: React.ComponentProps<typeof Feather>['name']; label: string; onPress: () => void; disabled?: boolean }[] = [
-    { icon: 'clock', label: t('account.orders'), onPress: () => router.push('/compte/commandes') },
-    { icon: 'info', label: t('look.bento.info'), onPress: () => router.push({ pathname: '/garage/vehicule/[engine]', params: { engine: active.engineId } }) },
-    { icon: 'plus', label: t('look.bento.add'), onPress: () => router.push('/garage/ajouter'), disabled: isFull() },
+  // Four doors: what was ordered, this car's details, every car, the next car.
+  const doors: { icon: React.ComponentProps<typeof Feather>['name']; label: string; hint: string; onPress: () => void; disabled?: boolean; accent?: boolean }[] = [
+    { icon: 'package', label: t('account.orders'), hint: t('look.bento.ordersHint'), onPress: () => router.push('/compte/commandes') },
+    {
+      icon: 'info',
+      label: t('look.bento.info'),
+      hint: active.engineName,
+      onPress: () => router.push({ pathname: '/garage/vehicule/[engine]', params: { engine: active.engineId } }),
+    },
+    { icon: 'layers', label: t('look.myVehiclesTitle'), hint: t('look.garageCount', { n: vehicles.length }), onPress: () => router.push('/garage/vehicules') },
+    { icon: 'plus', label: t('look.bento.add'), hint: t('look.find.carWhy'), onPress: () => router.push('/garage/ajouter'), disabled: isFull(), accent: true },
   ];
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
       <View style={styles.column}>
-        <Text variant="hint" tone={C.textMuted} style={{ textAlign: rtl ? 'right' : 'left' }}>
-          {t('look.garageCount', { n: vehicles.length })}
-        </Text>
-
         {/* The car, as the space's centrepiece — and with several, a
             carousel of them, the principal first. */}
         {ordered.length > 1 ? (
@@ -104,25 +106,30 @@ export default function GarageScreen() {
           <HeroCard vehicle={active} principal onMakePrincipal={() => undefined} />
         )}
 
-        {/* Three doors, each its own tile. */}
-        <View style={[styles.quick, row]}>
-          {small.map((b) => (
+        <View style={[styles.doors, row]}>
+          {doors.map((d) => (
             <PressScale
-              key={b.label}
+              key={d.label}
               accessibilityRole="button"
-              accessibilityState={{ disabled: b.disabled }}
-              disabled={b.disabled}
-              onPress={b.onPress}
-              style={[styles.quickItem, b.disabled && styles.disabled]}
+              accessibilityLabel={`${d.label}, ${d.hint}`}
+              accessibilityState={{ disabled: d.disabled }}
+              disabled={d.disabled}
+              onPress={d.onPress}
+              style={[styles.door, d.disabled && styles.disabled]}
               pressedStyle={styles.pressed}
-              scaleTo={0.96}
+              scaleTo={0.97}
             >
-              <View style={styles.quickIcon}>
-                <Feather name={b.icon} size={20} color={Brand.navy900} />
+              <View style={[styles.doorIcon, d.accent && styles.doorIconAccent]}>
+                <Feather name={d.icon} size={20} color={d.accent ? Brand.navy950 : Brand.white} />
               </View>
-              <Text style={[styles.quickLabel, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={2}>
-                {b.label}
-              </Text>
+              <View style={{ gap: 2 }}>
+                <Text style={[styles.doorLabel, { textAlign: rtl ? 'right' : 'left', fontFamily: familyFor('heading', rtl) }]} numberOfLines={2}>
+                  {d.label}
+                </Text>
+                <Text variant="hint" style={{ textAlign: rtl ? 'right' : 'left' }} numberOfLines={1}>
+                  {d.hint}
+                </Text>
+              </View>
             </PressScale>
           ))}
         </View>
@@ -131,21 +138,6 @@ export default function GarageScreen() {
         <View style={styles.bleed}>
           <CareDueStrip />
         </View>
-
-        <PressScale accessibilityRole="button" onPress={() => router.push('/garage/vehicules')} style={[row, styles.manage]} pressedStyle={styles.pressed}>
-          <View style={styles.manageIcon}>
-            <NavCar size={20} color={Brand.navy900} />
-          </View>
-          <View style={[styles.flex, { gap: 2 }]}>
-            <Text variant="rowTitle" style={{ textAlign: rtl ? 'right' : 'left' }}>
-              {t('look.myVehicles', { n: vehicles.length })}
-            </Text>
-            <Text variant="hint" style={{ textAlign: rtl ? 'right' : 'left' }}>
-              {t('look.myVehiclesHint')}
-            </Text>
-          </View>
-          <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={18} color={C.textMuted} />
-        </PressScale>
 
         {isFull() ? (
           <Text variant="hint" style={styles.centred}>
@@ -314,6 +306,19 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.gold500,
   },
   heroCtaText: { fontSize: 16, color: C.onAccent },
+  doors: { flexWrap: 'wrap', gap: Spacing.two },
+  door: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Radius.card,
+    backgroundColor: Brand.white,
+    ...Elevation.resting,
+  },
+  doorIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: Brand.navy900, alignItems: 'center', justifyContent: 'center' },
+  doorIconAccent: { backgroundColor: Brand.gold500 },
+  doorLabel: { fontSize: 16, lineHeight: 21, color: C.text },
   quick: { gap: Spacing.two },
   quickItem: {
     flex: 1,

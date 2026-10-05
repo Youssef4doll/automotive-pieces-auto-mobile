@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Brand, C, Elevation, familyFor, IconSize, Radius, Spacing } from '@/constants/theme';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
-import { AdviceArt } from '@/illustrations/advice-art';
+import { PhotoAdviceArt } from '@/illustrations/ways-art';
 import { Text } from './text';
 
 /**
@@ -34,7 +34,7 @@ export function AdviceCard({ title = 'look.advice', onPale = false }: { title?: 
       testID="advice-card"
       style={({ pressed }) => [styles.card, onPale && styles.white, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.pressed]}
     >
-      <AdviceArt size={84} />
+      <PhotoAdviceArt width={84} />
       <View style={[styles.body, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
         <Text style={[styles.title, align, { fontFamily: familyFor('heading', rtl) }]}>{t(title)}</Text>
         <Text variant="hint" tone={C.textMuted} style={align}>
