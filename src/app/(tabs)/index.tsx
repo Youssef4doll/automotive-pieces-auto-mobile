@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { BrandStrip } from '@/components/ui/brand-strip';
 import { CareBanner } from '@/components/ui/care-banner';
-import { CareDueStrip } from '@/components/ui/care-due';
+import { HomeForYou } from '@/components/ui/home-for-you';
 import { AdviceCard } from '@/components/ui/advice-card';
 import { PartImage } from '@/components/ui/part-image';
 import { PressScale } from '@/components/ui/press-scale';
@@ -213,6 +213,10 @@ export default function HomeScreen() {
 
         {/* The white sheet, pulled up over the road. */}
         <View style={[styles.sheet, { paddingBottom: tabBarSpace }]}>
+          {/* The customer first: the order on its way, what is due on the
+              car, and the car's own shelf — each only when it is real. */}
+          <HomeForYou />
+
           <View style={styles.column}>
             <View style={[styles.sectionHead, row]}>
               <Text style={[styles.sectionTitle, { fontFamily: familyFor('heading', rtl) }]}>{t('look.browse')}</Text>
@@ -250,8 +254,6 @@ export default function HomeScreen() {
                   </PressScale>
                 ))}
           </Rail>
-          {/* What the owner's own dates say is coming up for the main car. */}
-          <CareDueStrip />
 
           <View style={styles.column}>
             {families.status === 'loaded' ? (

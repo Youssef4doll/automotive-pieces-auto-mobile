@@ -56,6 +56,8 @@ const base = {
 
     'home.seeCompatible': 'Voir les pièces compatibles',
     'home.change': 'Changer',
+    'home.orderOnItsWay': 'Votre commande en cours',
+    'home.itemCount': '{n:one=# article;other=# articles}',
     'home.chooseCar': 'Choisir ma voiture',
 
     'fits.title': 'Pièces compatibles',
@@ -198,6 +200,8 @@ const base = {
 
     'home.seeCompatible': 'See parts that fit',
     'home.change': 'Change',
+    'home.orderOnItsWay': 'Your order on its way',
+    'home.itemCount': '{n:one=# item;other=# items}',
     'home.chooseCar': 'Choose my car',
 
     'fits.title': 'Parts that fit',
@@ -337,6 +341,8 @@ const base = {
 
     'home.seeCompatible': 'عرض القطع المتوافقة',
     'home.change': 'تغيير',
+    'home.orderOnItsWay': 'طلبك قيد التنفيذ',
+    'home.itemCount': '{n:one=قطعة واحدة;two=قطعتان;few=# قطع;many=# قطعة;other=# قطعة}',
     'home.chooseCar': 'اختيار سيارتي',
 
     'fits.title': 'القطع المتوافقة',
