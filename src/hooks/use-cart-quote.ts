@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { ApiError, type ApiFailure } from '@/api/client';
 import { ordersApi, type CartQuote, type DeliveryMethod } from '@/api/orders';
@@ -7,6 +7,14 @@ import { useGarage } from '@/store/garage';
 
 /** A stepper tapped four times is one quote, not four. */
 const DEBOUNCE_MS = 300;
+
+/**
+ * The last basket the shop priced, across screens: the cart, the delivery
+ * step and the payment step each mount their own hook, and each used to
+ * open on "—" until its first answer. It is shown dimmed while the new
+ * answer is on its way and never acted on (`stale` disables the buttons).
+ */
+let remembered: CartQuote | null = null;
 
 export type QuoteState =
   | { status: 'empty' }
@@ -43,12 +51,14 @@ export function useCartQuote(deliveryMethod?: DeliveryMethod) {
     for: string;
     value: { status: 'loaded'; data: CartQuote } | { status: 'failed'; failure: ApiFailure };
   } | null>(null);
-  const [last, setLast] = useState<CartQuote | null>(null);
+  const [last, setLast] = useState<CartQuote | null>(() => remembered);
   const empty = !hydrated || request.items.length === 0;
+  const answered = useRef(false);
 
   useEffect(() => {
     if (empty) return;
     const controller = new AbortController();
+    // The first question of a screen goes at once; only changes wait.
     const timer = setTimeout(() => {
       ordersApi
         .quote(request, controller.signal)
@@ -56,6 +66,7 @@ export function useCartQuote(deliveryMethod?: DeliveryMethod) {
           if (controller.signal.aborted) return;
           setAnswer({ for: question, value: { status: 'loaded', data } });
           setLast(data);
+          remembered = data;
           const reason = data.promoError?.reason;
           if (reason === 'unknown' || reason === 'too_many') useCart.getState().dropPromo(reason);
         })
@@ -67,7 +78,8 @@ export function useCartQuote(deliveryMethod?: DeliveryMethod) {
             value: { status: 'failed', failure: err instanceof ApiError ? err.failure : { kind: 'offline' } },
           });
         });
-    }, DEBOUNCE_MS);
+    }, answered.current ? DEBOUNCE_MS : 0);
+    answered.current = true;
     return () => {
       clearTimeout(timer);
       controller.abort();

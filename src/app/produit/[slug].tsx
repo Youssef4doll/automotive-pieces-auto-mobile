@@ -178,7 +178,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   // part is fine, it is just not listed for this car — and here is why.
   const fit =
     product.fitment === 'FITS'
-      ? { icon: 'check-circle' as const, fg: C.success, titleTone: C.success, bg: C.successSurface, text: t('product.fitsYour', { car: carName }), why: engineLine || null }
+      ? { icon: 'check-circle' as const, fg: C.success, titleTone: C.success, bg: C.successSurface, text: t('product.fitsYour', { car: carName }), why: [engineLine, t('look.fitGuarantee')].filter(Boolean).join(' · ') }
       : product.fitment === 'DOES_NOT_FIT'
         ? {
             icon: 'x-circle' as const,
@@ -285,6 +285,14 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                   <Pressable accessibilityRole="button" onPress={openCompat} hitSlop={6} style={styles.fitLink}>
                     <Text variant="hint" tone={C.text} style={styles.underline}>
                       {t('look.seeFits')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {product.fitment === 'FITS' ? (
+                  // The shop's own guarantee for a part it confirmed (/garanties).
+                  <Pressable accessibilityRole="link" onPress={() => router.push('/garanties')} hitSlop={6} style={styles.fitLink}>
+                    <Text variant="hint" tone={C.text} style={styles.underline}>
+                      {t('look.ourGuarantees')}
                     </Text>
                   </Pressable>
                 ) : null}

@@ -1,4 +1,8 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { APP_URL, addBmw, open, tap, tapLabel, testAccount } from './lib/drive.mjs';
+
+const WEBSITE = process.env.WEBSITE_DIR ?? path.resolve(new URL('.', import.meta.url).pathname, '../../automotive-pieces-auto');
 
 /**
  * The eight people the redesign brief asked the app to serve, walked end to
@@ -214,6 +218,50 @@ await journey('7/8 order, track, again', async ({ page }) => {
   const found = await lookup(data.ref.toLowerCase(), '+216 20333444');
   check(found.status === 200, 'api: the right phone, written differently, recovers it');
 }
+
+// 10 — a guest orders: the delivery step confirms the number by SMS and opens
+// the account in the name typed, with no detour through Compte.
+await journey('10 guest checkout by SMS', async ({ page }) => {
+  const outbox = path.join(WEBSITE, '.sms-outbox.jsonl');
+  const digits = `2${String(Date.now()).slice(-7)}`;
+  const lastCode = () => {
+    const lines = fs.existsSync(outbox) ? fs.readFileSync(outbox, 'utf8').trim().split('\n') : [];
+    for (const line of lines.reverse()) {
+      const m = JSON.parse(line);
+      if (m.to === `+216${digits}`) return m.body.match(/\d{6}/)?.[0] ?? null;
+    }
+    return null;
+  };
+  await addBmw(page);
+  await page.goto(`${APP_URL}/pieces-compatibles`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(2500);
+  await page.locator('[aria-label^="Ajouter "][aria-label$=" au panier"]').first().click();
+  await page.waitForTimeout(1200);
+  await page.goto(`${APP_URL}/panier`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(3000);
+  const offered = (await bodyText(page)).includes('un code par SMS confirme votre numéro');
+  if (!offered) {
+    check(true, '10 guest checkout: the shop cannot text here; sign-in first stays (skipped)');
+    return;
+  }
+  await page.getByRole('button', { name: /Passer la commande/ }).click();
+  await page.waitForTimeout(1800);
+  check(page.url().includes('/commande/livraison'), '10 guest checkout: the cart leads to the delivery step', page.url());
+  await page.getByLabel('Nom et prénom', { exact: true }).fill('Invité Essai');
+  await page.getByLabel('Téléphone', { exact: true }).fill(digits);
+  await tapLabel(page, 'Gouvernorat');
+  await tap(page, 'Ariana');
+  await tapLabel(page, 'Délégation');
+  await tap(page, 'La Soukra');
+  await page.getByLabel('Adresse', { exact: true }).fill('3 rue du Test');
+  await tap(page, 'Continuer');
+  await page.waitForTimeout(2500);
+  const code = lastCode();
+  check(Boolean(code), '10 guest checkout: a code went out to the number typed', code);
+  await page.getByTestId('phone-code').fill(code ?? '');
+  await page.waitForTimeout(4000);
+  check(page.url().includes('/commande/paiement'), '10 guest checkout: the code opens the account and goes on to payment', page.url());
+});
 
 console.log(failures ? `\n${failures} failing check(s)` : '\nall journeys pass');
 process.exit(failures ? 1 : 0);

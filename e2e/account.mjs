@@ -62,10 +62,20 @@ try {
   await page.getByRole('button', { name: /Ajouter au panier/ }).first().click();
   await page.waitForTimeout(800);
   await go(page, '/panier', 3000);
-  check(await says(page, 'Se connecter pour commander'), 'cart: a guest is asked to sign in to order');
-  await page.getByRole('button', { name: /Se connecter pour commander/ }).click();
-  await page.waitForTimeout(1500);
-  check(new URL(page.url()).pathname === '/compte/connexion', 'cart: … which opens the sign-in', page.url());
+  // Where the shop can text, a guest goes on to the delivery step and
+  // confirms the number there (a code by SMS opens the account); without
+  // SMS the cart sends them to sign in first.
+  if (await says(page, 'un code par SMS confirme votre numéro')) {
+    await page.getByRole('button', { name: /Passer la commande/ }).click();
+    await page.waitForTimeout(1500);
+    check(new URL(page.url()).pathname === '/commande/livraison', 'cart: a guest goes on to the delivery step', page.url());
+    await go(page, '/compte/connexion?then=checkout');
+  } else {
+    check(await says(page, 'Se connecter pour commander'), 'cart: a guest is asked to sign in to order');
+    await page.getByRole('button', { name: /Se connecter pour commander/ }).click();
+    await page.waitForTimeout(1500);
+    check(new URL(page.url()).pathname === '/compte/connexion', 'cart: … which opens the sign-in', page.url());
+  }
   check(await says(page, 'Il faut un compte pour commander'), 'sign-in: says ordering takes an account');
   // A code by SMS comes first when the shop can send one; this suite is about e-mail and password.
   if (await page.getByTestId('auth-method-email').count()) await page.getByTestId('auth-method-email').click();

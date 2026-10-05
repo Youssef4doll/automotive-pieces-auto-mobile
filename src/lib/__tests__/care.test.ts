@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { careDue, parseDate, reminderMoments } from '../care';
+import { careDue, maskDate, parseDate, reminderMoments } from '../care';
 
 test('the oil change is due from the owner\'s own interval, never an assumed one', () => {
   assert.deepEqual(careDue({ mileageKm: 120_000, oilChangeKm: 110_000 }), []);
@@ -37,4 +37,21 @@ test('reminders: a week before and on the day, at nine, never in the past', () =
   );
   assert.deepEqual(reminderMoments({}, now), []);
   assert.deepEqual(reminderMoments({ inspectionDue: '2026-09-01' }, now), []);
+});
+
+test('date typing lays digits out as JJ/MM/AAAA', () => {
+  assert.equal(maskDate('1'), '1');
+  assert.equal(maskDate('0503'), '05/03');
+  assert.equal(maskDate('05/032'), '05/03/2');
+  assert.equal(maskDate('05032027'), '05/03/2027');
+  assert.equal(maskDate('05/03/20271'), '05/03/2027');
+});
+
+test('date typing: deleting back over a slash still works', () => {
+  assert.equal(maskDate('05/'), '05');
+});
+
+test('date typing leaves dots and dashes to parseDate', () => {
+  assert.equal(maskDate('5.3.2027'), '5.3.2027');
+  assert.equal(parseDate(maskDate('05032027')), '2027-03-05');
 });

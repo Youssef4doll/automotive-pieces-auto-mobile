@@ -12,7 +12,7 @@ import { Text } from '@/components/ui/text';
 import { Brand, C, familyFor, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
-import { careDue, parseDate, reminderMoments, showDate, type CareDue, type VehicleCare } from '@/lib/care';
+import { careDue, maskDate, parseDate, reminderMoments, showDate, type CareDue, type VehicleCare } from '@/lib/care';
 import { cancelReminders, mayNotify, remindersAvailable, scheduleReminder } from '@/services/notifications';
 import { useGarage } from '@/store/garage';
 import { useToast } from '@/store/toast';
@@ -208,18 +208,20 @@ export default function VehicleScreen() {
           <FormField
             label={t('car.inspection')}
             value={inspection}
-            onChangeText={setInspection}
+            onChangeText={(v) => setInspection(maskDate(v))}
             placeholder={t('car.datePlaceholder')}
-            keyboardType="numbers-and-punctuation"
+            keyboardType="number-pad"
+            maxLength={10}
             ltr
             error={touched && inspectionBad ? t('car.badDate') : null}
           />
           <FormField
             label={t('car.insurance')}
             value={insurance}
-            onChangeText={setInsurance}
+            onChangeText={(v) => setInsurance(maskDate(v))}
             placeholder={t('car.datePlaceholder')}
-            keyboardType="numbers-and-punctuation"
+            keyboardType="number-pad"
+            maxLength={10}
             ltr
             error={touched && insuranceBad ? t('car.badDate') : null}
           />

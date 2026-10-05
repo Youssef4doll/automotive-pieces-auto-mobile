@@ -57,6 +57,19 @@ export function parseDate(text: string): string | null {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Digits typed into a date field, laid out as JJ/MM/AAAA while typing: the
+ * slashes come by themselves and the number pad is enough. Text with dots or
+ * dashes (a pasted "5.3.2027") is left alone for parseDate.
+ */
+export function maskDate(text: string): string {
+  if (/[.-]/.test(text)) return text.slice(0, 10);
+  const digits = text.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
 export function showDate(iso: string | undefined): string {
   if (!iso) return '';
   const [y, m, d] = iso.slice(0, 10).split('-');

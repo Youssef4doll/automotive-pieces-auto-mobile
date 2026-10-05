@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { FlatList, Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError, type ApiFailure } from '@/api/client';
@@ -18,7 +18,9 @@ import { VehicleBar } from '@/components/ui/vehicle-bar';
 import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap, Type } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
-import { useGarage } from '@/store/garage';
+import { useGarage, vehicleLabel } from '@/store/garage';
+import { useShopSettings } from '@/hooks/use-shop-settings';
+import { whatsappUrl } from '@/components/ui/shop-contact';
 import { useRecentSearches } from '@/store/recent-searches';
 import { track } from '@/services/analytics';
 import { Button } from '@/components/ui/button';
@@ -64,6 +66,9 @@ export default function SearchScreen() {
 
   const engineId = useGarage((s) => s.active?.engineId);
   const car = useGarage((s) => (s.active ? `${s.active.makeName} ${s.active.modelName}` : ''));
+  const active = useGarage((s) => s.active);
+  const shop = useShopSettings();
+  const whatsapp = shop.status === 'loaded' ? shop.data.contact.whatsapp : null;
   // "Only the ones that fit my car" — a narrowing of these results, offered
   // as the first suggestion whenever some of them are confirmed for it.
   const recents = useRecentSearches();
@@ -486,6 +491,18 @@ export default function SearchScreen() {
                 already written (demande attaches the active car). */}
             <Button label={t('search.askShop')} icon="message-circle" onPress={() => router.push({ pathname: '/demande', params: { q: trimmed } })} />
             <Button label={t('search.sendPhoto')} icon="camera" variant="secondary" onPress={() => router.push({ pathname: '/demande', params: { photo: '1', q: trimmed } })} />
+            {whatsapp ? (
+              <Button
+                label={t('help.whatsapp')}
+                icon="message-circle"
+                variant="secondary"
+                onPress={() => {
+                  track('whatsapp_opened', { from: 'zero_results' });
+                  const text = [t('search.lookingFor', { q: trimmed }), active ? t('help.messageVehicle', { vehicle: vehicleLabel(active) ?? '' }) : null].filter(Boolean).join(' ');
+                  void Linking.openURL(whatsappUrl(whatsapp, text)).catch(() => undefined);
+                }}
+              />
+            ) : null}
           </EmptyState>
         </ScrollView>
       ) : !result ? (

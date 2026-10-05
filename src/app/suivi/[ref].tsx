@@ -245,10 +245,18 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
           />
           {!order.questions?.length ? <Text variant="hint">{t('track.askHint')}</Text> : null}
           <ShopContact message={t('track.whatsappMsg', { ref: order.ref })} from="order" />
-          {order.status === 'PENDING' ? (
-            <Button label={t('track.cancel')} variant="danger" onPress={() => setConfirmCancel(true)} />
-          ) : null}
         </View>
+        {/* The way out, apart from the help and quieter than it: a red
+            full-width button right under "WhatsApp" was one slip from a
+            cancelled order. It still asks first (the sheet below). */}
+        {order.status === 'PENDING' ? (
+          <Pressable accessibilityRole="button" onPress={() => setConfirmCancel(true)} hitSlop={6} style={styles.cancelLink}>
+            <Feather name="x-circle" size={IconSize.small} color={C.danger} />
+            <Text variant="body" tone={C.danger} style={styles.cancelText}>
+              {t('track.cancel')}
+            </Text>
+          </Pressable>
+        ) : null}
 
         <Text variant="sectionTitle" style={styles.sectionTitle}>
           {t('track.items')}
@@ -326,6 +334,8 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
 const NODE = 22;
 
 const styles = StyleSheet.create({
+  cancelLink: { flexDirection: 'row', alignSelf: 'center', alignItems: 'center', gap: Spacing.one, minHeight: Tap.min, paddingHorizontal: Spacing.three, marginTop: Spacing.four },
+  cancelText: { textDecorationLine: 'underline' },
   scroll: { paddingBottom: Spacing.six },
   arrival: { alignItems: 'center', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.tile, backgroundColor: C.surface, marginTop: Spacing.three },
   flexText: { flex: 1 },
