@@ -67,7 +67,7 @@ try {
   const totalOf = async () => {
     // Prices carry direction isolates (LRI/PDI) so they stay left-to-right in Arabic.
     const t = (await text(page)).replace(/[\u2066-\u2069]/g, '');
-    const m = t.match(/Total[^\n]*\n?\s*([\d\s]+,\d{2})\s*DT/);
+    const m = t.match(/Total[^\n]*\n?\s*([\d\s ]+,\d{3})\s*DT/);
     return m ? Number(m[1].replace(/\s/g, '').replace(',', '.')) : null;
   };
   const t1 = await totalOf();
@@ -205,6 +205,10 @@ try {
   await page.waitForTimeout(1200);
   check(await says(page, 'Renault Clio IV enregistrée'), 'picker: the saved car is confirmed');
   await page.waitForTimeout(2000);
+  // A new car opens its own parts (confirmed, then to confirm); back is the garage.
+  check(page.url().includes('/pieces-compatibles') && (await says(page, 'Pour votre Renault Clio IV')), 'picker: a new car opens its parts', page.url());
+  await page.goBack();
+  await page.waitForTimeout(1500);
   check((await says(page, 'Renault Clio IV')) && (await page.locator('[style*="width: 18px"]').count()) >= 0, 'garage: shows the new principal');
   const cards = await page.evaluate(() => (document.body.innerText.match(/Pièces compatibles/g) ?? []).length);
   check(cards >= 2, 'garage: a carousel of both cars', cards);
