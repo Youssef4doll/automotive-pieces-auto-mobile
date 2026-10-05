@@ -16,6 +16,7 @@ import { EmptyBay } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel } from '@/store/garage';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { ltr } from '@/lib/format';
 
 /**
  * What the shop has confirmed fits this car.
@@ -134,7 +135,7 @@ export default function CompatiblePartsScreen() {
                     />
                     <View style={styles.contextText}>
                       <Text variant="hint" tone={C.text} numberOfLines={2} style={align}>
-                        {t('fits.forCar', { vehicle: vehicleLabel(vehicle) ?? '' })}
+                        {t('fits.forCar', { vehicle: ltr(vehicleLabel(vehicle) ?? '') })}
                       </Text>
                       <Text variant="hint" tone={C.textMuted} style={align}>
                         {`${t('fits.count', { n: parts.data.fits.total })} · ${t('fits.likelyCount', { n: parts.data.likely.total })}`}

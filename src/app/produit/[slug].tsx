@@ -22,7 +22,7 @@ import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { PartImage } from '@/components/ui/part-image';
 import { fitState } from '@/lib/fit';
-import { formatDT, yearSpan } from '@/lib/format';
+import { formatDT, ltr, yearSpan } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel } from '@/store/garage';
 import { track } from '@/services/analytics';
@@ -164,7 +164,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   ];
 
   const carName = active ? `${active.makeName} ${active.modelName}` : '';
-  const engineLine = active ? `${active.engineName}` : '';
+  const engineLine = active ? ltr(active.engineName) : '';
   // Incompatible is a neutral panel with a red mark, not a red alarm: the
   // part is fine, it is just not listed for this car — and here is why.
   const fit =
@@ -500,7 +500,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
 
       <BottomSheet visible={confirming} onClose={() => setConfirming(false)} title={t('product.mismatchTitle')}>
         <View style={styles.sheetBody}>
-          <Text variant="body">{t('product.mismatchBody', { vehicle: vehicleLabel(active) ?? '' })}</Text>
+          <Text variant="body">{t('product.mismatchBody', { vehicle: ltr(vehicleLabel(active) ?? '') })}</Text>
           <Button
             label={t('product.addAnyway')}
             variant="secondary"

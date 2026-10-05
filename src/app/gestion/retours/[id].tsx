@@ -17,7 +17,7 @@ import { useLive } from '@/hooks/use-live';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { coverCopy } from '@/lib/returns';
 import { useI18n } from '@/i18n/provider';
-import { formatDate, formatDT } from '@/lib/format';
+import { amountText, formatDate, formatDT } from '@/lib/format';
 import { useToast } from '@/store/toast';
 
 /**
@@ -60,7 +60,7 @@ function Detail({ r, onChange, onStale }: { r: ReturnDetail; onChange: (d: Retur
   const [refuseNote, setRefuseNote] = useState('');
   const [restock, setRestock] = useState(false);
   const [outcome, setOutcome] = useState<'EXCHANGED' | 'REFUNDED'>(r.wish === 'REFUND' ? 'REFUNDED' : 'EXCHANGED');
-  const [amount, setAmount] = useState(r.value.toFixed(2));
+  const [amount, setAmount] = useState(amountText(r.value));
   const [error, setError] = useState<string | null>(null);
 
   // The policy's sentence, with the shop's own figures (never typed in here).

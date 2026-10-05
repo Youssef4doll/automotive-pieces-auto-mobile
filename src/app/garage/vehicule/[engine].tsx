@@ -17,6 +17,7 @@ import { cancelReminders, mayNotify, remindersAvailable, scheduleReminder } from
 import { useGarage } from '@/store/garage';
 import { useToast } from '@/store/toast';
 import { useVehicleCare } from '@/store/vehicle-care';
+import { ltr } from '@/lib/format';
 
 /**
  * One car: what the shop knows about its engine, and what its owner knows
@@ -131,7 +132,7 @@ export default function VehicleScreen() {
             <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
               <Text style={[styles.name, align, { fontFamily: familyFor('headingStrong', rtl) }]}>{`${vehicle.makeName} ${vehicle.modelName}`}</Text>
               <Text variant="body" tone="#c7d1e3" style={align}>
-                {vehicle.engineName}
+                {ltr(vehicle.engineName)}
               </Text>
               {isMain ? (
                 <View style={[row, styles.mainPill]}>

@@ -53,8 +53,8 @@ const Ctx = createContext<I18n | null>(null);
  * in the middle of.
  */
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  // Start on the device's language rather than on French. A Tunisian phone
-  // set to Arabic should not have to find the setting to read Arabic.
+  // Arabic on an Arabic phone, French otherwise (locales.pickLocale). A
+  // Tunisian phone set to Arabic should not have to find the setting.
   const [locale, setLocaleState] = useState<Locale>(() =>
     pickLocale(Localization.getLocales().map((l) => l.languageTag)),
   );
@@ -64,6 +64,14 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   // data-locale): set before children render, and on a change every mounted
   // screen re-reads — from the cache, so a language switch costs no request.
   setDataLocale(locale);
+  // On the web build, the page says which language it is in and which way
+  // it reads — for screen readers, the browser's translate offer, and the
+  // bidi of any text the app does not isolate itself.
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    document.documentElement.lang = locale;
+    document.documentElement.dir = isRTL(locale) ? 'rtl' : 'ltr';
+  }, [locale]);
   const first = useRef(true);
   useEffect(() => {
     if (first.current) {

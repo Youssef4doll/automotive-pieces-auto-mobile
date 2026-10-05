@@ -16,7 +16,7 @@ import { AdviceCard } from '@/components/ui/advice-card';
 import { CareDueStrip } from '@/components/ui/care-due';
 import { CarKey } from '@/illustrations/car-key';
 import { useI18n } from '@/i18n/provider';
-import { yearSpan } from '@/lib/format';
+import { ltr, yearSpan } from '@/lib/format';
 import { useGarage, type SavedVehicle } from '@/store/garage';
 
 /**
@@ -234,7 +234,7 @@ function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehic
         </Text>
 
         <View style={[styles.fields, row]} pointerEvents="none">
-          <Field label={t('picker.stepEngine')} value={vehicle.engineName} />
+          <Field label={t('picker.stepEngine')} value={ltr(vehicle.engineName)} />
           {years ? <Field label={t('look.fieldYears')} value={`\u2066${years}\u2069`} /> : null}
         </View>
 

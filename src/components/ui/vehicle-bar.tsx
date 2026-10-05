@@ -6,6 +6,7 @@ import { Border, C, IconSize, Radius, Spacing, Tap } from '@/constants/theme';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
+import { ltr } from '@/lib/format';
 import { Text } from './text';
 
 /**
@@ -28,7 +29,7 @@ export function VehicleBar() {
 
   if (!hydrated) return null;
 
-  const label = active ? `${active.makeName} ${active.modelName} · ${active.engineName}` : t('fit.noVehicle');
+  const label = active ? ltr(`${active.makeName} ${active.modelName} · ${active.engineName}`) : t('fit.noVehicle');
 
   return (
     <Pressable

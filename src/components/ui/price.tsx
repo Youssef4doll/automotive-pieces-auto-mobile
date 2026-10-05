@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { C, familyFor, Spacing } from '@/constants/theme';
-import { formatDT } from '@/lib/format';
+import { dinarParts, formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { Text } from './text';
 
@@ -11,9 +11,9 @@ import { Text } from './text';
  * Two things this gets right that a template string does not.
  *
  * The decimals are set smaller and are optically aligned to the top of the
- * whole number rather than sitting on its baseline, so "89,00 DT" reads as
- * eighty-nine first and the centimes second. That is how a price is scanned,
- * and lining the two at the same size makes the eye read four digits.
+ * whole number rather than sitting on its baseline, so "89,000 DT" reads as
+ * eighty-nine first and the millimes second. That is how a price is scanned,
+ * and lining the two at the same size makes the eye read five digits.
  *
  * And the comma is the decimal separator, because that is how Tunisia writes
  * money. `toFixed` gives a full stop and nothing in this app should print
@@ -24,10 +24,10 @@ import { Text } from './text';
  *
  * The figure itself is never mirrored. The first version reversed the
  * whole-and-centimes row under Arabic along with everything else, and a
- * 32,70 DT filter read "DT 70,32" — the centimes on the wrong side of the
+ * 32,700 DT filter read "DT 700,32" — the millimes on the wrong side of the
  * dinars. A number is left-to-right in every language this app speaks, so
  * only the struck-through reference price and the amount swap sides; the
- * amount's own parts stay put.
+ * amount's own parts stay put. Figures come from lib/format (three decimals).
  */
 export function Price({
   value,
@@ -40,7 +40,7 @@ export function Price({
   size?: 'normal' | 'large';
 }) {
   const { rtl } = useI18n();
-  const [whole, cents] = value.toFixed(2).split('.');
+  const { whole, millimes } = dinarParts(value);
   const large = size === 'large';
 
   return (
@@ -75,7 +75,7 @@ export function Price({
             writingDirection: 'ltr',
           }}
         >
-          {`,${cents} DT`}
+          {`,${millimes} DT`}
         </Text>
       </View>
     </View>

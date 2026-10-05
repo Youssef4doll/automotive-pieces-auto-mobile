@@ -13,7 +13,7 @@ import { Text } from '@/components/ui/text';
 import { Border, C, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { quoteOf, useCartQuote } from '@/hooks/use-cart-quote';
 import type { DictKey } from '@/i18n/dictionaries';
-import { formatDT } from '@/lib/format';
+import { formatDT, ltr } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { useCart } from '@/store/cart';
 import { useCheckout } from '@/store/checkout';
@@ -177,7 +177,7 @@ export default function PaymentStep() {
             <View style={[styles.card, row]}>
               <Feather name="tool" size={IconSize.large} color={C.textMuted} />
               <Text variant="body" style={styles.flex}>
-                {t('checkout.forVehicle', { vehicle: vehicleLabel(active) ?? '' })}
+                {t('checkout.forVehicle', { vehicle: ltr(vehicleLabel(active) ?? '') })}
               </Text>
             </View>
           ) : null}

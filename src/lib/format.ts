@@ -1,19 +1,20 @@
 import type { Locale } from '@/i18n/locales';
 
 /**
- * "89,00 DT" — money as Tunisia writes it, in all three languages.
+ * "89,000 DT" — money as Tunisia writes it, in all three languages.
  *
- * The comma is the decimal separator and "DT" is not translated: it is what
- * is on the shelf label and on the invoice whatever the phone's language.
- * `Price` sets the same figure typographically; this is the plain-text form,
- * for a total in a sentence or an accessibility label.
- *
- * Two decimals, not the millimes the dinar actually has: the shop prices to
- * the centime, and the website prints two.
+ * Three decimals: the dinar has 1 000 millimes, and a Tunisian price label,
+ * receipt or bank statement prints all three. "89,00 DT" reads as foreign.
+ * The comma is the decimal separator, thousands are split by a narrow
+ * no-break space ("1 535,000 DT", as the website prints it), and "DT" is
+ * not translated: it is what is on the shelf label and on the invoice
+ * whatever the phone's language. `Price` sets the same figure
+ * typographically; this is the plain-text form, for a total in a sentence or
+ * an accessibility label.
  *
  * Wrapped in Unicode directional isolates (LRI … PDI). Inside an Arabic
- * sentence the bidi algorithm otherwise reorders "117,30 DT" into
- * "DT 117,30" — the Latin "DT" jumps to the far side of the number — and the
+ * sentence the bidi algorithm otherwise reorders "117,300 DT" into
+ * "DT 117,300" — the Latin "DT" jumps to the far side of the number — and the
  * customer reads a figure laid out differently from the one on the invoice
  * and the shelf label. An isolate says "this run is left-to-right, keep it
  * whole" and changes nothing in French or English. Invisible characters, so
@@ -21,9 +22,33 @@ import type { Locale } from '@/i18n/locales';
  */
 const LRI = '\u2066';
 const PDI = '\u2069';
+const THIN = '\u202f';
+
+/** The whole dinars (grouped by thousands) and the three millimes digits. */
+export function dinarParts(value: number): { whole: string; millimes: string } {
+  const sign = value < 0 ? '-' : '';
+  const total = Math.round(Math.abs(value) * 1000);
+  const whole = String(Math.floor(total / 1000)).replace(/\B(?=(\d{3})+(?!\d))/g, THIN);
+  return { whole: sign + whole, millimes: String(total % 1000).padStart(3, '0') };
+}
 
 export function formatDT(value: number): string {
-  return `${LRI}${value.toFixed(2).replace('.', ',')} DT${PDI}`;
+  const { whole, millimes } = dinarParts(value);
+  return `${LRI}${whole},${millimes} DT${PDI}`;
+}
+
+/**
+ * A Latin run kept whole inside Arabic text: "1.5 dCi" stays "1.5 dCi"
+ * rather than being laid out as "dCi 1.5" by the bidi algorithm. Car makes,
+ * models and engine names are written in Latin letters in every language.
+ */
+export function ltr(text: string): string {
+  return `${LRI}${text}${PDI}`;
+}
+
+/** An editable amount, as typed in a staff field: "89,000", no grouping. */
+export function amountText(value: number): string {
+  return value.toFixed(3).replace('.', ',');
 }
 
 /**

@@ -6,6 +6,7 @@ import { Border, C, Elevation, IconSize, Radius, Spacing, Tap } from '@/constant
 import { CarProfile, EmptyBay } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
+import { ltr } from '@/lib/format';
 import { Button } from './button';
 import { Skeleton } from './skeleton';
 import { Text } from './text';
@@ -119,7 +120,7 @@ export function VehicleContextCard() {
             {active.makeName} {active.modelName}
           </Text>
           <Text variant="hint" numberOfLines={1}>
-            {active.engineName}
+            {ltr(active.engineName)}
           </Text>
           {/* Stated only when it is true of more than one car. With a single
               vehicle "1 véhicule" is a count nobody asked for. */}

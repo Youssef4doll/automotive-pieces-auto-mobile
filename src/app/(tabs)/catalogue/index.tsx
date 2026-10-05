@@ -22,6 +22,7 @@ import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { useI18n } from '@/i18n/provider';
 import { NavCar } from '@/illustrations/vehicle';
 import { useGarage } from '@/store/garage';
+import { ltr } from '@/lib/format';
 
 /**
  * The catalogue's top level, laid out around the three ways a customer
@@ -249,7 +250,7 @@ function ForMyCar() {
             {`${active.makeName} ${active.modelName}`}
           </Text>
           <Text variant="hint" tone={Brand.navy300} numberOfLines={1} style={align}>
-            {active.engineName}
+            {ltr(active.engineName)}
           </Text>
         </View>
         <Pressable

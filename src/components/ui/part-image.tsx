@@ -124,5 +124,5 @@ const styles = StyleSheet.create({
   },
   tagSmall: { paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4 },
   tagText: { fontSize: 11, lineHeight: 14, color: Brand.white },
-  tagTextSmall: { fontSize: 9, lineHeight: 12 },
+  tagTextSmall: { fontSize: 11, lineHeight: 13 },
 });

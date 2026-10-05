@@ -19,7 +19,7 @@ import { Border, Brand, C, Elevation, familyFor, IconSize, MaxContentWidth, Radi
 import { quoteOf, useCartQuote } from '@/hooks/use-cart-quote';
 import { PartImage } from '@/components/ui/part-image';
 import { PromoField } from '@/components/ui/promo-field';
-import { formatDT } from '@/lib/format';
+import { formatDT, ltr } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { MAX_QTY, useCart, type CartItem } from '@/store/cart';
 import { track } from '@/services/analytics';
@@ -389,7 +389,7 @@ function EmptyCart({ bottom }: { bottom: number }) {
                 {t('cart.forCar')}
               </Text>
               <Text variant="hint" tone={Brand.navy300} numberOfLines={1}>
-                {`${active.makeName} ${active.modelName} · ${active.engineName}`}
+                {ltr(`${active.makeName} ${active.modelName} · ${active.engineName}`)}
               </Text>
             </View>
             <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={Brand.white} />

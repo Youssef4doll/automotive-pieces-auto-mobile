@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Brand, familyFor, MaxContentWidth, Spacing, Tap } from '@/constants/theme';
 import { NavCar } from '@/illustrations/vehicle';
+import { localeMeta, locales } from '@/i18n/locales';
 import { useI18n } from '@/i18n/provider';
 import { track } from '@/services/analytics';
 import { useAccount } from '@/store/account';
@@ -35,7 +36,7 @@ const LOGO = require('../../assets/images/logo-lockup.png');
  * needs them. "Passer" is on every step.
  */
 export default function WelcomeScreen() {
-  const { t, rtl } = useI18n();
+  const { t, rtl, locale, setLocale } = useI18n();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const finish = useOnboarding((s) => s.finish);
@@ -83,6 +84,24 @@ export default function WelcomeScreen() {
         <Animated.View key={step} entering={FadeIn.duration(220).reduceMotion(ReduceMotion.System)} style={styles.column}>
           {step === 0 ? (
             <>
+              {/* The language before anything else is read. The phone's
+                  language picked one already (French, or Arabic); this is
+                  the one-tap correction, not a question. */}
+              <View style={[styles.langs, { flexDirection: rtl ? 'row-reverse' : 'row' }]} accessibilityRole="radiogroup">
+                {locales.map((l) => (
+                  <Pressable
+                    key={l}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: l === locale }}
+                    onPress={() => setLocale(l)}
+                    style={[styles.lang, l === locale && styles.langOn]}
+                  >
+                    <Text style={[styles.langText, l === locale && styles.langTextOn, { fontFamily: familyFor('bodySemi', l === 'ar') }]}>
+                      {localeMeta[l].label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
               <Text style={[styles.title, align, { fontFamily: familyFor('headingStrong', rtl) }]} accessibilityRole="header">
                 {t('look.slogan1')} {t('look.slogan2')}
                 <Text style={[styles.title, styles.accent, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('look.slogan2Accent')}</Text>
@@ -187,4 +206,16 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Brand.navy700 },
   dotOn: { width: 24, backgroundColor: Brand.gold500 },
   later: { minHeight: Tap.min, justifyContent: 'center' },
+  langs: { gap: Spacing.two, flexWrap: 'wrap', marginBottom: Spacing.four },
+  lang: {
+    minHeight: 36,
+    paddingHorizontal: Spacing.three,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Brand.navy700,
+    justifyContent: 'center',
+  },
+  langOn: { backgroundColor: Brand.white, borderColor: Brand.white },
+  langText: { fontSize: 14, color: Brand.navy50 },
+  langTextOn: { color: Brand.navy950 },
 });

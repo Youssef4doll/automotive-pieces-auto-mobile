@@ -95,8 +95,10 @@ describe('create-account form', () => {
 
 describe('money and years', () => {
   it('writes dinars the Tunisian way, isolated for right-to-left text', () => {
-    assert.equal(formatDT(89), '⁦89,00 DT⁩');
-    assert.equal(formatDT(117.3), '⁦117,30 DT⁩');
+    assert.equal(formatDT(89), '⁦89,000 DT⁩');
+    assert.equal(formatDT(117.3), '⁦117,300 DT⁩');
+    assert.equal(formatDT(1535.25), '⁦1\u202f535,250 DT⁩');
+    assert.equal(formatDT(0.1 + 0.2), '⁦0,300 DT⁩');
   });
   it('says nothing about years the shop did not record', () => {
     const t = (key: string, vars: Record<string, number>) => `${key}:${Object.values(vars).join('-')}`;

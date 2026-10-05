@@ -17,7 +17,7 @@ import { Brand, C, Radius, Spacing, Tap } from '@/constants/theme';
 import { useLive } from '@/hooks/use-live';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
-import { formatDate, formatDT } from '@/lib/format';
+import { amountText, formatDate, formatDT } from '@/lib/format';
 import { photoForm, pickPhoto } from '@/lib/photo';
 import { useToast } from '@/store/toast';
 
@@ -57,7 +57,6 @@ function parseCount(raw: string): number | null {
   const s = raw.trim();
   return /^\d{1,6}$/.test(s) ? Number(s) : null;
 }
-const amountText = (n: number) => n.toFixed(2).replace('.', ',');
 
 function Editor({ product, onChange }: { product: ProductDetail; onChange: (p: ProductDetail) => void }) {
   const { t, rtl, locale } = useI18n();

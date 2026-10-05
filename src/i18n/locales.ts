@@ -25,19 +25,22 @@ export function isRTL(locale: Locale) {
 }
 
 /**
- * The best of our three languages for a device that asked for something else.
+ * The language a first launch opens in: Arabic on a phone that lists Arabic
+ * first among the shop's languages, French otherwise.
  *
- * `expo-localization` reports tags like `ar-TN`, `fr-FR`, `en-GB`, and a
- * Tunisian phone very often lists several. Matched on the language subtag
- * only: `ar-TN` and `ar-EG` are both Arabic as far as this shop's copy is
- * concerned, and a shopper whose phone is set to Italian gets French rather
- * than English, because French is what the shop itself speaks.
+ * English is never picked for the customer. Plenty of Tunisian phones run in
+ * English while their owners read the shop in French or Arabic, and the
+ * shop's own words — part names, shelf labels, the invoice — are French. A
+ * phone in English gets French; English stays one tap away in Compte →
+ * Langue, and in the first screen's language chips.
+ *
+ * Matched on the language subtag only: `ar-TN` and `ar-EG` are both Arabic.
  */
 export function pickLocale(deviceTags: readonly (string | null | undefined)[]): Locale {
   for (const tag of deviceTags) {
     const language = tag?.split('-')[0]?.toLowerCase();
-    const match = locales.find((l) => l === language);
-    if (match) return match;
+    if (language === 'ar') return 'ar';
+    if (language === 'fr') return 'fr';
   }
   return DEFAULT_LOCALE;
 }
