@@ -7,6 +7,7 @@ import type { Product } from '@/api/catalogue';
 import { API_BASE_URL } from '@/constants/config';
 import { Brand, C, Elevation, familyFor, IconSize, Radius, Spacing, Tap } from '@/constants/theme';
 import { useAddToCart } from '@/hooks/use-add-to-cart';
+import { fitState, FIT_LOOK } from '@/lib/fit';
 import { formatDT } from '@/lib/format';
 import { PartImage } from './part-image';
 import { useI18n } from '@/i18n/provider';
@@ -40,7 +41,7 @@ import { Text } from './text';
  */
 const STOCK: Record<Product['availability'], { icon: React.ComponentProps<typeof Feather>['name']; tone: string; label: DictKey }> = {
   IN_STOCK: { icon: 'check', tone: C.success, label: 'stock.inStock' },
-  ON_ORDER: { icon: 'clock', tone: C.caution, label: 'stock.onOrder' },
+  ON_ORDER: { icon: 'clock', tone: C.cautionText, label: 'stock.onOrder' },
   UNAVAILABLE: { icon: 'slash', tone: C.textFaint, label: 'stock.unavailable' },
 };
 
@@ -52,14 +53,18 @@ export function ProductCard({ product }: { product: Product }) {
   const car = useGarage((st) => (st.active ? `${st.active.makeName} ${st.active.modelName}` : ''));
   // The verdict as a sentence naming THEIR car where there is one — the line
   // the brief puts straight under the name — quiet text, not another pill.
-  const fit =
-    product.fitment === 'FITS'
-      ? { icon: 'check-circle' as const, tone: C.success, text: car ? t('product.fitsYour', { car }) : t('fit.fits') }
-      : product.fitment === 'DOES_NOT_FIT'
-        ? { icon: 'x-circle' as const, tone: C.danger, text: car ? t('product.notYour', { car }) : t('fit.no') }
-        : product.fitment === 'UNKNOWN'
-          ? { icon: 'help-circle' as const, tone: C.caution, text: t('fit.unknown') }
-          : null;
+  const state = fitState(product);
+  const fit = state
+    ? {
+        ...FIT_LOOK[state],
+        text:
+          state === 'FITS' && car
+            ? t('product.fitsYour', { car })
+            : state === 'DOES_NOT_FIT' && car
+              ? t('product.notYour', { car })
+              : t(FIT_LOOK[state].label),
+      }
+    : null;
   const quickAdd = product.availability !== 'UNAVAILABLE' && product.fitment !== 'DOES_NOT_FIT';
   const stockLine =
     product.lowStockQty !== null ? t('stock.low', { n: product.lowStockQty }) : t(stock.label);
@@ -114,7 +119,7 @@ export function ProductCard({ product }: { product: Product }) {
 
           {fit ? (
             <View style={[styles.fitRow, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-              <Feather name={fit.icon} size={14} color={fit.tone} />
+              <Feather name={fit.icon} size={14} color={fit.iconTone} />
               <Text variant="hint" tone={fit.tone} numberOfLines={2} style={styles.fitText}>
                 {fit.text}
               </Text>

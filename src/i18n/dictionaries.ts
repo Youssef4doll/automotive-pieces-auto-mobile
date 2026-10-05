@@ -28,6 +28,7 @@ const base = {
 
     'fit.fits': 'Compatible avec votre véhicule',
     'fit.unknown': 'Compatibilité à vérifier',
+    'fit.likely': 'Probablement compatible — à confirmer',
     'fit.no': 'Ne correspond pas à votre véhicule',
     'fit.noVehicle': 'Sélectionnez votre véhicule',
 
@@ -59,11 +60,16 @@ const base = {
 
     'fits.title': 'Pièces compatibles',
     'fits.for': 'Confirmées pour votre {vehicle}',
-    'fits.count': '{n} pièce(s) confirmée(s)',
+    'fits.count': '{n:one=# pièce confirmée;other=# pièces confirmées}',
     'fits.empty': 'Aucune pièce confirmée pour ce véhicule.',
     'fits.emptyWhy':
       "La compatibilité est renseignée pièce par pièce, et elle est encore partielle. Parcourez le catalogue : chaque fiche dit si la pièce convient, ou si c'est à vérifier.",
     'fits.browse': 'Parcourir le catalogue',
+    'fits.forCar': 'Pour votre {vehicle}',
+    'fits.likelyCount': '{n} à confirmer',
+    'fits.likelyTitle': 'À confirmer avec la boutique',
+    'fits.likelyWhy': 'Des pistes, pas encore confirmées : déduites d’un moteur proche, ou confirmées pour le même code moteur sur un autre modèle. Demandez à la boutique avant de commander.',
+    'fits.ask': 'Demander à la boutique de vérifier',
 
     'garage.yourCar': 'Votre voiture',
     'garage.primary': 'Véhicule principal',
@@ -164,6 +170,7 @@ const base = {
 
     'fit.fits': 'Fits your vehicle',
     'fit.unknown': 'Compatibility to check',
+    'fit.likely': 'Probably fits — to be confirmed',
     'fit.no': 'Does not fit your vehicle',
     'fit.noVehicle': 'Select your vehicle',
 
@@ -195,11 +202,16 @@ const base = {
 
     'fits.title': 'Parts that fit',
     'fits.for': 'Confirmed for your {vehicle}',
-    'fits.count': '{n} confirmed part(s)',
+    'fits.count': '{n:one=# confirmed part;other=# confirmed parts}',
     'fits.empty': 'No part is confirmed for this vehicle yet.',
     'fits.emptyWhy':
       'Fitment is recorded part by part and is still partial. Browse the catalogue: every part says whether it fits, or whether that needs checking.',
     'fits.browse': 'Browse the catalogue',
+    'fits.forCar': 'For your {vehicle}',
+    'fits.likelyCount': '{n} to confirm',
+    'fits.likelyTitle': 'To confirm with the shop',
+    'fits.likelyWhy': 'Leads, not yet confirmed: inferred from a close engine, or confirmed for the same engine code on another model. Ask the shop before you order.',
+    'fits.ask': 'Ask the shop to check',
 
     'garage.yourCar': 'Your car',
     'garage.primary': 'Primary vehicle',
@@ -297,6 +309,7 @@ const base = {
 
     'fit.fits': 'متوافقة مع سيارتك',
     'fit.unknown': 'التوافق يحتاج تحقّقاً',
+    'fit.likely': 'متوافقة على الأرجح — يجب التأكيد',
     'fit.no': 'لا تناسب سيارتك',
     'fit.noVehicle': 'اختر سيارتك',
 
@@ -333,6 +346,11 @@ const base = {
     'fits.emptyWhy':
       'التوافق يُسجَّل قطعة بقطعة وهو لا يزال جزئيًا. تصفّح الكتالوج: كل قطعة تبيّن إن كانت تناسب سيارتك أو إن كان الأمر يحتاج إلى تحقّق.',
     'fits.browse': 'تصفّح الكتالوج',
+    'fits.forCar': 'لسيارتك {vehicle}',
+    'fits.likelyCount': '{n} للتأكيد',
+    'fits.likelyTitle': 'للتأكيد مع المحل',
+    'fits.likelyWhy': 'احتمالات غير مؤكَّدة بعد: مستنتَجة من محرك قريب، أو مؤكَّدة لنفس رمز المحرك في طراز آخر. اسأل المحل قبل الطلب.',
+    'fits.ask': 'اطلب من المحل التحقّق',
 
     'garage.yourCar': 'سيارتك',
     'garage.primary': 'السيارة الأساسية',

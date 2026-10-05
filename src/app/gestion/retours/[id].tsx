@@ -46,7 +46,7 @@ export default function StaffReturn() {
   );
 }
 
-const FIT_KEY = { VERIFIED: 'fit.fits', DERIVED: 'fit.fits', UNLISTED: 'fit.unknown' } as const;
+const FIT_KEY = { VERIFIED: 'fit.fits', DERIVED: 'fit.likely', UNLISTED: 'fit.unknown' } as const;
 
 function Detail({ r, onChange, onStale }: { r: ReturnDetail; onChange: (d: ReturnDetail) => void; onStale: () => Promise<void> }) {
   const { t, rtl, locale } = useI18n();

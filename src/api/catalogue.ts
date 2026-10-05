@@ -138,6 +138,12 @@ export const productsApi = {
     return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
   },
 
+  /** The leads for one engine: inferred, or confirmed for the same engine code elsewhere — "à confirmer". */
+  likelyForEngine: (engineId: string, signal?: AbortSignal) => {
+    const params = new URLSearchParams({ engine: engineId, likely: '1' });
+    return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
+  },
+
   /** The shop's packs — products whose specs list the parts they bundle. */
   packs: (engineId: string | undefined, signal?: AbortSignal) => {
     const params = new URLSearchParams({ packs: '1' });

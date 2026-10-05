@@ -102,6 +102,8 @@ export const Colors = {
     successBorder: Brand.green200,
     /** Careful: we do not know whether this fits. Gold, the shop's attention. */
     caution: Brand.gold600,
+    /** Amber words: gold600 is 2.1:1 on white, this is 5.5:1. Icons keep the gold. */
+    cautionText: '#8a6100',
     cautionSurface: '#fffbeb',
     cautionBorder: '#fde68a',
 

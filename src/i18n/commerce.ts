@@ -161,7 +161,7 @@ export const commerce = {
     'product.compatNone':
       'Aucun véhicule n’est encore renseigné pour cette pièce. Comparez la référence avec votre ancienne pièce avant de commander.',
     'product.compatMore': 'et {n} autre(s)',
-    'product.compatDerived': 'Déduit d’une motorisation voisine',
+    'product.compatDerived': 'Déduit d’une motorisation voisine — à confirmer',
     'product.compatYours': 'Votre voiture',
     'product.references': 'Références',
     'product.oem': 'Références d’origine (OE)',
@@ -528,7 +528,7 @@ export const commerce = {
     'product.compatNone':
       'No vehicle is recorded for this part yet. Compare the reference with your old part before ordering.',
     'product.compatMore': 'and {n} more',
-    'product.compatDerived': 'Inferred from a sibling engine',
+    'product.compatDerived': 'Inferred from a sibling engine — to be confirmed',
     'product.compatYours': 'Your car',
     'product.references': 'References',
     'product.oem': 'Original equipment (OE) references',
@@ -893,7 +893,7 @@ export const commerce = {
     'product.compatCount': 'مُدرجة لـ {n:one=محرّك واحد;two=محرّكان;few=# محرّكات;many=# محرّكًا;other=# محرّك}',
     'product.compatNone': 'لا توجد سيارة مسجّلة لهذه القطعة بعد. قارن المرجع بقطعتك القديمة قبل الطلب.',
     'product.compatMore': 'و{n} أخرى',
-    'product.compatDerived': 'مُستنتج من محرك مشابه',
+    'product.compatDerived': 'مُستنتج من محرك مشابه — للتأكيد',
     'product.compatYours': 'سيارتك',
     'product.references': 'المراجع',
     'product.oem': 'المراجع الأصلية (OE)',

@@ -1,9 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { SectionList, StyleSheet, View } from 'react-native';
 
-import { productsApi } from '@/api/catalogue';
+import { productsApi, type ProductPage } from '@/api/catalogue';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/ui/product-card';
 import { Screen } from '@/components/ui/screen';
@@ -56,13 +56,21 @@ export default function CompatiblePartsScreen() {
       // The screen is never rendered without an engine (see the guard below);
       // this keeps `useResource`'s contract honest rather than firing a
       // request with "undefined" in the query string.
-      if (!engineId) return Promise.resolve({ products: [], total: 0, page: 1, perPage: 0, hasMore: false });
-      return productsApi.fitsEngine(engineId, {}, signal);
+      const none: ProductPage = { products: [], total: 0, page: 1, perPage: 0, hasMore: false };
+      if (!engineId) return Promise.resolve({ fits: none, likely: none });
+      // Both lists at once: the confirmed parts, and the leads still to be
+      // confirmed. Never merged — they are two different promises.
+      return Promise.all([productsApi.fitsEngine(engineId, {}, signal), productsApi.likelyForEngine(engineId, signal)]).then(
+        ([fits, likely]) => ({ fits, likely }),
+      );
     },
     [engineId],
   );
   const parts = useResource(load);
   const refreshControl = usePullRefresh();
+  const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
+  // The shop's inbox, with the car attached by the request screen.
+  const ask = () => router.push('/demande');
 
   // Opened with no car at all — from a deep link, or after the last vehicle
   // was removed while this screen sat in the stack. Send them to the picker
@@ -89,49 +97,77 @@ export default function CompatiblePartsScreen() {
     <>
       <Stack.Screen options={{ title: t('fits.title') }} />
       <Screen edges={['left', 'right', 'bottom']}>
-        {/* Which car this page is answering for. Without it a list of two
-            brake pads is just a list of two brake pads. */}
-        {vehicle ? (
-          <View style={[styles.context, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-            <Feather name="check-circle" size={IconSize.medium} color={C.success} />
-            <Text variant="hint" tone={C.text} style={styles.contextText} numberOfLines={2}>
-              {t('fits.for', { vehicle: vehicleLabel(vehicle) ?? '' })}
-            </Text>
-          </View>
-        ) : null}
-
         {parts.status === 'loading' ? (
           <View style={styles.body}>
             <ProductListSkeleton />
           </View>
         ) : parts.status === 'failed' ? (
           <Failed failure={parts.failure} onRetry={parts.retry} />
-        ) : parts.data.products.length === 0 ? (
-          <View style={styles.centre}>
-            <Text variant="sectionTitle" style={styles.centred}>
-              {t('fits.empty')}
-            </Text>
-            <Text variant="hint" style={styles.centred}>
-              {t('fits.emptyWhy')}
-            </Text>
-            <Button
-              label={t('fits.browse')}
-              variant="secondary"
-              onPress={() => router.dismissTo('/catalogue')}
-            />
-          </View>
         ) : (
-          <FlatList
-            data={parts.data.products}
+          <SectionList
+            sections={[
+              { key: 'fits', data: parts.data.fits.products },
+              { key: 'likely', data: parts.data.likely.products },
+            ].filter((section) => section.data.length > 0)}
             keyExtractor={(product) => product.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
             refreshControl={refreshControl}
+            stickySectionHeadersEnabled={false}
             ItemSeparatorComponent={Gap}
             ListHeaderComponent={
-              <Text variant="hint" tone={C.textMuted} style={styles.count}>
-                {t('fits.count', { n: parts.data.total })}
-              </Text>
+              <View style={styles.head}>
+                {/* Which car this page answers for, and what it found — the
+                    tick only when there is something confirmed to tick. */}
+                {vehicle ? (
+                  <View
+                    style={[
+                      styles.context,
+                      { flexDirection: rtl ? 'row-reverse' : 'row' },
+                      parts.data.fits.total > 0 ? styles.contextYes : styles.contextNeutral,
+                    ]}
+                  >
+                    <Feather
+                      name={parts.data.fits.total > 0 ? 'check-circle' : 'truck'}
+                      size={IconSize.medium}
+                      color={parts.data.fits.total > 0 ? C.success : C.textMuted}
+                    />
+                    <View style={styles.contextText}>
+                      <Text variant="hint" tone={C.text} numberOfLines={2} style={align}>
+                        {t('fits.forCar', { vehicle: vehicleLabel(vehicle) ?? '' })}
+                      </Text>
+                      <Text variant="hint" tone={C.textMuted} style={align}>
+                        {`${t('fits.count', { n: parts.data.fits.total })} · ${t('fits.likelyCount', { n: parts.data.likely.total })}`}
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
+                {parts.data.fits.total === 0 && parts.data.likely.total === 0 ? (
+                  <View style={styles.emptyBlock}>
+                    <Text variant="sectionTitle" style={styles.centred}>
+                      {t('fits.empty')}
+                    </Text>
+                    <Text variant="hint" style={styles.centred}>
+                      {t('fits.emptyWhy')}
+                    </Text>
+                    <Button label={t('fits.ask')} icon="message-circle" onPress={ask} />
+                    <Button label={t('fits.browse')} variant="secondary" onPress={() => router.dismissTo('/catalogue')} />
+                  </View>
+                ) : null}
+              </View>
+            }
+            renderSectionHeader={({ section }) =>
+              section.key === 'likely' ? (
+                <View style={styles.likelyHead}>
+                  <Text variant="sectionTitle" style={align}>
+                    {t('fits.likelyTitle')}
+                  </Text>
+                  <Text variant="hint" style={align}>
+                    {t('fits.likelyWhy')}
+                  </Text>
+                  <Button label={t('fits.ask')} icon="message-circle" variant="secondary" onPress={ask} />
+                </View>
+              ) : null
             }
             renderItem={({ item }) => <ProductCard product={item} />}
           />
@@ -146,20 +182,20 @@ function Gap() {
 }
 
 const styles = StyleSheet.create({
+  head: { gap: Spacing.three, paddingBottom: Spacing.three },
   context: {
     alignItems: 'center',
     gap: Spacing.two,
-    marginTop: Spacing.three,
     padding: Spacing.three,
     borderRadius: Radius.card,
     borderWidth: Border.thin,
-    borderColor: C.successBorder,
-    backgroundColor: C.successSurface,
   },
+  contextYes: { borderColor: C.successBorder, backgroundColor: C.successSurface },
+  contextNeutral: { borderColor: C.border, backgroundColor: C.surface },
+  likelyHead: { gap: Spacing.two, paddingTop: Spacing.five, paddingBottom: Spacing.three },
   contextText: { flex: 1 },
   body: { flex: 1, paddingTop: Spacing.three },
   list: { paddingTop: Spacing.three, paddingBottom: Spacing.six },
-  count: { paddingBottom: Spacing.two },
   gap: { height: Spacing.two },
   centre: {
     flex: 1,
@@ -168,5 +204,6 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingBottom: Spacing.six,
   },
+  emptyBlock: { alignItems: 'center', gap: Spacing.three, paddingTop: Spacing.five },
   centred: { textAlign: 'center' },
 });

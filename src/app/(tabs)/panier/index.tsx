@@ -8,6 +8,7 @@ import type { Product } from '@/api/catalogue';
 import type { CartQuoteLine } from '@/api/orders';
 import { Button } from '@/components/ui/button';
 import { CompatibilityBadge } from '@/components/ui/compatibility';
+import { fitState } from '@/lib/fit';
 import { OrderSummary } from '@/components/ui/order-summary';
 import { QuantityStepper } from '@/components/ui/quantity-stepper';
 import { Loading } from '@/components/ui/states';
@@ -227,7 +228,7 @@ function Line({
           <Text variant="body" tone={C.text} numberOfLines={2}>
             {name}
           </Text>
-          {product ? <CompatibilityBadge verdict={product.fitment} /> : null}
+          {product ? <CompatibilityBadge state={fitState(product)} /> : null}
         </View>
       </Pressable>
 
@@ -247,7 +248,7 @@ function Line({
             </Text>
           </View>
           {line?.backorder ? (
-            <Text variant="hint" tone={C.caution}>
+            <Text variant="hint" tone={C.cautionText}>
               {t('cart.backorder')}
             </Text>
           ) : null}
@@ -325,7 +326,7 @@ function FreeDelivery({
             </Pressable>
             <Button label={t('cart.suggest.add')} icon="plus" variant="secondary" onPress={() => onAdd(suggestion)} />
           </View>
-          {suggestion.fitment ? <CompatibilityBadge verdict={suggestion.fitment} /> : null}
+          {suggestion.fitment ? <CompatibilityBadge state={fitState(suggestion)} /> : null}
         </View>
       ) : null}
     </View>

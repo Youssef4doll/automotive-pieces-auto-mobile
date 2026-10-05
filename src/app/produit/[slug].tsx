@@ -21,6 +21,7 @@ import { useAddToCart } from '@/hooks/use-add-to-cart';
 import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { PartImage } from '@/components/ui/part-image';
+import { fitState } from '@/lib/fit';
 import { formatDT, yearSpan } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel } from '@/store/garage';
@@ -183,12 +184,18 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                   ? t('look.whyNot', { n: product.compatibility.total, car: carName })
                   : t('look.whyNotNone'),
           }
-        : product.fitment === 'UNKNOWN'
-          ? { icon: 'help-circle' as const, fg: C.caution, titleTone: C.text, bg: C.cautionSurface, text: t('fit.unknown'), why:
-                product.fitmentReason === 'SAME_ENGINE_CODE'
-                  ? t('look.unknownSameEngine', { car: carName })
-                  : `${t('look.unknownWhy', { car: carName })} ${t('product.unknownNote')}` }
-          : { icon: 'info' as const, fg: C.text, titleTone: C.text, bg: C.surface, text: t('look.chooseToCheck'), why: null };
+        : product.fitment === 'UNKNOWN' && fitState(product) === 'LIKELY'
+          ? {
+              icon: 'help-circle' as const,
+              fg: C.caution,
+              titleTone: C.cautionText,
+              bg: C.cautionSurface,
+              text: t('fit.likely'),
+              why: product.fitmentReason === 'SAME_ENGINE_CODE' ? t('look.unknownSameEngine', { car: carName }) : t('look.likelyDerived', { car: carName }),
+            }
+          : product.fitment === 'UNKNOWN'
+            ? { icon: 'search' as const, fg: C.textMuted, titleTone: C.text, bg: C.surface, text: t('fit.unknown'), why: `${t('look.unknownWhy', { car: carName })} ${t('product.unknownNote')}` }
+            : { icon: 'info' as const, fg: C.text, titleTone: C.text, bg: C.surface, text: t('look.chooseToCheck'), why: null };
   const openCompat = () => {
     setCompatKey((k) => k + 1);
     requestAnimationFrame(() => scroll.current?.scrollTo({ y: compatY.current, animated: true }));
@@ -207,7 +214,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
       : product.availability === 'ON_ORDER'
         ? {
             icon: 'clock' as const,
-            tone: C.caution,
+            tone: C.cautionText,
             label: t('stock.onOrder'),
             // Named only when the shop has named it. Without the setting the
             // line says the part is ordered in and stops there.
@@ -598,7 +605,14 @@ function Compatibility({ product, activeEngineId }: { product: ProductDetail; ac
           .join(' · ');
         return (
           <View key={v.engineId} style={[styles.vehicleRow, { flexDirection: rtl ? 'row-reverse' : 'row' }, mine && styles.vehicleMine]}>
-            <Feather name={mine ? 'check-circle' : 'circle'} size={IconSize.small} color={mine ? C.success : C.textFaint} />
+            {/* A green tick only for a row the shop recorded. An inferred row
+                for THEIR engine is a lead, and the page above says "à
+                confirmer" about it — the two must never disagree. */}
+            <Feather
+              name={mine ? (v.derived ? 'help-circle' : 'check-circle') : 'circle'}
+              size={IconSize.small}
+              color={mine ? (v.derived ? C.caution : C.success) : C.textFaint}
+            />
             <View style={styles.flex}>
               <Text variant="body" tone={C.text}>
                 {`${v.make} ${v.model} · ${v.engine}`}

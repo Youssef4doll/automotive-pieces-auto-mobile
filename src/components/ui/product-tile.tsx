@@ -7,6 +7,7 @@ import { Brand, C, Elevation, familyFor, Radius, Spacing } from '@/constants/the
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
 import { useAddToCart } from '@/hooks/use-add-to-cart';
+import { fitState, FIT_LOOK } from '@/lib/fit';
 import { PartImage } from './part-image';
 import { PressScale } from './press-scale';
 import { Price } from './price';
@@ -25,14 +26,9 @@ import { Text } from './text';
  * button, never inside it, and absent for a part that cannot be bought or
  * is known not to fit (that one needs the product page's explanation).
  */
-const FIT: Record<'FITS' | 'UNKNOWN' | 'DOES_NOT_FIT', { icon: React.ComponentProps<typeof Feather>['name']; tone: string; key: DictKey }> = {
-  FITS: { icon: 'check-circle', tone: C.success, key: 'look.fit.FITS' },
-  UNKNOWN: { icon: 'help-circle', tone: C.caution, key: 'look.fit.UNKNOWN' },
-  DOES_NOT_FIT: { icon: 'x-circle', tone: C.danger, key: 'look.fit.DOES_NOT_FIT' },
-};
 const STOCK: Record<Product['availability'], { tone: string; key: DictKey }> = {
   IN_STOCK: { tone: C.success, key: 'stock.inStock' },
-  ON_ORDER: { tone: C.caution, key: 'stock.onOrder' },
+  ON_ORDER: { tone: C.cautionText, key: 'stock.onOrder' },
   UNAVAILABLE: { tone: C.textFaint, key: 'stock.unavailable' },
 };
 
@@ -44,7 +40,8 @@ export function ProductTile({ product }: { product: Product }) {
   const router = useRouter();
   const addToCart = useAddToCart();
   const quickAdd = product.availability !== 'UNAVAILABLE' && product.fitment !== 'DOES_NOT_FIT';
-  const fit = product.fitment ? FIT[product.fitment] : null;
+  const state = fitState(product);
+  const fit = state ? { icon: FIT_LOOK[state].icon, iconTone: FIT_LOOK[state].iconTone, tone: FIT_LOOK[state].tone, key: FIT_LOOK[state].short } : null;
   const stock = STOCK[product.availability];
   const stockLine = product.lowStockQty !== null ? t('stock.low', { n: product.lowStockQty }) : t(stock.key);
   const start = { alignItems: rtl ? ('flex-end' as const) : ('flex-start' as const) };
@@ -73,7 +70,7 @@ export function ProductTile({ product }: { product: Product }) {
         </Text>
         {fit ? (
           <View style={[row, styles.line]}>
-            <Feather name={fit.icon} size={13} color={fit.tone} />
+            <Feather name={fit.icon} size={13} color={fit.iconTone} />
             <Text variant="hint" tone={fit.tone} numberOfLines={1}>
               {t(fit.key)}
             </Text>
