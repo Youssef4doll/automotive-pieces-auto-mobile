@@ -1821,7 +1821,35 @@ family/axle rule (website `lib/complements`). Events carry an id and a
 sequence number, and `product_viewed` fires once per opening. "Scanner ma
 carte grise" became "Saisir le VIN de ma carte grise".
 
-Not done here, because they need the owner or real data: confirming fitment
-rows, real product photos and brands, card payment, delivery dates promised
-per governorate, SMS on every status, and a smaller hero on Home (kept as
-chosen on October 5).
+**Second pass, the same day.** What was left of the audit that needed
+neither the owner nor real data:
+
+- *The account wall.* Where the shop can text, a guest's cart goes on to
+  the delivery step; "Continuer" sends a code to the number just typed and
+  the code signs in that number's account or opens one in the name on the
+  form (`PhoneSignIn` with a preset). No detour, no password. Without SMS
+  the sign-in-first path stays.
+- *"Va sur ma voiture"* on family lists (the shop's `fits=1`).
+- *The fitment queue* (website `/admin/compatibilites`): every inferred
+  row, car by car, the cars customers drive first, confirm or remove in
+  one tap.
+- *The event schema* from the audit's measurement plan: every event carries
+  locale, engine and signed-in; new ones for filters, zero results,
+  fitment summary and questions, the delivery step, the logbook, reminders
+  and the notification answer; the website records order_placed,
+  order_status_changed, order_delivered and order_cancelled itself
+  (`lib/server-events`).
+- *Smaller:* the last priced basket shown dimmed instead of "—"; the
+  free-delivery suggestion only from families that finish the basket's
+  job; WhatsApp on zero results; the shop's guarantee beside a confirmed
+  part; dates typed as JJ/MM/AAAA; a shorter welcome step 2; "Annuler la
+  commande" as a quiet link away from the help; the website's fitment list
+  no longer greens an inferred engine; `npm run perf` in the website checks
+  a 300 ms p95 budget (locally every call is under 90 ms).
+
+Not done here, because they need the owner or real data: confirming the
+fitment rows themselves (the queue is ready for it), real product photos
+and brands, reviews, good/better/best tiers, card payment, delivery dates
+promised per governorate (a dispatch cut-off), SMS on every status, a
+personal Home and a smaller hero (Home kept as chosen on October 5),
+notification preferences, referral and pro mode.
