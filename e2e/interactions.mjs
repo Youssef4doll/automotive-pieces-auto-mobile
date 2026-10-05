@@ -206,7 +206,7 @@ try {
   check(await says(page, 'Renault Clio IV enregistrée'), 'picker: the saved car is confirmed');
   await page.waitForTimeout(2000);
   // A new car opens its own parts (confirmed, then to confirm); back is the garage.
-  check(page.url().includes('/pieces-compatibles') && (await says(page, 'Pour votre Renault Clio IV')), 'picker: a new car opens its parts', page.url());
+  check(page.url().includes('/pieces-compatibles') && (await says(page, 'Renault Clio IV · 1.5 dCi')), 'picker: a new car opens its parts', page.url());
   await page.goBack();
   await page.waitForTimeout(1500);
   check((await says(page, 'Renault Clio IV')) && (await page.locator('[style*="width: 18px"]').count()) >= 0, 'garage: shows the new principal');
