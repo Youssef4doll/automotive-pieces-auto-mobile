@@ -72,7 +72,7 @@ export default function GarageScreen() {
       <View style={styles.column}>
         <View style={[row, styles.head]}>
           <Text style={[styles.count, { fontFamily: familyFor('heading', rtl) }]}>{t('look.garageCount', { n: vehicles.length })}</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/garage/vehicules')} hitSlop={8} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/garage/vehicules')} style={({ pressed }) => [styles.seeAll, pressed && { opacity: 0.6 }]}>
             <Text style={[styles.seeAllText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('catalog.seeAll')}</Text>
           </Pressable>
         </View>
@@ -344,9 +344,9 @@ const styles = StyleSheet.create({
   heroCtaText: { fontSize: 16, color: C.onAccent },
   pressed: { backgroundColor: C.surface },
   disabled: { opacity: 0.45 },
-  head: { alignItems: 'baseline', justifyContent: 'space-between' },
+  head: { alignItems: 'center', justifyContent: 'space-between' },
   section: { fontSize: 18, lineHeight: 24, color: C.text },
-  seeAll: { alignItems: 'center', gap: 4, minHeight: Tap.min },
+  seeAll: { minHeight: Tap.min, minWidth: Tap.min, justifyContent: 'center' },
   list: { gap: Spacing.two },
   carousel: { marginHorizontal: -2 },
   dots: { justifyContent: 'center', gap: 6, paddingTop: Spacing.two },
