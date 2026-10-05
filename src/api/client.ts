@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getRandomBytes } from 'expo-crypto';
 
 import { API_BASE_URL, REQUEST_TIMEOUT_MS } from '@/constants/config';
@@ -249,9 +250,66 @@ const MAX_AGE_MS = 30_000;
 const cache = new Map<string, { data: unknown; at: number }>();
 const inFlight = new Map<string, Promise<unknown>>();
 
+/**
+ * The shop's furniture — families, parts makers, its settings and its
+ * promotions — changes a few times a month, and every cold screen asked for
+ * it again. These are kept for a day and on disk: a screen gets the last
+ * answer at once, and an answer older than MAX_AGE_MS is asked again in the
+ * background, so a changed promotion still shows on the next visit.
+ * Nothing about stock, prices of a part or fitment is in here.
+ */
+const STATIC = [/^\/api\/v1\/catalogue\/families$/, /^\/api\/v1\/catalogue\/brands$/, /^\/api\/v1\/settings\/public$/, /^\/api\/v1\/promotions$/];
+const STATIC_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const STATIC_KEY = 'apa-static-cache-v1';
+const isStatic = (path: string) => STATIC.some((r) => r.test(path));
+
+const restored = AsyncStorage.getItem(STATIC_KEY)
+  .then((raw) => {
+    if (!raw) return;
+    const saved = JSON.parse(raw) as Record<string, { data: unknown; at: number }>;
+    for (const [path, entry] of Object.entries(saved)) {
+      if (isStatic(path) && !cache.has(path) && Date.now() - entry.at < STATIC_MAX_AGE_MS) cache.set(path, entry);
+    }
+  })
+  .catch(() => undefined);
+
+function persistStatic() {
+  const saved: Record<string, { data: unknown; at: number }> = {};
+  for (const [path, entry] of cache) if (isStatic(path)) saved[path] = entry;
+  AsyncStorage.setItem(STATIC_KEY, JSON.stringify(saved)).catch(() => undefined);
+}
+
+function fetchInto<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const pending = withRetries<T>(path, { signal })
+    .then((data) => {
+      cache.set(path, { data, at: Date.now() });
+      if (isStatic(path)) persistStatic();
+      return data;
+    })
+    .finally(() => {
+      inFlight.delete(path);
+    });
+  inFlight.set(path, pending);
+  return pending;
+}
+
 export async function get<T>(path: string, options?: { signal?: AbortSignal; fresh?: boolean }): Promise<T> {
+  const fixed = isStatic(path);
+  // A cold start waits for the disk once (a few ms) rather than asking the
+  // network for something it already holds.
+  if (fixed && !cache.has(path)) await restored;
+
   const hit = cache.get(path);
-  if (!options?.fresh && hit && Date.now() - hit.at < MAX_AGE_MS) return hit.data as T;
+  if (!options?.fresh && hit) {
+    const age = Date.now() - hit.at;
+    if (age < MAX_AGE_MS) return hit.data as T;
+    if (fixed && age < STATIC_MAX_AGE_MS) {
+      // Stale but usable: answer now, refresh behind it. No signal — the
+      // screen that asked may be gone by the time the answer lands.
+      if (!inFlight.has(path)) void fetchInto<T>(path).catch(() => undefined);
+      return hit.data as T;
+    }
+  }
 
   // Two screens asking for the same thing at once make one request. This
   // happens for real: a fast tap through the picker mounts the next screen
@@ -259,17 +317,7 @@ export async function get<T>(path: string, options?: { signal?: AbortSignal; fre
   const existing = inFlight.get(path);
   if (existing && !options?.fresh) return existing as Promise<T>;
 
-  const pending = withRetries<T>(path, { signal: options?.signal })
-    .then((data) => {
-      cache.set(path, { data, at: Date.now() });
-      return data;
-    })
-    .finally(() => {
-      inFlight.delete(path);
-    });
-
-  inFlight.set(path, pending);
-  return pending;
+  return fetchInto<T>(path, options?.signal);
 }
 
 /**

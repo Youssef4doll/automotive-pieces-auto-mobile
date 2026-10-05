@@ -65,10 +65,19 @@ export default function ProductScreen() {
   const product = useResource(load);
   const settings = useShopSettings();
   const viewed = product.status === 'loaded' ? product.data : null;
+  // Once per opening of the page, when it first renders — not again on
+  // every refetch (pull to refresh, a language switch, the refresh after an
+  // add), which stamped a second "viewed" after the add and turned the
+  // view → add funnel backwards.
+  const tracked = useRef<string | null>(null);
   useEffect(() => {
     if (!viewed) return;
-    track('product_viewed', { productId: viewed.id, slug: viewed.slug, brand: viewed.brand, price: viewed.price, family: viewed.familySlug });
-    if (engineId) track('compatibility_checked', { productId: viewed.id, engineId, verdict: viewed.fitment });
+    const key = `${viewed.id}|${engineId ?? ''}`;
+    if (tracked.current === key) return;
+    tracked.current = key;
+    const fit = fitState(viewed);
+    track('product_viewed', { productId: viewed.id, slug: viewed.slug, brand: viewed.brand, price: viewed.price, family: viewed.familySlug, fit: fit ?? 'none' });
+    if (engineId) track('compatibility_checked', { productId: viewed.id, engineId, verdict: viewed.fitment, fit: fit ?? 'none' });
   }, [viewed, engineId]);
 
   return (

@@ -81,6 +81,7 @@ const MAX_QUEUE = 200;
 
 let queue: Queued[] = [];
 let sessionId: string | null = null;
+let seq = 0;
 let timer: ReturnType<typeof setTimeout> | null = null;
 let flushing = false;
 let retried = false;
@@ -114,7 +115,10 @@ export function track(name: EventName, props?: Props) {
     const clean: Props | undefined = props
       ? Object.fromEntries(Object.entries(props).filter(([, v]) => v !== undefined))
       : undefined;
-    queue.push({ name, at: new Date().toISOString(), props: clean });
+    // An id per event and a running number per launch, so a report can drop
+    // a batch that was sent twice and order events that share a millisecond.
+    seq += 1;
+    queue.push({ name, at: new Date().toISOString(), props: { ...clean, eventId: randomId(), seq } });
     if (queue.length > MAX_QUEUE) queue = queue.slice(-MAX_QUEUE);
     if (queue.length >= BATCH || IMMEDIATE.has(name)) void flush();
     else if (!timer) timer = setTimeout(() => void flush(), FLUSH_MS);

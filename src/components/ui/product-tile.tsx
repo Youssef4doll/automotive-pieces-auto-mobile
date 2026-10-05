@@ -3,6 +3,8 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import type { Product } from '@/api/catalogue';
+import { productApi } from '@/api/product';
+import { useGarage } from '@/store/garage';
 import { Brand, C, Elevation, familyFor, Radius, Spacing } from '@/constants/theme';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
@@ -38,6 +40,7 @@ const ADD_ROOM = 44 + Spacing.one;
 export function ProductTile({ product }: { product: Product }) {
   const { t, rtl } = useI18n();
   const router = useRouter();
+  const engineId = useGarage((st) => st.active?.engineId);
   const addToCart = useAddToCart();
   const quickAdd = product.availability !== 'UNAVAILABLE' && product.fitment !== 'DOES_NOT_FIT';
   const state = fitState(product);
@@ -52,6 +55,7 @@ export function ProductTile({ product }: { product: Product }) {
     <PressScale
       accessibilityRole="button"
       accessibilityLabel={[product.brand, product.name, fit ? t(fit.key) : null, stockLine].filter(Boolean).join(', ')}
+      onPressIn={() => productApi.prefetch(product.slug, engineId)}
       onPress={() => router.push({ pathname: '/produit/[slug]', params: { slug: product.slug } })}
       style={styles.tile}
       pressedStyle={styles.pressed}

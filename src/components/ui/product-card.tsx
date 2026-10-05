@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Product } from '@/api/catalogue';
+import { productApi } from '@/api/product';
 import { API_BASE_URL } from '@/constants/config';
 import { Brand, C, Elevation, familyFor, IconSize, Radius, Spacing, Tap } from '@/constants/theme';
 import { useAddToCart } from '@/hooks/use-add-to-cart';
@@ -48,6 +49,7 @@ const STOCK: Record<Product['availability'], { icon: React.ComponentProps<typeof
 export function ProductCard({ product }: { product: Product }) {
   const { t, rtl } = useI18n();
   const router = useRouter();
+  const engineId = useGarage((st) => st.active?.engineId);
   const addToCart = useAddToCart();
   const stock = STOCK[product.availability];
   const car = useGarage((st) => (st.active ? `${st.active.makeName} ${st.active.modelName}` : ''));
@@ -77,6 +79,7 @@ export function ProductCard({ product }: { product: Product }) {
         accessibilityLabel={[product.brand, product.name, formatDT(product.price), stockLine]
           .filter(Boolean)
           .join(', ')}
+        onPressIn={() => productApi.prefetch(product.slug, engineId)}
         onPress={() => router.push({ pathname: '/produit/[slug]', params: { slug: product.slug } })}
         style={({ pressed }) => [
           styles.pressable,
