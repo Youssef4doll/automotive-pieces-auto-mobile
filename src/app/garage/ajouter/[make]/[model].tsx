@@ -81,7 +81,9 @@ export default function EnginesScreen() {
       // first so the back gesture does not walk them through the flow again.
       // Re-selecting a car already saved is a switch, and goes to the garage.
       router.dismissTo('/garage');
-      if (!already) router.push({ pathname: '/pieces-compatibles', params: { engine: engine.id } });
+      // On the next frame: pushed in the same tick as the dismiss, the parts
+      // landed on top of the picker and "back" walked into it again.
+      if (!already) requestAnimationFrame(() => router.push({ pathname: '/pieces-compatibles', params: { engine: engine.id } }));
       toast({
         message: t('look.saved', { car: `${makeName ?? ''} ${modelName ?? ''}`.trim() }),
         tone: 'success',
