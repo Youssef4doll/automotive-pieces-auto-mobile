@@ -2,11 +2,10 @@ import { Feather } from '@expo/vector-icons';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { Brand, C, Elevation, familyFor, Radius, Spacing } from '@/constants/theme';
-import { RENDERS } from '@/illustrations/renders';
+import { CarKey } from '@/illustrations/car-key';
 import { useI18n } from '@/i18n/provider';
 import { yearSpan } from '@/lib/format';
 import type { SavedVehicle } from '@/store/garage';
-import { Image } from 'expo-image';
 
 import { MakeLogo } from './make-logo';
 import { PressScale } from './press-scale';
@@ -69,7 +68,7 @@ export function VehicleCard({
         {vehicle ? (
           <MakeLogo name={vehicle.makeName} slug={vehicle.makeSlug} size={compactArt ? 56 : 64} />
         ) : (
-          <Image source={RENDERS.key} style={{ width: compactArt ? 60 : 72, height: compactArt ? 60 : 72 }} contentFit="contain" />
+          <CarKey size={compactArt ? 60 : 72} />
         )}
       </View>
       <View style={[styles.body, start]}>

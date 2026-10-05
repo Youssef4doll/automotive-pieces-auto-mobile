@@ -7,6 +7,7 @@ import { Text } from '@/components/ui/text';
 import { Brand, C, Elevation, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { Image } from 'expo-image';
 
+import { CarKey } from '@/illustrations/car-key';
 import { familyRender, RENDERS } from '@/illustrations/renders';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
@@ -26,7 +27,7 @@ export default function FindScreen() {
   const active = useGarage((s) => s.active);
 
   const ways: { key: Way; title: DictKey; why: DictKey; icon: React.ReactNode }[] = [
-    { key: 'car', title: 'look.find.car', why: 'look.find.carWhy', icon: <WayArt source={RENDERS.key} /> },
+    { key: 'car', title: 'look.find.car', why: 'look.find.carWhy', icon: <CarKey size={60} /> },
     { key: 'part', title: 'look.find.part', why: 'look.find.partWhy', icon: <WayArt source={familyRender('freinage') ?? RENDERS.magnifier} /> },
     { key: 'ref', title: 'look.find.ref', why: 'look.find.refWhy', icon: <WayArt source={RENDERS.magnifier} /> },
     // Always offered now: the photo goes to the shop's own inbox with the

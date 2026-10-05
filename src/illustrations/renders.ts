@@ -40,8 +40,6 @@ export function familyRender(slug: string | null | undefined): ImageSourcePropTy
 export const RENDERS = {
   /** Home: a drilled disc under a gold caliper, on a dark studio floor. */
   hero: require('../../assets/renders/hero.webp') as ImageSourcePropType,
-  /** "Je connais ma voiture": a car key, no maker's badge on it. */
-  key: require('../../assets/renders/car-key.webp') as ImageSourcePropType,
   /** "J'ai la référence": the magnifier. */
   magnifier: require('../../assets/renders/magnifier.webp') as ImageSourcePropType,
   /** "Photo / Expert": a phone whose camera frames a brake disc. */

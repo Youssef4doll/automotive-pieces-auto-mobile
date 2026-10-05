@@ -1733,3 +1733,21 @@ The families come from a new shop endpoint, `GET
 /api/v1/catalogue/brands/[slug]` (lib/data/catalog `getBrandFamilies`). It
 counts active parts grouped by top-level family and returns 404 for a slug
 that is not a parts maker with something on sale.
+
+**The artist's key and carte grise (October 5).** Two more of the shop
+artist's drawings replace what stood in for them:
+- **The car key** (`CarKey`, `cle-vehicule.svg`): a key and its navy fob on
+  a ring. It replaces the studio render everywhere it was used: the empty
+  garage, "Mes véhicules" with no car, a vehicle card for a make with no
+  mark on record, "Je connais ma voiture" and the error page. The render
+  (`car-key.webp`) is gone from the app; its Blender script stays in
+  tools/renders.
+- **The carte grise** (`CarteGrise`, `carte-grise-vin.svg`): a registration
+  card with its serial-number line picked out in gold under a "VIN · 17"
+  tag. It shows on the VIN screen, and smaller on the picker's "Scanner ma
+  carte grise" card, whose tile became a rounded rectangle to fit a drawing
+  wider than tall. What is printed on it is the artist's sample, not anyone's
+  data.
+
+`scripts/inline-svg.py` now also drops `<metadata>`, which holds the files'
+provenance record (C2PA), so it never ships in the bundle.

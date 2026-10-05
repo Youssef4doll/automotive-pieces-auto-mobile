@@ -38,7 +38,9 @@ def convert(path):
         el.attrib.pop('id', None)
     for parent in root.iter():
         for i, ch in enumerate(list(parent)):
-            if ch.tag == f'{{{NS}}}defs':
+            # <metadata> is the file's provenance record (a C2PA manifest), kept
+            # in the .svg as delivered; it draws nothing, so the app goes without.
+            if ch.tag in (f'{{{NS}}}defs', f'{{{NS}}}metadata'):
                 parent.remove(ch)
             elif ch.tag == f'{{{NS}}}svg':
                 x, y = float(ch.get('x', 0)), float(ch.get('y', 0))

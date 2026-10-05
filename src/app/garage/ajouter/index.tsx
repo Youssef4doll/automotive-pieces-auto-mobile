@@ -163,7 +163,7 @@ function Shortcuts({ topMakes, onMake }: { topMakes: Make[]; onMake: (make: Make
         style={({ pressed }) => [styles.vin, row, pressed && styles.pressed]}
       >
         <View style={styles.vinIcon}>
-          <CarteGrise width={44} compact />
+          <CarteGrise width={60} />
         </View>
         <View style={styles.flex}>
           <Text variant="rowTitle">{t('look.scanCard')}</Text>
@@ -191,7 +191,8 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     backgroundColor: C.background,
   },
-  vinIcon: { width: 52, height: 52, borderRadius: 26, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
+  // The drawing is wider than tall, so its tile is too.
+  vinIcon: { width: 68, height: 56, borderRadius: Radius.tile, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
   block: { gap: Spacing.two },
   // The rail bleeds to the screen edge so the next badge peeks.
   railBar: { flexGrow: 0, flexShrink: 0, marginHorizontal: -Spacing.three },

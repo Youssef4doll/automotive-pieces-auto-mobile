@@ -8,14 +8,13 @@ import { PressScale } from '@/components/ui/press-scale';
 import { Text } from '@/components/ui/text';
 import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
-import { Image } from 'expo-image';
 
 import { MakeLogo, MarkGlyph } from '@/components/ui/make-logo';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { MAKE_MARKS, markKey } from '@/illustrations/marques';
 import { AdviceCard } from '@/components/ui/advice-card';
 import { CareDueStrip } from '@/components/ui/care-due';
-import { RENDERS } from '@/illustrations/renders';
+import { CarKey } from '@/illustrations/car-key';
 import { NavCar } from '@/illustrations/vehicle';
 import { useI18n } from '@/i18n/provider';
 import { yearSpan } from '@/lib/format';
@@ -48,7 +47,7 @@ export default function GarageScreen() {
   if (!active) {
     return (
       <View style={[styles.root, styles.empty]}>
-        <Image source={RENDERS.key} style={{ width: 180, height: 180 }} contentFit="contain" />
+        <CarKey size={180} />
         <Text variant="screenTitle" style={styles.centred}>
           {t('garage.title')}
         </Text>

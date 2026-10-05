@@ -8,8 +8,7 @@ import { useMaybeI18n } from '@/i18n/provider';
 import { track } from '@/services/analytics';
 import { Button } from './button';
 import { EmptyState } from './empty-state';
-import { Image } from 'expo-image';
-import { RENDERS } from '@/illustrations/renders';
+import { CarKey } from '@/illustrations/car-key';
 
 /**
  * What a screen shows when its own code throws, instead of a white page.
@@ -34,7 +33,7 @@ export function RouteError({ error, retry }: ErrorBoundaryProps) {
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <EmptyState
-        art={<Image source={RENDERS.key} style={{ width: 108, height: 108 }} contentFit="contain" />}
+        art={<CarKey size={108} />}
         title={t('error.title')}
         body={t('error.body')}
       >
