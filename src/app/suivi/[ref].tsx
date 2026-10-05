@@ -136,7 +136,12 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
   const tokenFor = useOrders((s) => s.tokenFor);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  // Locked on the first tap: a second POST would come back 409 "already not
+  // pending" and tell the customer it was too late for a cancel that worked.
+  const cancelBusy = useRef(false);
   const cancel = async () => {
+    if (cancelBusy.current) return;
+    cancelBusy.current = true;
     setCancelling(true);
     try {
       const token = await tokenFor(order.ref);
@@ -148,6 +153,7 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
       const notPending = err instanceof ApiError && err.failure.kind === 'server' && err.failure.status === 409;
       toast({ message: t(notPending ? 'track.cancelTooLate' : 'track.cancelFailed'), tone: 'neutral' });
     } finally {
+      cancelBusy.current = false;
       setCancelling(false);
       setConfirmCancel(false);
       onRefresh();

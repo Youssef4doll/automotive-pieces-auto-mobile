@@ -21,6 +21,7 @@ import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 import { useRecentSearches } from '@/store/recent-searches';
 import { track } from '@/services/analytics';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { RENDERS } from '@/illustrations/renders';
 import { Rail } from '@/components/ui/rail';
@@ -477,7 +478,12 @@ export default function SearchScreen() {
             art={<Image source={RENDERS.magnifier} style={{ width: 112, height: 112 }} contentFit="contain" />}
             title={t('search.none', { q: trimmed })}
             body={t('search.noneWhy')}
-          />
+          >
+            {/* Not a dead end: the shop answers, with the words and the car
+                already written (demande attaches the active car). */}
+            <Button label={t('search.askShop')} icon="message-circle" onPress={() => router.push({ pathname: '/demande', params: { q: trimmed } })} />
+            <Button label={t('search.sendPhoto')} icon="camera" variant="secondary" onPress={() => router.push({ pathname: '/demande', params: { photo: '1', q: trimmed } })} />
+          </EmptyState>
         </ScrollView>
       ) : !result ? (
         <View style={[styles.column, styles.idle]}>

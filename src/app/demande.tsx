@@ -46,7 +46,7 @@ const MAX = 3;
 export default function AskScreen() {
   const { t, rtl, locale } = useI18n();
   const router = useRouter();
-  const params = useLocalSearchParams<{ sku?: string; order?: string; photo?: string }>();
+  const params = useLocalSearchParams<{ sku?: string; order?: string; photo?: string; q?: string }>();
   const sku = params.sku?.trim() || undefined;
   const orderRef = params.order?.trim().toUpperCase() || undefined;
   const photoFirst = params.photo === '1';
@@ -56,7 +56,8 @@ export default function AskScreen() {
   const settings = useShopSettings();
   const whatsapp = settings.status === 'loaded' ? settings.data.contact.whatsapp : null;
 
-  const [body, setBody] = useState('');
+  // From a search that found nothing: the words they typed, already written.
+  const [body, setBody] = useState(() => (params.q?.trim() ? t('search.lookingFor', { q: params.q.trim().slice(0, 80) }) : ''));
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [name, setName] = useState(account?.name ?? saved.customerName);
   const [phone, setPhone] = useState(account?.phone ?? saved.phone);

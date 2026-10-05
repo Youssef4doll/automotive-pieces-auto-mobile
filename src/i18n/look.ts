@@ -109,8 +109,8 @@ export const look = {
     'look.brandSearch': 'Rechercher une marque…',
     'look.allMakes': 'Voir toutes les marques',
     'look.recentVehicles': 'Véhicules récents',
-    'look.scanCard': 'Scanner ma carte grise',
-    'look.scanCardWhy': 'Par le numéro de série (VIN)',
+    'look.scanCard': 'Saisir le VIN de ma carte grise',
+    'look.scanCardWhy': 'Les 17 caractères du numéro de série',
     'look.whichMake': 'Quelle est la marque ?',
     'look.noMakeMatch': 'Aucune marque ne correspond. Écrivez-nous : nous l’ajoutons.',
 
@@ -240,8 +240,8 @@ export const look = {
     'look.brandSearch': 'Search a make…',
     'look.allMakes': 'See all makes',
     'look.recentVehicles': 'Recent vehicles',
-    'look.scanCard': 'Scan my registration card',
-    'look.scanCardWhy': 'By the serial number (VIN)',
+    'look.scanCard': 'Enter the VIN from my registration card',
+    'look.scanCardWhy': 'The 17 characters of the serial number',
     'look.whichMake': 'Which make is it?',
     'look.noMakeMatch': 'No make matches. Write to us: we will add it.',
 
@@ -371,8 +371,8 @@ export const look = {
     'look.brandSearch': 'ابحث عن علامة…',
     'look.allMakes': 'كلّ العلامات',
     'look.recentVehicles': 'السيارات الأخيرة',
-    'look.scanCard': 'مسح البطاقة الرمادية',
-    'look.scanCardWhy': 'برقم الهيكل (VIN)',
+    'look.scanCard': 'أدخل رقم الهيكل من البطاقة الرمادية',
+    'look.scanCardWhy': 'الأحرف الـ17 لرقم الهيكل',
     'look.whichMake': 'ما هي العلامة؟',
     'look.noMakeMatch': 'لا توجد علامة مطابقة. راسلنا وسنضيفها.',
 

@@ -13,6 +13,7 @@ import { Text } from '@/components/ui/text';
 import { Border, C, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { quoteOf, useCartQuote } from '@/hooks/use-cart-quote';
 import type { DictKey } from '@/i18n/dictionaries';
+import { fitState, FIT_LOOK } from '@/lib/fit';
 import { formatDT, ltr } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { useCart } from '@/store/cart';
@@ -55,12 +56,18 @@ export default function PaymentStep() {
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<DictKey | null>(null);
   const attempt = useRef<{ body: string; key: string } | null>(null);
+  // A ref, not the state: two taps inside one frame both see `placing`
+  // still false. The shop also answers a repeated idempotency key with the
+  // first order, so even a slipped second request never becomes two.
+  const busy = useRef(false);
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   if (items.length === 0 && !placing) return <Redirect href="/panier" />;
   if (account === 'guest' && !placing) return <Redirect href={{ pathname: '/compte/connexion', params: { then: 'checkout' } }} />;
 
   const place = async () => {
+    if (busy.current) return;
+    busy.current = true;
     setError(null);
     setPlacing(true);
     try {
@@ -120,9 +127,11 @@ export default function PaymentStep() {
       // basket again so the total on the button is the one that will be charged.
       if (failure.kind === 'invalid' && failure.field === 'promoCode') retry();
       setPlacing(false);
+      busy.current = false;
     }
   };
 
+  const toCheck = active && quote ? quote.lines.filter((l) => l.product && fitState(l.product) !== 'FITS').length : 0;
   const canPlace = state.status === 'loaded' && !state.data.blocked && !placing;
 
   return (
@@ -165,7 +174,7 @@ export default function PaymentStep() {
               </Text>
               <Text variant="body">{details.phone.trim()}</Text>
               {details.deliveryMethod === 'DELIVERY' ? (
-                <Text variant="body">{`${details.address.trim()}, ${details.governorate}`}</Text>
+                <Text variant="body">{[details.delegation, details.address.trim(), details.governorate].filter(Boolean).join(', ')}</Text>
               ) : null}
             </View>
             <Text variant="hint" tone={C.text}>
@@ -185,16 +194,45 @@ export default function PaymentStep() {
           <View style={styles.lines}>
             {items.map((i) => {
               const line = quote?.lines.find((l) => l.productId === i.productId);
+              // The same verdict the card and the cart showed (lib/fit) — at
+              // the moment of commitment, not hidden behind "pour votre…".
+              const fit = active && line?.product ? fitState(line.product) : null;
               return (
                 <View key={i.productId} style={[styles.lineRow, row]}>
-                  <Text variant="body" tone={C.text} style={styles.flex} numberOfLines={2}>
-                    {`${i.qty} × ${line?.product?.name ?? i.name}`}
-                  </Text>
+                  <View style={styles.flex}>
+                    <Text variant="body" tone={C.text} numberOfLines={2} style={{ textAlign: rtl ? 'right' : 'left' }}>
+                      {`${i.qty} × ${line?.product?.name ?? i.name}`}
+                    </Text>
+                    {fit ? (
+                      <View style={[row, styles.fitLine]}>
+                        <Feather name={FIT_LOOK[fit].icon} size={13} color={FIT_LOOK[fit].iconTone} />
+                        <Text variant="hint" tone={FIT_LOOK[fit].tone}>
+                          {t(FIT_LOOK[fit].short)}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                   <Text variant="body">{line ? formatDT(line.lineTotal) : '—'}</Text>
                 </View>
               );
             })}
           </View>
+
+          {toCheck > 0 ? (
+            <View style={[styles.card, row, styles.toCheck]}>
+              <Feather name="help-circle" size={IconSize.large} color={C.caution} />
+              <View style={[styles.flex, { gap: Spacing.two }]}>
+                <Text variant="hint" tone={C.text} style={{ textAlign: rtl ? 'right' : 'left' }}>
+                  {t('checkout.toCheck', { n: toCheck })}
+                </Text>
+                <Pressable accessibilityRole="button" onPress={() => router.push('/demande')} hitSlop={6} style={{ alignSelf: rtl ? 'flex-end' : 'flex-start' }}>
+                  <Text variant="hint" tone={C.text} style={styles.underline}>
+                    {t('expert.askShop')}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
 
           {quote ? (
             <OrderSummary
@@ -267,6 +305,9 @@ function messageFor(failure: ApiFailure): DictKey {
 }
 
 const styles = StyleSheet.create({
+  fitLine: { alignItems: 'center', gap: Spacing.one, marginTop: 2 },
+  toCheck: { alignItems: 'flex-start', backgroundColor: C.cautionSurface, borderColor: C.cautionBorder },
+  underline: { textDecorationLine: 'underline' },
   root: { flex: 1, backgroundColor: C.background },
   scroll: { paddingBottom: Spacing.five },
   column: {

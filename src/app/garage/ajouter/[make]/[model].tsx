@@ -74,18 +74,20 @@ export default function EnginesScreen() {
         yearTo: engine.yearTo ?? null,
       });
 
-      // Back to the garage, not forward to a confirmation. The customer came
-      // here to tell the app their car; the proof that it worked is the car
-      // sitting at the top of the garage marked active, which is the screen
-      // they land on. `dismissTo` collapses the three picker screens so the
-      // back gesture does not walk them through the flow again.
+      // A new car opens straight on its parts: the customer just told the
+      // app their car, and the payback is the list judged against it —
+      // confirmed, then the ones to confirm. The garage sits under it, so
+      // "back" lands there. `dismissTo` collapses the three picker screens
+      // first so the back gesture does not walk them through the flow again.
+      // Re-selecting a car already saved is a switch, and goes to the garage.
       router.dismissTo('/garage');
-      // Said once, with the obvious next step: the car is remembered, and
-      // every part is now judged against it.
+      if (!already) router.push({ pathname: '/pieces-compatibles', params: { engine: engine.id } });
       toast({
         message: t('look.saved', { car: `${makeName ?? ''} ${modelName ?? ''}`.trim() }),
         tone: 'success',
-        action: { label: t('home.seeCompatible'), onPress: () => router.push({ pathname: '/pieces-compatibles', params: { engine: engine.id } }) },
+        ...(already
+          ? { action: { label: t('home.seeCompatible'), onPress: () => router.push({ pathname: '/pieces-compatibles', params: { engine: engine.id } }) } }
+          : {}),
       });
     },
     [add, isFull, isSaved, make, makeId, makeName, model, modelId, modelName, router, t, toast],
