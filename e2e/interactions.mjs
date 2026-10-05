@@ -206,7 +206,7 @@ try {
   check(await says(page, 'Renault Clio IV enregistrée'), 'picker: the saved car is confirmed');
   await page.waitForTimeout(2000);
   check((await says(page, 'Renault Clio IV')) && (await page.locator('[style*="width: 18px"]').count()) >= 0, 'garage: shows the new principal');
-  const cards = await page.evaluate(() => (document.body.innerText.match(/Voir les pièces compatibles/g) ?? []).length);
+  const cards = await page.evaluate(() => (document.body.innerText.match(/Pièces compatibles/g) ?? []).length);
   check(cards >= 2, 'garage: a carousel of both cars', cards);
   await page.getByRole('button', { name: 'Rendre principal' }).first().click();
   await page.waitForTimeout(800);

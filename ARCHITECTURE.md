@@ -1763,3 +1763,13 @@ it as a nested drawing (`assets/illustrations/disque-frein.svg`). The phone
 drawing also replaces the phone render on the photo request and "Mes
 questions"; `phone.webp` is gone. `inline-svg.py` now keeps clip paths and
 their ids, which the phone and the magnifier need.
+
+**Mon garage, white (October 5).** Chosen by the owner from two previews.
+The page is white from the header down (no pale second tone). Above the
+car: "N véhicule(s)" as a heading, with "Voir tout" opening Mes véhicules.
+The car's pass now holds its actions, as in the owner's reference: the gold
+"Pièces compatibles" and a round (i) for the car's details. Under it,
+"Raccourcis": one pale grouped list with hairlines (Mes commandes, Mes
+véhicules, Ajouter un véhicule in gold). Then the care strip and "Besoin
+d'un conseil ?", now on the pale surface with the artist's phone drawing;
+that drawing replaces `AdviceArt` on the card everywhere it appears.
