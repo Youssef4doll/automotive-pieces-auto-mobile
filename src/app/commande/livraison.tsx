@@ -166,7 +166,8 @@ function Checkout({ settings }: { settings: ShopSettings }) {
       clearCart();
       settle();
       // The stack ends up [tabs, confirmation]: "back" lands in the app.
-      router.dismissAll();
+      // Reached straight from sign-in, checkout can be alone in the stack.
+      if (router.canDismiss()) router.dismissAll();
       router.push({ pathname: '/commande/confirmation/[ref]', params: { ref: result.ref } });
     } catch (err) {
       track('purchase_failed', { reason: err instanceof ApiError ? err.failure.kind : 'offline' });
@@ -281,6 +282,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
             sub={addressSet && method === 'DELIVERY' ? where : null}
             strong={!addressSet}
             error={addressError}
+            testID="checkout-address"
             onPress={() => setSheet('address')}
           />
           <Row
@@ -289,6 +291,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
             sub={contactSet ? ltr(`+216 ${details.phone.trim()}`) : null}
             strong={!contactSet}
             error={contactError}
+            testID="checkout-contact"
             onPress={() => setSheet('contact')}
           />
           <Row
@@ -562,6 +565,7 @@ function Row({
   strong = false,
   error,
   onPress,
+  testID,
 }: {
   icon: React.ComponentProps<typeof Feather>['name'];
   title: string;
@@ -569,6 +573,7 @@ function Row({
   strong?: boolean;
   error?: string;
   onPress?: () => void;
+  testID?: string;
 }) {
   const { rtl } = useI18n();
   const start = { textAlign: rtl ? ('right' as const) : ('left' as const) };
@@ -577,6 +582,7 @@ function Row({
       accessibilityRole={onPress ? 'button' : undefined}
       disabled={!onPress}
       onPress={onPress}
+      testID={testID}
       style={({ pressed }) => [styles.row, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.pressed]}
     >
       <Feather name={icon} size={IconSize.large} color={error ? C.danger : C.text} />

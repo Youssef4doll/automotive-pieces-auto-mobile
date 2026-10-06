@@ -239,3 +239,26 @@ export async function testAccount(name = 'Client Essai') {
   suiteAccount = { token: body.data.token, email, name };
   return suiteAccount;
 }
+
+/**
+ * Checkout is one page (app/commande/livraison): the contact and address
+ * rows each open a sheet. Fills both; the caller presses "Confirmer la
+ * commande".
+ */
+export async function fillCheckout(page, { name, phone, address }) {
+  await page.getByTestId('checkout-contact').click();
+  await page.waitForTimeout(700);
+  await page.getByLabel('Nom et prénom', { exact: true }).fill(name);
+  await page.getByLabel('Téléphone', { exact: true }).fill(phone);
+  await tap(page, 'Valider');
+  await page.getByTestId('checkout-address').click();
+  await page.waitForTimeout(700);
+  await tapLabel(page, 'Gouvernorat');
+  await tap(page, 'Ariana');
+  // Greater Tunis and Nabeul ask for the delegation (lib/delegations).
+  await tapLabel(page, 'Délégation');
+  await tap(page, 'La Soukra');
+  await page.getByLabel('Adresse', { exact: true }).fill(address);
+  await tap(page, 'Valider');
+  await page.waitForTimeout(1500);
+}

@@ -1,4 +1,4 @@
-import { APP_URL, open, tap, tapLabel } from './lib/drive.mjs';
+import { APP_URL, open, tap, tapLabel, fillCheckout } from './lib/drive.mjs';
 
 /**
  * The customer account, driven end to end: a guest order, then an account
@@ -66,9 +66,9 @@ try {
   // confirms the number there (a code by SMS opens the account); without
   // SMS the cart sends them to sign in first.
   if (await says(page, 'un code par SMS confirme votre numéro')) {
-    await page.getByRole('button', { name: /Passer la commande/ }).click();
+    await page.getByRole('button', { name: /^Commander/ }).click();
     await page.waitForTimeout(1500);
-    check(new URL(page.url()).pathname === '/commande/livraison', 'cart: a guest goes on to the delivery step', page.url());
+    check(new URL(page.url()).pathname === '/commande/livraison', 'cart: a guest goes on to the checkout', page.url());
     await go(page, '/compte/connexion?then=checkout');
   } else {
     check(await says(page, 'Se connecter pour commander'), 'cart: a guest is asked to sign in to order');
@@ -101,15 +101,7 @@ try {
   check(await shows(page, 'Bienvenue, Compte'), 'sign-up: welcomed by name');
   await page.waitForTimeout(1500);
   check(new URL(page.url()).pathname === '/commande/livraison', 'sign-up from the cart: straight on to the checkout', page.url());
-  await page.getByLabel('Nom et prénom', { exact: true }).fill('Compte Essai');
-  await page.getByLabel('Téléphone', { exact: true }).fill('20 333 444');
-  await tapLabel(page, 'Gouvernorat');
-  await tap(page, 'Ariana');
-  // Greater Tunis and Nabeul ask for the delegation (lib/delegations).
-  await tapLabel(page, 'Délégation');
-  await tap(page, 'La Soukra');
-  await page.getByLabel('Adresse', { exact: true }).fill('5 rue du Compte, Ariana');
-  await tap(page, 'Continuer');
+  await fillCheckout(page, { name: 'Compte Essai', phone: '20 333 444', address: '5 rue du Compte, Ariana' });
   await page.waitForTimeout(3000);
   await page.getByRole('button', { name: /Confirmer la commande/ }).click();
   await page.waitForTimeout(4500);

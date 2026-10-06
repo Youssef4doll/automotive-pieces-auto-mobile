@@ -3,13 +3,14 @@ import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useMemo, useState } from 'react';
 import { Image } from 'expo-image';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { BrandStrip } from '@/components/ui/brand-strip';
 import { CareBanner } from '@/components/ui/care-banner';
-import { HomeForYou } from '@/components/ui/home-for-you';
+import { CareDueStrip } from '@/components/ui/care-due';
 import { AdviceCard } from '@/components/ui/advice-card';
 import { PartImage } from '@/components/ui/part-image';
 import { PressScale } from '@/components/ui/press-scale';
@@ -32,20 +33,22 @@ import { Rail } from '@/components/ui/rail';
 const LOGO = require('../../../assets/images/logo-lockup.png');
 
 /**
- * Accueil.
+ * Accueil — the reference's home, top to bottom, on the shop's data.
  *
- * On the night road, kept to about a third of the phone: the shop's logo and
- * the search, the slogan with the disc beside it, the search box, and the car
- * every result is judged against (or the invitation to choose one).
+ * On the night road: the shop's own logo and the search, the slogan, a
+ * search box, and "Votre véhicule" — the car in the garage, or the
+ * invitation to choose one. Then "Que recherchez-vous ?" and the three
+ * round doors on their arc.
  *
- * On the white sheet, the customer first — "Youssef, voici pour vous" with
- * the car's own shelf, the order on its way and what is due (HomeForYou),
- * each only when it is real. Then the families, "Entretien auto" (a way into
- * the filters — navigation, not a promotion), the shop's campaigns when it
- * runs one, the parts makers it carries, and "Besoin d'un conseil ?".
+ * On the white sheet: the popular families (the four with the most parts,
+ * counted), "Entretien auto" (a way into the filters — navigation, not a
+ * promotion), the parts makers the shop carries, the shop's own campaigns
+ * when it runs one, and "Besoin d'un conseil ?" — only when the shop has
+ * published a way to be reached.
  *
- * Kept true: the greeting uses the name on the account, or none; there is no
- * bell, because the app has no notifications to ring it.
+ * Kept true where the reference could not be: the greeting uses the name the
+ * customer gave at checkout, or none; there is no bell, because the app has
+ * no notifications to ring it.
  */
 export default function HomeScreen() {
   const onboarded = useOnboarding((s) => s.done);
@@ -53,9 +56,14 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const tabBarSpace = useTabBarSpace();
+  const { width } = useWindowDimensions();
   const { t, rtl } = useI18n();
   const active = useGarage((s) => s.active);
   const vehicleLine = useVehicleLine();
+  // The hero photograph is 3:4; it is lifted so the part sits beside the
+  // slogan and under the search, then fades into the navy below.
+  const heroHeight = Math.round(Math.min(width, MaxContentWidth + 120) * 4 / 3);
+  const heroLift = Math.round(heroHeight * 0.06);
 
   // Light clock and battery over the night road; dark again on the white
   // screens. The tabs stay mounted, so this follows focus rather than mount.
@@ -89,25 +97,48 @@ export default function HomeScreen() {
     <View style={styles.root}>
       {focused ? <StatusBar style="light" /> : null}
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
-        {/* The hero, kept to what earns its height: the shop's logo and the
-            search, the promise with the disc beside it, the search box and
-            the car every result is judged against — about a third of the
-            phone, so what is for the customer starts above the fold. */}
-        <View style={[styles.column, { paddingTop: insets.top + Spacing.two }]}>
-          <View style={[styles.topRow, row]}>
-            <Image source={LOGO} style={styles.logo} contentFit="contain" accessibilityLabel={t('app.name')} />
-            <Pressable
-              accessibilityRole="search"
-              accessibilityLabel={t('home.searchA11y')}
-              onPress={() => router.push('/recherche')}
-              style={({ pressed }) => [styles.roundBtn, pressed && styles.roundBtnPressed]}
-            >
-              <Feather name="search" size={20} color={Brand.white} />
-            </Pressable>
+        <View>
+          <View style={[styles.heroBg, { top: -heroLift }]} pointerEvents="none">
+            <Image
+              source={RENDERS.hero}
+              style={{ width: '100%', height: heroHeight, transform: rtl ? [{ scaleX: -1 }] : undefined }}
+              contentFit="cover"
+              contentPosition={rtl ? 'left center' : 'right center'}
+              accessibilityIgnoresInvertColors
+            />
+            {/* Into the navy: the photograph ends where the questions start. */}
+            <Svg style={StyleSheet.absoluteFill} width="100%" height={heroHeight}>
+              <Defs>
+                <LinearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor={Brand.navy950} stopOpacity="0.55" />
+                  <Stop offset="0.3" stopColor={Brand.navy950} stopOpacity="0.05" />
+                  <Stop offset="0.72" stopColor={Brand.navy950} stopOpacity="0.15" />
+                  <Stop offset="0.94" stopColor={Brand.navy950} stopOpacity="1" />
+                </LinearGradient>
+                <LinearGradient id="side" x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="0">
+                  <Stop offset="0" stopColor={Brand.navy950} stopOpacity="0.5" />
+                  <Stop offset="0.5" stopColor={Brand.navy950} stopOpacity="0" />
+                </LinearGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height={heroHeight} fill="url(#side)" />
+              <Rect x="0" y="0" width="100%" height={heroHeight} fill="url(#fade)" />
+            </Svg>
           </View>
 
-          <View style={[styles.heroRow, row]}>
-            <View style={[styles.flex, styles.slogan]}>
+          <View style={[styles.column, { paddingTop: insets.top + Spacing.three }]}>
+            <View style={[styles.topRow, row]}>
+              <Image source={LOGO} style={styles.logo} contentFit="contain" accessibilityLabel={t('app.name')} />
+              <Pressable
+                accessibilityRole="search"
+                accessibilityLabel={t('home.searchA11y')}
+                onPress={() => router.push('/recherche')}
+                style={({ pressed }) => [styles.roundBtn, pressed && styles.roundBtnPressed]}
+              >
+                <Feather name="search" size={20} color={Brand.white} />
+              </Pressable>
+            </View>
+
+            <View style={styles.slogan}>
               <Text style={[styles.sloganText, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}>
                 {t('look.slogan1')}
                 {'\n'}
@@ -116,66 +147,72 @@ export default function HomeScreen() {
               </Text>
               <Text style={[styles.subtitle, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.slogan3')}</Text>
             </View>
-            <Image
-              source={RENDERS.heroDisc}
-              style={[styles.disc, rtl ? styles.discRtl : styles.discLtr]}
-              contentFit="contain"
-              accessibilityIgnoresInvertColors
-            />
+
+            {/* Room for the photograph between the promise and the search, as
+                the reference leaves room for its car. */}
+            <View style={{ height: Math.round(heroHeight * 0.44) }} />
+
+            {/* The main action, and the car it answers for, as one piece:
+                the search, and directly under it the line that says which
+                car every result will be judged against. */}
+            <PressScale
+              accessibilityRole="search"
+              accessibilityLabel={t('home.searchA11y')}
+              onPress={() => router.push('/recherche')}
+              style={[styles.searchPill, row]}
+              pressedStyle={styles.searchPillPressed}
+              scaleTo={0.985}
+            >
+              <Feather name="search" size={20} color={C.text} />
+              <Text numberOfLines={1} style={[styles.flex, styles.searchText, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+                {t('look.searchBig')}
+              </Text>
+              <View style={styles.searchGo}>
+                <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={18} color={C.onAccent} />
+              </View>
+            </PressScale>
+
+            <PressScale
+              accessibilityRole="button"
+              accessibilityLabel={active ? `${t('look.forVehicle', { car: `${active.makeName} ${active.modelName}` })}, ${t('home.change')}` : t('look.noVehicleLine')}
+              onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
+              style={[styles.vehicleLine, row]}
+              scaleTo={0.985}
+            >
+              {active ? (
+                <MakeLogo name={active.makeName} slug={active.makeSlug} size={36} lifted={false} />
+              ) : (
+                <View style={styles.vehicleIcon}>
+                  <NavCar size={18} color={Brand.gold400} />
+                </View>
+              )}
+              <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+                <Text numberOfLines={1} style={[styles.vehicleName, { fontFamily: familyFor('bodySemi', rtl) }]}>
+                  {active ? `${active.makeName} ${active.modelName}` : t('look.noVehicleLine')}
+                </Text>
+                <Text numberOfLines={1} style={[styles.vehicleSub, { fontFamily: familyFor('body', rtl) }]}>
+                  {active ? vehicleLine(active) : t('look.chooseWhy')}
+                </Text>
+              </View>
+              <Text style={[styles.vehicleAction, { fontFamily: familyFor('bodySemi', rtl) }]}>{active ? t('home.change') : t('look.choose')}</Text>
+            </PressScale>
+
           </View>
 
-          {/* The main action, and the car it answers for, as one piece:
-              the search, and directly under it the line that says which
-              car every result will be judged against. */}
-          <PressScale
-            accessibilityRole="search"
-            accessibilityLabel={t('home.searchA11y')}
-            onPress={() => router.push('/recherche')}
-            style={[styles.searchPill, row]}
-            pressedStyle={styles.searchPillPressed}
-            scaleTo={0.985}
-          >
-            <Feather name="search" size={20} color={C.text} />
-            <Text numberOfLines={1} style={[styles.flex, styles.searchText, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>
-              {t('look.searchBig')}
-            </Text>
-            <View style={styles.searchGo}>
-              <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={18} color={C.onAccent} />
-            </View>
-          </PressScale>
-
-          <PressScale
+          <Pressable
             accessibilityRole="button"
-            accessibilityLabel={active ? `${t('look.forVehicle', { car: `${active.makeName} ${active.modelName}` })}, ${t('home.change')}` : t('look.noVehicleLine')}
-            onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
-            style={[styles.vehicleLine, row]}
-            scaleTo={0.985}
+            onPress={() => router.push('/trouver')}
+            style={({ pressed }) => [styles.allWays, row, pressed && { opacity: 0.7 }]}
           >
-            {active ? (
-              <MakeLogo name={active.makeName} slug={active.makeSlug} size={32} lifted={false} />
-            ) : (
-              <View style={styles.vehicleIcon}>
-                <NavCar size={18} color={Brand.gold400} />
-              </View>
-            )}
-            <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
-              <Text numberOfLines={1} style={[styles.vehicleName, { fontFamily: familyFor('bodySemi', rtl) }]}>
-                {active ? `${active.makeName} ${active.modelName}` : t('look.noVehicleLine')}
-              </Text>
-              <Text numberOfLines={1} style={[styles.vehicleSub, { fontFamily: familyFor('body', rtl) }]}>
-                {active ? vehicleLine(active) : t('look.chooseWhy')}
-              </Text>
-            </View>
-            <Text style={[styles.vehicleAction, { fontFamily: familyFor('bodySemi', rtl) }]}>{active ? t('home.change') : t('look.choose')}</Text>
-          </PressScale>
+            <Text variant="hint" tone={Brand.white}>
+              {t('look.find')}
+            </Text>
+            <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={Brand.white} />
+          </Pressable>
         </View>
 
         {/* The white sheet, pulled up over the road. */}
         <View style={[styles.sheet, { paddingBottom: tabBarSpace }]}>
-          {/* The customer first: the order on its way, what is due on the
-              car, and the car's own shelf — each only when it is real. */}
-          <HomeForYou />
-
           <View style={styles.column}>
             <View style={[styles.sectionHead, row]}>
               <Text style={[styles.sectionTitle, { fontFamily: familyFor('heading', rtl) }]}>{t('look.browse')}</Text>
@@ -213,6 +250,8 @@ export default function HomeScreen() {
                   </PressScale>
                 ))}
           </Rail>
+          {/* What the owner's own dates say is coming up for the main car. */}
+          <CareDueStrip />
 
           <View style={styles.column}>
             {families.status === 'loaded' ? (
@@ -236,16 +275,6 @@ export default function HomeScreen() {
           {/* Always there: the photo goes to the shop's inbox (/demande). */}
           <View style={[styles.column, styles.adviceWrap]}>
             <AdviceCard />
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push('/trouver')}
-              style={({ pressed }) => [styles.allWays, row, pressed && { opacity: 0.7 }]}
-            >
-              <Text variant="hint" tone={C.text} style={styles.allWaysText}>
-                {t('look.find')}
-              </Text>
-              <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={C.text} />
-            </Pressable>
           </View>
         </View>
       </ScrollView>
@@ -256,6 +285,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.navy950 },
   flex: { flex: 1, minWidth: 0 },
+  heroBg: { position: 'absolute', top: 0, left: 0, right: 0 },
   column: {
     width: '100%',
     maxWidth: MaxContentWidth,
@@ -273,13 +303,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
   roundBtnPressed: { backgroundColor: 'rgba(255,255,255,0.24)' },
-  heroRow: { alignItems: 'center', minHeight: 132 },
-  slogan: { gap: 6, paddingVertical: Spacing.two },
-  sloganText: { fontSize: 24, lineHeight: 29, letterSpacing: -0.4, color: Brand.white },
-  // The disc beside the promise, its light bleeding a little past the column.
-  disc: { width: 112, height: 127, marginVertical: -Spacing.one },
-  discLtr: { marginRight: -Spacing.four },
-  discRtl: { marginLeft: -Spacing.four, transform: [{ scaleX: -1 }] },
+  slogan: { paddingTop: Spacing.four, gap: Spacing.two },
+  sloganText: { fontSize: 30, lineHeight: 36, letterSpacing: -0.4, color: Brand.white },
   sloganAccent: { color: Brand.gold500 },
   searchPill: {
     marginTop: 0,
@@ -298,10 +323,9 @@ const styles = StyleSheet.create({
   // The car, part of the hero rather than a card on it.
   vehicleLine: {
     marginTop: Spacing.two,
-    marginBottom: Spacing.four,
     alignItems: 'center',
     gap: Spacing.three,
-    minHeight: 52,
+    minHeight: 56,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.tile,
     backgroundColor: 'rgba(255,255,255,0.07)',
@@ -313,9 +337,20 @@ const styles = StyleSheet.create({
   vehicleSub: { fontSize: 13, lineHeight: 17, color: '#aab6cc' },
   vehicleAction: { fontSize: 14, color: Brand.gold400 },
   // On its own dark pill: it sits over the road's centre line.
-  subtitle: { fontSize: 14, lineHeight: 19, color: '#c7d1e3' },
-  allWays: { alignSelf: 'center', alignItems: 'center', gap: 6, minHeight: Tap.min, marginTop: Spacing.two },
-  allWaysText: { textDecorationLine: 'underline' },
+  subtitle: { fontSize: 15, lineHeight: 21, color: '#c7d1e3', maxWidth: 320 },
+  allWays: {
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: Tap.min,
+    paddingHorizontal: Spacing.four,
+    marginTop: Spacing.three,
+    marginBottom: Spacing.four,
+    borderRadius: Radius.pill,
+    backgroundColor: Brand.navy900,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
   // The white sheet runs to the bottom of the content, so a short page never
   // shows the navy root beneath it.
   scroll: { flexGrow: 1 },

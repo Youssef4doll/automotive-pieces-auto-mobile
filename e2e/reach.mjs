@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { APP_URL, open, tap, tapLabel, testAccount } from './lib/drive.mjs';
+import { APP_URL, open, tap, tapLabel, testAccount, fillCheckout } from './lib/drive.mjs';
 
 /**
  * Reaching the shop, and being reached — end to end:
@@ -87,16 +87,9 @@ try {
   await page.getByRole('button', { name: /Ajouter au panier/ }).first().click();
   await page.waitForTimeout(800);
   await go(page, '/panier', 3000);
-  await page.getByRole('button', { name: /Passer la commande/ }).click();
+  await page.getByRole('button', { name: /^Commander/ }).click();
   await page.waitForTimeout(1800);
-  await page.getByLabel('Nom et prénom', { exact: true }).fill('Question Essai');
-  await page.getByLabel('Téléphone', { exact: true }).fill('20 444 555');
-  await tapLabel(page, 'Gouvernorat');
-  await tap(page, 'Ariana');
-  await tapLabel(page, 'Délégation');
-  await tap(page, 'La Soukra');
-  await page.getByLabel('Adresse', { exact: true }).fill('7 rue de la Question, Ariana');
-  await tap(page, 'Continuer');
+  await fillCheckout(page, { name: 'Question Essai', phone: '20 444 555', address: '7 rue de la Question, Ariana' });
   await page.waitForTimeout(3000);
   await page.getByRole('button', { name: /Confirmer la commande/ }).click();
   await page.waitForTimeout(4500);
