@@ -1,9 +1,7 @@
-import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { Platform } from 'react-native';
 
-import { TabBar } from '@/components/tab-bar';
+import { SYSTEM_TAB_BAR, TabBar } from '@/components/tab-bar';
 import { Brand, familyFor } from '@/constants/theme';
 import { TabIcon } from '@/illustrations/tab-icons';
 import { useI18n } from '@/i18n/provider';
@@ -51,8 +49,8 @@ import { useCartCount } from '@/store/cart';
  * (scripts/make-tab-icons.mjs) and shown in their own colours.
  */
 
-/** Apple's own tab bar where the system has liquid glass; asked once. */
-const SYSTEM_BAR = Platform.OS === 'ios' && isLiquidGlassAvailable();
+/** Apple's own tab bar where the system has liquid glass (components/tab-bar). */
+const SYSTEM_BAR = SYSTEM_TAB_BAR;
 
 const ICONS = {
   home: { default: require('@/assets/images/tabs/home.png'), selected: require('@/assets/images/tabs/home-on.png') },

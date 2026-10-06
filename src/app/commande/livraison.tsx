@@ -35,10 +35,11 @@ import { useOrders } from '@/store/orders';
 /**
  * Commande — one page, as a delivery app lays it out.
  *
- * What is being bought (folded to a line, open on a tap), where it goes and
- * who takes it (two rows, each opening a sheet with only its own fields), how
- * it travels (the shop's options, with the delay it publishes and the fee
- * the basket is charged), how it is paid (cash on delivery, the only way),
+ * What is being bought (folded to a line, open on a tap), how it travels
+ * (the shop's options, with the delay it publishes and the fee the basket is
+ * charged — first, because it decides whether there is an address to give),
+ * where it goes and who takes it (two rows, each opening a sheet with only
+ * its own fields), how it is paid (cash on delivery, the only way),
  * the code, and the shop's figures on a receipt. One button at the bottom,
  * carrying the total the shop has just priced.
  *
@@ -271,6 +272,30 @@ function Checkout({ settings }: { settings: ShopSettings }) {
             </View>
           ) : null}
 
+          {/* How it travels first — it decides whether there is an address to give:
+              the shop's options, its delay, the basket's fee. */}
+          <Text style={[styles.h2, start, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('checkout.method')}</Text>
+          <View style={styles.options}>
+            <Option
+              selected={method === 'DELIVERY'}
+              title={t('checkout.home')}
+              sub={delay}
+              price={fee === 0 ? t('cart.free') : formatDT(fee)}
+              free={fee === 0}
+              onPress={() => update({ deliveryMethod: 'DELIVERY' })}
+            />
+            {settings.pickup ? (
+              <Option
+                selected={method === 'PICKUP'}
+                title={t('checkout.pickup')}
+                sub={settings.pickup.hours}
+                price={t('checkout.pickupFree')}
+                free
+                onPress={() => update({ deliveryMethod: 'PICKUP' })}
+              />
+            ) : null}
+          </View>
+
           {/* Where, and who. */}
           <Text style={[styles.h2, start, { fontFamily: familyFor('headingStrong', rtl) }]}>{t(method === 'PICKUP' ? 'checkout.pickupAt' : 'checkout.addressTitle')}</Text>
           {method === 'PICKUP' && settings.pickup ? (
@@ -300,29 +325,6 @@ function Checkout({ settings }: { settings: ShopSettings }) {
             sub={details.notes.trim() ? null : t('checkout.noteRowWhy')}
             onPress={() => setSheet('note')}
           />
-
-          {/* How it travels: the shop's options, its delay, the basket's fee. */}
-          <Text style={[styles.h2, start, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('checkout.method')}</Text>
-          <View style={styles.options}>
-            <Option
-              selected={method === 'DELIVERY'}
-              title={t('checkout.home')}
-              sub={delay}
-              price={fee === 0 ? t('cart.free') : formatDT(fee)}
-              free={fee === 0}
-              onPress={() => update({ deliveryMethod: 'DELIVERY' })}
-            />
-            {settings.pickup ? (
-              <Option
-                selected={method === 'PICKUP'}
-                title={t('checkout.pickup')}
-                sub={settings.pickup.hours}
-                price={t('checkout.pickupFree')}
-                free
-                onPress={() => update({ deliveryMethod: 'PICKUP' })}
-              />
-            ) : null}
-          </View>
 
           {/* How it is paid: one way, said plainly. */}
           <Text style={[styles.h2, start, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('checkout.paymentTitle')}</Text>

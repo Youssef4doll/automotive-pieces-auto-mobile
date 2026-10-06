@@ -1,3 +1,4 @@
+import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import type { Tabs } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder, Platform, Pressable, StyleSheet, View } from 'react-native';
@@ -38,8 +39,20 @@ const SWELL_IN = { duration: 120 };
 const SWELL_OUT = { duration: 280 };
 const LANDING = 160;
 
-/** The bar's footprint over the bottom of the screen: what a screen ending under it must leave clear. */
+/** Apple's own tab bar where the system has liquid glass (app/(tabs)/_layout); asked once. */
+export const SYSTEM_TAB_BAR = Platform.OS === 'ios' && isLiquidGlassAvailable();
+
+/**
+ * The bar's footprint over the bottom of the screen: what a screen ending
+ * under it must leave clear.
+ *
+ * Under the system's bar, iOS already counts the bar in the bottom safe-area
+ * inset (about 83pt, not 34), so the inset is the whole footprint. Adding
+ * our own bar's height on top of it left a hand's width of white between the
+ * basket's "Commander" and the bar.
+ */
 export function tabBarFootprint(insetBottom: number) {
+  if (SYSTEM_TAB_BAR) return insetBottom;
   return TOP + BAR + Math.max(insetBottom, GAP);
 }
 
