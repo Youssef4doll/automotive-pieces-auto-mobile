@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { APP_URL, addBmw, open, tap, tapLabel, testAccount } from './lib/drive.mjs';
+import { APP_URL, addBmw, open, tap, tapLabel, testAccount, fillCheckout } from './lib/drive.mjs';
 
 const WEBSITE = process.env.WEBSITE_DIR ?? path.resolve(new URL('.', import.meta.url).pathname, '../../automotive-pieces-auto');
 
@@ -61,21 +61,13 @@ async function journey(name, fn, { token = null } = {}) {
   }
 }
 
-/** Fill the two checkout steps and place the order; returns its reference. */
+/** Fill the checkout page and place the order; returns its reference. */
 async function checkout(page) {
   await page.goto(`${APP_URL}/panier`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(3000);
-  await page.getByRole('button', { name: /Passer la commande/ }).click();
+  await page.getByRole('button', { name: /^Commander/ }).click();
   await page.waitForTimeout(1800);
-  await page.getByLabel('Nom et prénom', { exact: true }).fill('Test Journées');
-  await page.getByLabel('Téléphone', { exact: true }).fill('20 111 222');
-  await tapLabel(page, 'Gouvernorat');
-  await tap(page, 'Ariana');
-  // Greater Tunis and Nabeul ask for the delegation (lib/delegations).
-  await tapLabel(page, 'Délégation');
-  await tap(page, 'La Soukra');
-  await page.getByLabel('Adresse', { exact: true }).fill('3 rue du Test');
-  await tap(page, 'Continuer');
+  await fillCheckout(page, { name: 'Test Journées', phone: '20 111 222', address: '3 rue du Test' });
   await page.waitForTimeout(3000);
   await page.getByRole('button', { name: /Confirmer la commande/ }).click();
   await page.waitForTimeout(4500);
@@ -244,23 +236,17 @@ await journey('10 guest checkout by SMS', async ({ page }) => {
     check(true, '10 guest checkout: the shop cannot text here; sign-in first stays (skipped)');
     return;
   }
-  await page.getByRole('button', { name: /Passer la commande/ }).click();
+  await page.getByRole('button', { name: /^Commander/ }).click();
   await page.waitForTimeout(1800);
-  check(page.url().includes('/commande/livraison'), '10 guest checkout: the cart leads to the delivery step', page.url());
-  await page.getByLabel('Nom et prénom', { exact: true }).fill('Invité Essai');
-  await page.getByLabel('Téléphone', { exact: true }).fill(digits);
-  await tapLabel(page, 'Gouvernorat');
-  await tap(page, 'Ariana');
-  await tapLabel(page, 'Délégation');
-  await tap(page, 'La Soukra');
-  await page.getByLabel('Adresse', { exact: true }).fill('3 rue du Test');
-  await tap(page, 'Continuer');
+  check(page.url().includes('/commande/livraison'), '10 guest checkout: the cart leads to the checkout', page.url());
+  await fillCheckout(page, { name: 'Invité Essai', phone: digits, address: '3 rue du Test' });
+  await page.getByRole('button', { name: /Confirmer la commande/ }).click();
   await page.waitForTimeout(2500);
   const code = lastCode();
   check(Boolean(code), '10 guest checkout: a code went out to the number typed', code);
   await page.getByTestId('phone-code').fill(code ?? '');
   await page.waitForTimeout(4000);
-  check(page.url().includes('/commande/paiement'), '10 guest checkout: the code opens the account and goes on to payment', page.url());
+  check(page.url().includes('/commande/confirmation'), '10 guest checkout: the code opens the account and the order goes', page.url());
 });
 
 console.log(failures ? `\n${failures} failing check(s)` : '\nall journeys pass');

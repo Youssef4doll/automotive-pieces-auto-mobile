@@ -67,7 +67,8 @@ try {
   const totalOf = async () => {
     // Prices carry direction isolates (LRI/PDI) so they stay left-to-right in Arabic.
     const t = (await text(page)).replace(/[\u2066-\u2069]/g, '');
-    const m = t.match(/Total[^\n]*\n?\s*([\d\s ]+,\d{3})\s*DT/);
+    // The basket bar: "Sous-total" (delivery and stamp come at checkout).
+    const m = t.match(/Sous-total\s*\n?\s*([\d\s\u00a0\u202f]+,\d{3})\s*DT/);
     return m ? Number(m[1].replace(/\s/g, '').replace(',', '.')) : null;
   };
   const t1 = await totalOf();
@@ -79,12 +80,13 @@ try {
     check(t1 !== null && t2 !== null && t2 > t1, 'basket: one more raises the total (priced by the shop)', { t1, t2 });
   } else check(false, 'basket: a quantity control exists');
 
-  // ---- basket: a promo code is the shop's to judge; one it does not know is said, and taken out
+  // ---- checkout: a promo code is the shop's to judge; one it does not know is said, and taken out
+  await go('/commande/livraison', 3000);
   await page.getByText('Vous avez un code promo ?').click();
   await page.getByLabel('Code promo').fill('pas un code');
   await page.getByRole('button', { name: 'Appliquer' }).click();
   await page.waitForTimeout(2500);
-  check(await says(page, 'Le code PASUNCODE n’existe pas'), 'basket: an unknown promo code is refused by the shop');
+  check(await says(page, 'Le code PASUNCODE n’existe pas'), 'checkout: an unknown promo code is refused by the shop');
 
   // ---- incompatible part
   if (misfit) {
