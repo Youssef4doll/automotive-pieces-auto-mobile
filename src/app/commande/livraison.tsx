@@ -380,7 +380,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
           </Text>
         ) : null}
         <Button
-          label={quote ? `${t('checkout.place')} · ${formatDT(quote.total)}` : t('checkout.place')}
+          label={quote ? `${t('cart.go')} · ${formatDT(quote.total)}` : t('checkout.place')}
           onPress={submit}
           disabled={!canPlace}
           loading={placing || state.status === 'loading'}

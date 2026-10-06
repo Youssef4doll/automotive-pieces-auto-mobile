@@ -766,8 +766,10 @@ const styles = StyleSheet.create({
   },
   pressedDim: { opacity: 0.75 },
   note: { paddingTop: Spacing.two },
-  priceRow: { alignItems: 'baseline', gap: Spacing.two, paddingTop: Spacing.three },
-  price: { fontSize: 28, lineHeight: 34, color: C.text },
+  // Wraps as a row, never inside the price: "89,000 DT" stays on one line and
+  // the saving moves under it when the three do not fit.
+  priceRow: { alignItems: 'baseline', flexWrap: 'wrap', columnGap: Spacing.two, rowGap: Spacing.one, paddingTop: Spacing.three },
+  price: { fontSize: 26, lineHeight: 32, color: C.text, flexShrink: 0 },
   struck: { textDecorationLine: 'line-through' },
   dot: { width: 8, height: 8, borderRadius: 4 },
   // Reassurance, not a second call to action: no box, muted, below the button.

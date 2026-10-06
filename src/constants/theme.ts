@@ -166,12 +166,13 @@ export type ThemeColor = keyof typeof Colors.light;
  * once, here.
  */
 export const Fonts = {
-  body: 'Barlow_400Regular',
-  bodyMedium: 'Barlow_500Medium',
-  bodySemi: 'Barlow_600SemiBold',
-  display: 'BarlowSemiCondensed_600SemiBold',
-  heading: 'Archivo_700Bold',
-  headingStrong: 'Archivo_800ExtraBold',
+  // Trial: Montserrat for every Latin role (montserrat-preview).
+  body: 'Montserrat_400Regular',
+  bodyMedium: 'Montserrat_500Medium',
+  bodySemi: 'Montserrat_600SemiBold',
+  display: 'Montserrat_700Bold',
+  heading: 'Montserrat_700Bold',
+  headingStrong: 'Montserrat_800ExtraBold',
   arabic: 'Cairo_400Regular',
   arabicSemi: 'Cairo_700Bold',
   arabicHeading: 'Cairo_800ExtraBold',
@@ -226,13 +227,16 @@ export const Type = {
    * Leading is tight (31 on 26) because it is set in short stacked lines and
    * default leading pulls them apart until they stop reading as one object.
    */
-  hero: { fontSize: 26, lineHeight: 31, letterSpacing: -0.4 },
-  screenTitle: { fontSize: 28, lineHeight: 34 },
-  sectionTitle: { fontSize: 20, lineHeight: 26 },
-  rowTitle: { fontSize: 17, lineHeight: 22 },
-  body: { fontSize: 15, lineHeight: 21 },
-  label: { fontSize: 13, lineHeight: 17, letterSpacing: 0.6 },
-  hint: { fontSize: 13, lineHeight: 18 },
+  // Montserrat trial: a size under Barlow's, because Montserrat sets about
+  // 15% wider — at Barlow's sizes the checkout button and the product price
+  // wrapped to two lines.
+  hero: { fontSize: 24, lineHeight: 30, letterSpacing: -0.4 },
+  screenTitle: { fontSize: 26, lineHeight: 32 },
+  sectionTitle: { fontSize: 19, lineHeight: 25 },
+  rowTitle: { fontSize: 16, lineHeight: 21 },
+  body: { fontSize: 14, lineHeight: 20 },
+  label: { fontSize: 12, lineHeight: 16, letterSpacing: 0.4 },
+  hint: { fontSize: 12, lineHeight: 17 },
 } as const;
 
 /**

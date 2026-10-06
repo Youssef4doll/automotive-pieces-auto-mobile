@@ -91,7 +91,7 @@ try {
   await page.waitForTimeout(1800);
   await fillCheckout(page, { name: 'Question Essai', phone: '20 444 555', address: '7 rue de la Question, Ariana' });
   await page.waitForTimeout(3000);
-  await page.getByRole('button', { name: /Confirmer la commande/ }).click();
+  await page.getByRole('button', { name: /^Commander · / }).click();
   await page.waitForTimeout(4500);
   ref = (await text(page)).match(/CMD-\d+/)?.[0] ?? null;
   check(Boolean(ref), 'guest: the order is placed', ref);

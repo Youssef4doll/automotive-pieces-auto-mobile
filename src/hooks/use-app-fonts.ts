@@ -2,6 +2,13 @@ import { Archivo_700Bold, Archivo_800ExtraBold } from '@expo-google-fonts/archiv
 import { Barlow_400Regular, Barlow_500Medium, Barlow_600SemiBold } from '@expo-google-fonts/barlow';
 import { BarlowSemiCondensed_600SemiBold } from '@expo-google-fonts/barlow-semi-condensed';
 import { Cairo_400Regular, Cairo_700Bold, Cairo_800ExtraBold } from '@expo-google-fonts/cairo';
+import {
+  Montserrat_400Regular,
+  Montserrat_500Medium,
+  Montserrat_600SemiBold,
+  Montserrat_700Bold,
+  Montserrat_800ExtraBold,
+} from '@expo-google-fonts/montserrat';
 import { useFonts } from 'expo-font';
 
 /**
@@ -25,6 +32,11 @@ import { useFonts } from 'expo-font';
  */
 export function useAppFonts() {
   const [loaded, error] = useFonts({
+    Montserrat_400Regular,
+    Montserrat_500Medium,
+    Montserrat_600SemiBold,
+    Montserrat_700Bold,
+    Montserrat_800ExtraBold,
     Barlow_400Regular,
     Barlow_500Medium,
     Barlow_600SemiBold,

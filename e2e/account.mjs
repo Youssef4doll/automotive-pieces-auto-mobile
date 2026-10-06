@@ -103,7 +103,7 @@ try {
   check(new URL(page.url()).pathname === '/commande/livraison', 'sign-up from the cart: straight on to the checkout', page.url());
   await fillCheckout(page, { name: 'Compte Essai', phone: '20 333 444', address: '5 rue du Compte, Ariana' });
   await page.waitForTimeout(3000);
-  await page.getByRole('button', { name: /Confirmer la commande/ }).click();
+  await page.getByRole('button', { name: /^Commander · / }).click();
   await page.waitForTimeout(4500);
   ref = (await text(page)).match(/CMD-\d+/)?.[0] ?? null;
   check(Boolean(ref), 'signed in: the order is placed', ref);

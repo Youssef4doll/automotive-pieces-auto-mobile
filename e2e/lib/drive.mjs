@@ -242,8 +242,7 @@ export async function testAccount(name = 'Client Essai') {
 
 /**
  * Checkout is one page (app/commande/livraison): the contact and address
- * rows each open a sheet. Fills both; the caller presses "Confirmer la
- * commande".
+ * rows each open a sheet. Fills both; the caller presses "Commander · total".
  */
 export async function fillCheckout(page, { name, phone, address }) {
   await page.getByTestId('checkout-contact').click();

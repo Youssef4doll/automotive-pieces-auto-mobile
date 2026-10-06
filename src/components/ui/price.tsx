@@ -55,8 +55,8 @@ export function Price({
         <Text
           style={{
             fontFamily: familyFor('headingStrong', rtl),
-            fontSize: large ? 28 : 19,
-            lineHeight: large ? 32 : 23,
+            fontSize: large ? 24 : 17,
+            lineHeight: large ? 28 : 21,
             color: C.text,
             writingDirection: 'ltr',
           }}
@@ -66,8 +66,8 @@ export function Price({
         <Text
           style={{
             fontFamily: familyFor('bodySemi', rtl),
-            fontSize: large ? 15 : 12,
-            lineHeight: large ? 20 : 16,
+            fontSize: large ? 13 : 11,
+            lineHeight: large ? 18 : 15,
             color: C.text,
             // Optical, not mechanical: the decimals ride high against the
             // whole number instead of centring in the line box.

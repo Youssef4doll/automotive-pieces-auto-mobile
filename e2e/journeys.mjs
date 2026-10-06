@@ -69,7 +69,7 @@ async function checkout(page) {
   await page.waitForTimeout(1800);
   await fillCheckout(page, { name: 'Test Journées', phone: '20 111 222', address: '3 rue du Test' });
   await page.waitForTimeout(3000);
-  await page.getByRole('button', { name: /Confirmer la commande/ }).click();
+  await page.getByRole('button', { name: /^Commander · / }).click();
   await page.waitForTimeout(4500);
   const text = await bodyText(page);
   return text.match(/CMD-\d+/)?.[0] ?? null;
@@ -240,7 +240,7 @@ await journey('10 guest checkout by SMS', async ({ page }) => {
   await page.waitForTimeout(1800);
   check(page.url().includes('/commande/livraison'), '10 guest checkout: the cart leads to the checkout', page.url());
   await fillCheckout(page, { name: 'Invité Essai', phone: digits, address: '3 rue du Test' });
-  await page.getByRole('button', { name: /Confirmer la commande/ }).click();
+  await page.getByRole('button', { name: /^Commander · / }).click();
   await page.waitForTimeout(2500);
   const code = lastCode();
   check(Boolean(code), '10 guest checkout: a code went out to the number typed', code);
