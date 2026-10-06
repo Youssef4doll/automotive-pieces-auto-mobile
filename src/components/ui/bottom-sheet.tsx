@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -81,7 +81,9 @@ export function BottomSheet({
         <Pressable accessibilityRole="button" accessibilityLabel={t('garage.cancel')} onPress={onClose} style={StyleSheet.absoluteFill} />
       </Animated.View>
 
-      <View style={styles.dock} pointerEvents="box-none">
+      {/* A sheet with fields (checkout's address, the SMS code) rides up
+          with the keyboard rather than under it. */}
+      <KeyboardAvoidingView style={styles.dock} behavior={Platform.OS === 'ios' ? 'padding' : undefined} pointerEvents="box-none">
         <Animated.View
           accessibilityViewIsModal
           onLayout={(e) => setHeight(e.nativeEvent.layout.height + 40)}
@@ -105,7 +107,7 @@ export function BottomSheet({
 
           {children}
         </Animated.View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

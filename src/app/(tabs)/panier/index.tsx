@@ -1,24 +1,25 @@
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { Product } from '@/api/catalogue';
 import type { CartQuoteLine } from '@/api/orders';
 import { Button } from '@/components/ui/button';
 import { CompatibilityBadge } from '@/components/ui/compatibility';
-import { fitState } from '@/lib/fit';
-import { OrderSummary } from '@/components/ui/order-summary';
+import { fitState, FIT_LOOK } from '@/lib/fit';
+import { BottomSheet, SheetAction } from '@/components/ui/bottom-sheet';
+import { ProductTile } from '@/components/ui/product-tile';
 import { QuantityStepper } from '@/components/ui/quantity-stepper';
 import { Loading } from '@/components/ui/states';
 import { StickyBar } from '@/components/ui/sticky-bar';
 import { Text } from '@/components/ui/text';
 import { API_BASE_URL } from '@/constants/config';
-import { Border, Brand, C, Elevation, familyFor, IconSize, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { Border, Brand, C, Elevation, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { quoteOf, useCartQuote } from '@/hooks/use-cart-quote';
 import { PartImage } from '@/components/ui/part-image';
-import { PromoField } from '@/components/ui/promo-field';
+import { productApi } from '@/api/product';
 import { formatDT, ltr } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { MAX_QTY, useCart, type CartItem } from '@/store/cart';
@@ -57,15 +58,18 @@ export default function CartScreen() {
   const setQty = useCart((s) => s.setQty);
   const remove = useCart((s) => s.remove);
   const add = useCart((s) => s.add);
+  const clear = useCart((s) => s.clear);
   const { state, retry, hydrated } = useCartQuote();
   const quote = quoteOf(state);
   const lines = items.length;
+  const [clearing, setClearing] = useState(false);
   // Ordering takes an account: a guest is sent to sign in, and comes back to the checkout.
   const guest = useAccount((s) => s.status) !== 'signedIn';
-  // Where the shop can text, a guest goes on to the delivery step and
-  // confirms their number there; elsewhere they sign in first.
+  // Where the shop can text, a guest goes on to the checkout and confirms
+  // their number there; elsewhere they sign in first.
   const shopSettings = useShopSettings();
   const phoneCode = shopSettings.status === 'loaded' && shopSettings.data.auth?.phoneCode === true;
+  const alsoLike = useAlsoLike(items, quote?.suggestion ?? null);
   useFocusEffect(
     useCallback(() => {
       track('view_cart', { lines });
@@ -80,6 +84,9 @@ export default function CartScreen() {
   const stale = state.status === 'loading';
   const canCheckout = state.status === 'loaded' && !state.data.blocked;
   const count = items.reduce((n, i) => n + i.qty, 0);
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  const start = { textAlign: rtl ? ('right' as const) : ('left' as const) };
+  const signInFirst = guest && !phoneCode;
 
   return (
     <View style={styles.root}>
@@ -87,11 +94,24 @@ export default function CartScreen() {
         data={items}
         keyExtractor={(i) => i.productId}
         contentContainerStyle={styles.list}
-        ItemSeparatorComponent={Gap}
+        ItemSeparatorComponent={Rule}
         ListHeaderComponent={
-          <Text variant="hint" style={styles.count}>
-            {t('cart.itemCount', { n: count })}
-          </Text>
+          <View style={[styles.head, row]}>
+            <View style={styles.flexText}>
+              <Text style={[styles.headTitle, start, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('cart.yourCart')}</Text>
+              <Text variant="hint" style={start}>
+                {t('cart.itemCount', { n: count })}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('cart.clear')}
+              onPress={() => setClearing(true)}
+              style={({ pressed }) => [styles.roundBtn, pressed && styles.roundBtnPressed]}
+            >
+              <Feather name="trash-2" size={20} color={C.text} />
+            </Pressable>
+          </View>
         }
         renderItem={({ item }) => (
           <Line
@@ -105,20 +125,27 @@ export default function CartScreen() {
         )}
         ListFooterComponent={
           <View style={styles.footer}>
+            <PressScale
+              accessibilityRole="button"
+              onPress={() => router.navigate('/catalogue')}
+              style={[styles.addMore, { alignSelf: rtl ? 'flex-start' : 'flex-end' }]}
+              pressedStyle={styles.addMorePressed}
+              scaleTo={0.97}
+            >
+              <Text style={[styles.addMoreText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('cart.addMore')}</Text>
+            </PressScale>
+
             {quote && quote.remainingForFree > 0 ? (
               <FreeDelivery
                 remaining={quote.remainingForFree}
                 threshold={quote.freeShippingThreshold}
                 subtotal={quote.subtotal - quote.discount}
-                suggestion={stale ? null : quote.suggestion}
-                onAdd={(p) => {
-                  track('free_delivery_suggestion_added', { productId: p.id, gap: quote.remainingForFree });
-                  add(p);
-                }}
+                suggestion={null}
+                onAdd={add}
                 onOpen={(p) => router.push({ pathname: '/produit/[slug]', params: { slug: p.slug } })}
               />
             ) : quote ? (
-              <View style={[styles.freeDone, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+              <View style={[styles.freeDone, row]}>
                 <Feather name="gift" size={IconSize.medium} color={C.success} />
                 <Text variant="body" tone={C.success}>
                   {t('cart.freeEarned')}
@@ -126,19 +153,22 @@ export default function CartScreen() {
               </View>
             ) : null}
 
-            <PromoField quote={quote} stale={stale} />
-
-            {quote ? (
-              <OrderSummary
-                subtotal={quote.subtotal}
-                discount={quote.discount}
-                promoCode={quote.promo?.code}
-                deliveryFee={quote.deliveryFee}
-                stampDuty={quote.stampDuty}
-                total={quote.total}
-                deliveryLabel={t('cart.deliveryHome')}
-                stale={stale}
-              />
+            {/* Parts the shop links to what is in the basket, or that close
+                the gap to free delivery — the shop's own choice, never a
+                random part. Absent when it has none. */}
+            {alsoLike.length ? (
+              <View style={styles.also}>
+                <Text style={[styles.alsoTitle, start, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('cart.alsoLike')}</Text>
+                <View style={[styles.alsoGrid, row]}>
+                  {alsoLike.map((p) => (
+                    <View key={p.id} style={styles.alsoCell}>
+                      <ProductTile
+                        product={p}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
             ) : null}
 
             {state.status === 'failed' ? (
@@ -157,34 +187,101 @@ export default function CartScreen() {
         }
       />
 
+      {/* The parts' figure and the way on, as one bar. Delivery and the
+          stamp are added at checkout, so this says "Sous-total" — never a
+          "Total" that is not the total. */}
       <StickyBar inTabs>
         {guest ? (
-          <Text variant="hint" style={[styles.signInWhy, { textAlign: rtl ? 'right' : 'left' }]}>
+          <Text variant="hint" style={[styles.signInWhy, start]}>
             {t(phoneCode ? 'cart.phoneWhy' : 'cart.signInWhy')}
           </Text>
         ) : null}
-        <Button
-          label={
-            guest && !phoneCode
-              ? t('cart.signInToOrder')
-              : quote
-                ? `${t('cart.checkout')} · ${formatDT(quote.total)}`
-                : t('cart.checkout')
-          }
-          icon={guest && !phoneCode ? 'log-in' : undefined}
-          onPress={() =>
-            guest && !phoneCode
-              ? router.push({ pathname: '/compte/connexion', params: { then: 'checkout' } })
-              : router.push('/commande/livraison')
-          }
-          disabled={!canCheckout}
-          loading={stale}
-        />
+        {signInFirst ? (
+          <Button
+            label={t('cart.signInToOrder')}
+            icon="log-in"
+            onPress={() => router.push({ pathname: '/compte/connexion', params: { then: 'checkout' } })}
+            disabled={!canCheckout}
+            loading={stale}
+          />
+        ) : (
+          <View style={[styles.payRow, row]}>
+            <View style={[styles.payAmount, stale && styles.staleText]}>
+              <Text variant="hint" style={start}>
+                {t('cart.subtotal')}
+              </Text>
+              <Text style={[styles.payFigure, start, { fontFamily: familyFor('headingStrong', rtl) }]}>
+                {quote ? formatDT(quote.subtotal - quote.discount) : '—'}
+              </Text>
+            </View>
+            <PressScale
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canCheckout, busy: stale }}
+              disabled={!canCheckout}
+              onPress={() => router.push('/commande/livraison')}
+              style={[styles.go, row, !canCheckout && styles.goDisabled]}
+              pressedStyle={styles.goPressed}
+              scaleTo={0.98}
+            >
+              <Text style={[styles.goText, { fontFamily: familyFor('display', rtl) }]}>{t('cart.go')}</Text>
+              <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={20} color={C.onAccent} />
+            </PressScale>
+          </View>
+        )}
       </StickyBar>
+
+      <BottomSheet visible={clearing} onClose={() => setClearing(false)} title={t('cart.clearTitle')}>
+        <SheetAction
+          icon="trash-2"
+          label={t('cart.clear')}
+          tone="danger"
+          onPress={() => {
+            track('cart_cleared', { lines });
+            clear();
+            setClearing(false);
+          }}
+        />
+      </BottomSheet>
     </View>
   );
 }
 
+/**
+ * Up to four parts for "Vous aimerez aussi": the free-delivery suggestion the
+ * quote carries, then what the shop sells with the parts in the basket (its
+ * own links, and parts bought in the same orders that make mechanical sense
+ * beside them — website boughtTogether). Nothing already in the basket.
+ */
+function useAlsoLike(items: CartItem[], suggestion: Product | null): Product[] {
+  const engineId = useGarage((s) => s.active?.engineId);
+  const slugs = items
+    .map((i) => i.slug)
+    .filter((x): x is string => !!x)
+    .slice(0, 3)
+    .join('|');
+  const load = useCallback(
+    async (signal: AbortSignal) => {
+      const pages = await Promise.all(slugs.split('|').filter(Boolean).map((slug) => productApi.bySlug(slug, engineId, signal).catch(() => null)));
+      return pages.flatMap((p) => p?.boughtTogether ?? []);
+    },
+    [slugs, engineId],
+  );
+  const together = useResource(load);
+  const inCart = new Set(items.map((i) => i.productId));
+  const seen = new Set<string>();
+  const out: Product[] = [];
+  for (const p of [...(suggestion ? [suggestion] : []), ...(together.status === 'loaded' ? together.data : [])]) {
+    if (inCart.has(p.id) || seen.has(p.id) || p.availability === 'UNAVAILABLE' || p.fitment === 'DOES_NOT_FIT') continue;
+    seen.add(p.id);
+    out.push(p);
+  }
+  return out.slice(0, 4);
+}
+
+/**
+ * One line, as a shop's app lists it: the picture, the name, the verdict and
+ * the price, and the quantity pill at the end of the row.
+ */
 function Line({
   item,
   line,
@@ -202,62 +299,66 @@ function Line({
 }) {
   const { t, rtl } = useI18n();
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  const start = { textAlign: rtl ? ('right' as const) : ('left' as const) };
   // The shop's current view of the part when there is one; the phone's
   // snapshot while there is not.
   const product = line?.product;
   const name = product?.name ?? item.name;
-  const brand = product?.brand ?? item.brand;
   const image = product?.imageUrl ?? item.imageUrl;
   const family = product?.familySlug ?? item.familySlug;
   const problem = line && !line.buyable ? (line.product ? t('cart.lineUnavailable') : t('cart.lineGone')) : null;
+  const fit = product ? fitState(product) : null;
 
   return (
-    <View style={[styles.line, problem && styles.lineProblem]}>
+    <View style={[styles.line, row, problem && styles.lineProblem]}>
       <Pressable
         accessibilityRole={onOpen ? 'button' : undefined}
+        accessibilityLabel={name}
         disabled={!onOpen}
         onPress={onOpen}
-        style={({ pressed }) => [styles.lineTop, row, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.art, pressed && styles.pressed]}
       >
-        <View style={styles.art}>
-          {image ? (
-            <Image source={{ uri: `${API_BASE_URL}${image}` }} style={styles.photo} contentFit="contain" />
-          ) : family ? (
-            <PartImage slug={family} size={40} />
-          ) : (
-            <Feather name="package" size={IconSize.large} color={C.textMuted} />
-          )}
-        </View>
-        <View style={styles.lineText}>
-          {brand ? <Text variant="label">{brand}</Text> : null}
-          <Text variant="body" tone={C.text} numberOfLines={2}>
-            {name}
-          </Text>
-          {product ? <CompatibilityBadge state={fitState(product)} /> : null}
-        </View>
+        {image ? (
+          <Image source={{ uri: `${API_BASE_URL}${image}` }} style={styles.photo} contentFit="contain" />
+        ) : family ? (
+          <PartImage slug={family} size={60} />
+        ) : (
+          <Feather name="package" size={IconSize.large} color={C.textMuted} />
+        )}
       </Pressable>
 
-      {problem ? (
-        <View style={[styles.lineFoot, row]}>
-          <Text variant="hint" tone={C.danger} style={styles.lineText}>
-            {problem}
-          </Text>
-          <Button label={t('common.remove')} variant="secondary" onPress={onRemove} />
-        </View>
-      ) : (
-        <>
-          <View style={[styles.lineFoot, row]}>
-            <QuantityStepper value={item.qty} onChange={onQty} onRemove={onRemove} max={MAX_QTY} size="compact" />
-            <Text variant="rowTitle" style={stale && styles.staleText}>
-              {line ? formatDT(line.lineTotal) : '—'}
+      <View style={styles.lineText}>
+        <Text variant="body" tone={C.text} numberOfLines={2} style={start}>
+          {name}
+        </Text>
+        {fit ? (
+          <View style={[row, styles.fitLine]}>
+            <Feather name={FIT_LOOK[fit].icon} size={13} color={FIT_LOOK[fit].iconTone} />
+            <Text variant="hint" tone={FIT_LOOK[fit].tone} numberOfLines={1}>
+              {t(FIT_LOOK[fit].short)}
             </Text>
           </View>
-          {line?.backorder ? (
-            <Text variant="hint" tone={C.cautionText}>
-              {t('cart.backorder')}
-            </Text>
-          ) : null}
-        </>
+        ) : null}
+        {problem ? (
+          <Text variant="hint" tone={C.danger} style={start}>
+            {problem}
+          </Text>
+        ) : (
+          <Text style={[styles.linePrice, start, { fontFamily: familyFor('headingStrong', rtl) }, stale && styles.staleText]}>
+            {line ? formatDT(line.lineTotal) : '—'}
+          </Text>
+        )}
+        {line?.backorder && !problem ? (
+          <Text variant="hint" tone={C.cautionText} style={start}>
+            {t('cart.backorder')}
+          </Text>
+        ) : null}
+      </View>
+
+      {problem ? (
+        <Button label={t('common.remove')} variant="secondary" onPress={onRemove} />
+      ) : (
+        <QuantityStepper value={item.qty} onChange={onQty} onRemove={onRemove} max={MAX_QTY} size="compact" />
       )}
     </View>
   );
@@ -338,8 +439,8 @@ function FreeDelivery({
   );
 }
 
-function Gap() {
-  return <View style={{ height: Spacing.two }} />;
+function Rule() {
+  return <View style={styles.rule} />;
 }
 
 /**
@@ -439,10 +540,40 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
-    padding: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingTop: Spacing.three,
     paddingBottom: Spacing.five,
   },
-  count: { paddingBottom: Spacing.two },
+  head: { alignItems: 'center', gap: Spacing.two, paddingBottom: Spacing.three },
+  headTitle: { fontSize: 26, lineHeight: 32, letterSpacing: -0.3, color: C.text },
+  roundBtn: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface },
+  roundBtnPressed: { backgroundColor: C.surfacePressed },
+  rule: { height: StyleSheet.hairlineWidth, backgroundColor: C.border },
+  fitLine: { alignItems: 'center', gap: 4 },
+  linePrice: { fontSize: 16, lineHeight: 22, color: C.text, marginTop: 2 },
+  addMore: { minHeight: 48, paddingHorizontal: Spacing.four, borderRadius: Radius.pill, backgroundColor: C.surface, justifyContent: 'center' },
+  addMorePressed: { backgroundColor: C.surfacePressed },
+  addMoreText: { fontSize: 15, lineHeight: 20, color: C.text },
+  also: { gap: Spacing.three, paddingTop: Spacing.two },
+  alsoTitle: { fontSize: 22, lineHeight: 28, color: C.text },
+  alsoGrid: { flexWrap: 'wrap', gap: Spacing.two },
+  alsoCell: { width: '48.5%' },
+  payRow: { alignItems: 'center', gap: Spacing.three },
+  payAmount: { flex: 1, minWidth: 0 },
+  payFigure: { fontSize: 20, lineHeight: 26, color: C.text },
+  go: {
+    flex: 1.3,
+    minHeight: Tap.primary,
+    borderRadius: Radius.pill,
+    backgroundColor: C.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.one,
+    paddingHorizontal: Spacing.four,
+  },
+  goPressed: { backgroundColor: Brand.gold600 },
+  goDisabled: { opacity: 0.4 },
+  goText: { fontSize: 17, lineHeight: 22, color: C.onAccent },
   emptyRoot: { flex: 1, backgroundColor: C.background },
   emptyScroll: { paddingTop: Spacing.three },
   emptyColumn: { width: '100%', maxWidth: 480, alignSelf: 'center', paddingHorizontal: Spacing.three, gap: Spacing.four },
@@ -462,14 +593,13 @@ const styles = StyleSheet.create({
   startName: { textAlign: 'center', fontSize: 12, lineHeight: 15 },
   centred: { textAlign: 'center' },
   line: {
-    gap: Spacing.two,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: Border.thin,
-    borderColor: C.border,
+    alignItems: 'flex-start',
+    gap: Spacing.three,
+    paddingVertical: Spacing.three,
   },
   lineProblem: {
-    borderColor: '#f6d5d9',
+    paddingHorizontal: Spacing.two,
+    borderRadius: Radius.card,
     backgroundColor: C.dangerSurface,
   },
   lineTop: {
@@ -478,15 +608,15 @@ const styles = StyleSheet.create({
   },
   pressed: { backgroundColor: C.surface },
   art: {
-    width: 56,
-    height: 56,
-    borderRadius: Radius.tile,
+    width: 76,
+    height: 76,
+    borderRadius: Radius.card,
     backgroundColor: C.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   photo: { width: '80%', height: '80%' },
-  lineText: { flex: 1, gap: 2 },
+  lineText: { flex: 1, minWidth: 0, gap: 4 },
   lineFoot: {
     alignItems: 'center',
     justifyContent: 'space-between',

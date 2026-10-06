@@ -17,16 +17,20 @@ import { useI18n } from '@/i18n/provider';
  * here, the title is the same on every phone. Accueil has no header; its
  * navy hero is the top of the screen.
  */
-export function TabScreen({ title }: { title: string }) {
+export function TabScreen({ title, centered = false }: { title: string; centered?: boolean }) {
   const insets = useSafeAreaInsets();
   const { rtl } = useI18n();
   return (
     <View style={styles.root}>
-      <View style={[styles.header, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
+      <View style={[styles.header, centered && styles.headerCentered, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
         <Text
           accessibilityRole="header"
           numberOfLines={1}
-          style={[styles.title, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}
+          style={[
+            styles.title,
+            centered && styles.titleCentered,
+            { fontFamily: familyFor('headingStrong', rtl), textAlign: centered ? 'center' : rtl ? 'right' : 'left' },
+          ]}
         >
           {title}
         </Text>
@@ -39,6 +43,9 @@ export function TabScreen({ title }: { title: string }) {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
   header: { backgroundColor: C.background },
+  // A screen whose own content opens with a large title (the basket): the
+  // bar is a small centred name over a hairline, as a shop's app draws it.
+  headerCentered: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
   title: {
     minHeight: Platform.select({ ios: 52, android: 56, default: 64 }),
     lineHeight: Platform.select({ ios: 52, android: 56, default: 64 }),
@@ -46,4 +53,5 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: C.text,
   },
+  titleCentered: { minHeight: 52, lineHeight: 52, fontSize: 17 },
 });

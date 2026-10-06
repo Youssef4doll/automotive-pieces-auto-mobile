@@ -38,6 +38,7 @@ export type EventName =
   | 'add_to_cart'
   | 'remove_from_cart'
   | 'view_cart'
+  | 'cart_cleared'
   | 'begin_checkout'
   | 'purchase'
   | 'purchase_failed'
