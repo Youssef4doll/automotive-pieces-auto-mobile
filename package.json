@@ -3,9 +3,6 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
-    "@expo-google-fonts/archivo": "^0.4.2",
-    "@expo-google-fonts/barlow": "^0.4.1",
-    "@expo-google-fonts/barlow-semi-condensed": "^0.4.1",
     "@expo-google-fonts/cairo": "^0.4.2",
     "@expo-google-fonts/montserrat": "^0.4.2",
     "@expo/ui": "~57.0.19",

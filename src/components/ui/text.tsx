@@ -9,8 +9,8 @@ import { useI18n } from '@/i18n/provider';
  * It exists for two reasons, both of which are bugs that happened in the
  * first draft of the picker.
  *
- * The font family has to be chosen per language — Archivo has no Arabic
- * glyphs, so an Arabic heading rendered as a row of boxes. Doing that lookup
+ * The font family has to be chosen per language — Montserrat has no Arabic
+ * glyphs (Archivo, before it, had none either), so an Arabic heading rendered as a row of boxes. Doing that lookup
  * inside the text component means no screen can forget it.
  *
  * And `writingDirection` has to be stated. React Native infers direction from

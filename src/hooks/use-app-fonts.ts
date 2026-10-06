@@ -1,6 +1,3 @@
-import { Archivo_700Bold, Archivo_800ExtraBold } from '@expo-google-fonts/archivo';
-import { Barlow_400Regular, Barlow_500Medium, Barlow_600SemiBold } from '@expo-google-fonts/barlow';
-import { BarlowSemiCondensed_600SemiBold } from '@expo-google-fonts/barlow-semi-condensed';
 import { Cairo_400Regular, Cairo_700Bold, Cairo_800ExtraBold } from '@expo-google-fonts/cairo';
 import {
   Montserrat_400Regular,
@@ -14,8 +11,7 @@ import { useFonts } from 'expo-font';
 /**
  * The shop's faces, loaded before the first screen paints.
  *
- * Nine files, which is more than it looks: three weights of Barlow, one
- * condensed, two of Archivo and three of Cairo. React Native cannot fake a
+ * Eight files: five weights of Montserrat and three of Cairo. React Native cannot fake a
  * weight, so every weight the design uses is a file — see `Fonts` in
  * theme.ts.
  *
@@ -37,12 +33,6 @@ export function useAppFonts() {
     Montserrat_600SemiBold,
     Montserrat_700Bold,
     Montserrat_800ExtraBold,
-    Barlow_400Regular,
-    Barlow_500Medium,
-    Barlow_600SemiBold,
-    BarlowSemiCondensed_600SemiBold,
-    Archivo_700Bold,
-    Archivo_800ExtraBold,
     Cairo_400Regular,
     Cairo_700Bold,
     Cairo_800ExtraBold,

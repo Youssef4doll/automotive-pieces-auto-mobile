@@ -150,12 +150,14 @@ export const LaunchBackground = Brand.navy950;
 export type ThemeColor = keyof typeof Colors.light;
 
 /**
- * The four families, with the weights the screens actually use.
+ * The two families, with the weights the screens actually use.
  *
- * Barlow for body, Barlow Semi Condensed for the uppercase labels and
- * buttons, Archivo for headings. Cairo for Arabic, because none of the other
- * three has Arabic glyphs — under RTL the whole stack swaps, headings
- * included, which is what `familyFor` below is for.
+ * Montserrat for every Latin role — body, buttons, headings (October 2026,
+ * the owner's call; it replaced Barlow, Barlow Semi Condensed and Archivo).
+ * It sets about 15% wider than Barlow, which is why the type scale below is
+ * a size smaller than the website's. Cairo for Arabic, because Montserrat
+ * has no Arabic glyphs — under RTL the whole stack swaps, headings included,
+ * which is what `familyFor` below is for.
  *
  * React Native does not synthesise a bold: setting `fontWeight: '700'` on a
  * face that was loaded as Regular gives a fake, badly spaced bold on Android
@@ -166,7 +168,6 @@ export type ThemeColor = keyof typeof Colors.light;
  * once, here.
  */
 export const Fonts = {
-  // Trial: Montserrat for every Latin role (montserrat-preview).
   body: 'Montserrat_400Regular',
   bodyMedium: 'Montserrat_500Medium',
   bodySemi: 'Montserrat_600SemiBold',
@@ -227,9 +228,8 @@ export const Type = {
    * Leading is tight (31 on 26) because it is set in short stacked lines and
    * default leading pulls them apart until they stop reading as one object.
    */
-  // Montserrat trial: a size under Barlow's, because Montserrat sets about
-  // 15% wider — at Barlow's sizes the checkout button and the product price
-  // wrapped to two lines.
+  // A size under Barlow's, because Montserrat sets about 15% wider — at
+  // Barlow's sizes the checkout button and the product price wrapped.
   hero: { fontSize: 24, lineHeight: 30, letterSpacing: -0.4 },
   screenTitle: { fontSize: 26, lineHeight: 32 },
   sectionTitle: { fontSize: 19, lineHeight: 25 },
