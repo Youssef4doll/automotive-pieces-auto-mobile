@@ -19,6 +19,7 @@ import { Border, C, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/co
 import { useResource } from '@/hooks/use-resource';
 import { PartImage } from '@/components/ui/part-image';
 import { formatDate, formatDT } from '@/lib/format';
+import { DELIVERY_FLOW, PICKUP_FLOW, readyToCollect, statusNext, statusWord } from '@/lib/order-status';
 import { useI18n } from '@/i18n/provider';
 import { useCart } from '@/store/cart';
 import { useOrders } from '@/store/orders';
@@ -29,8 +30,6 @@ import { OrderNotify } from '@/components/ui/order-notify';
 import { OrderRating } from '@/components/ui/order-rating';
 import { OrderReturns } from '@/components/ui/order-returns';
 
-/** The shop's own status flow — see `ORDER_STATUS_FLOW` on the website. */
-const FLOW: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PREPARED', 'SHIPPED', 'DELIVERED'];
 
 /**
  * Suivi — where is my order?
@@ -107,7 +106,11 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   const cancelled = order.status === 'CANCELLED';
-  const reached = cancelled ? -1 : FLOW.indexOf(order.status);
+  // The shop's own flow (website ORDER_STATUS_FLOW), without "Expédiée" for
+  // an order collected in store (lib/order-status).
+  const pickup = order.deliveryMethod === 'PICKUP';
+  const FLOW = pickup ? PICKUP_FLOW : DELIVERY_FLOW;
+  const reached = cancelled ? -1 : FLOW.indexOf(pickup && order.status === 'SHIPPED' ? 'PREPARED' : order.status);
   const when = (status: OrderStatus) => order.history.filter((h) => h.status === status).at(-1)?.at ?? null;
 
   const buyAgain = () => {
@@ -183,10 +186,25 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
       <View style={styles.column}>
         <View style={[styles.statusCard, cancelled && styles.statusCancelled]}>
           <Text variant="label">{t('track.placedOn', { date: formatDate(order.createdAt, locale) })}</Text>
-          <Text variant="sectionTitle">{t(`status.${order.status}`)}</Text>
-          <Text variant="body">{t(`next.${order.status}`)}</Text>
+          <Text variant="sectionTitle">{t(statusWord(order.status, order.deliveryMethod))}</Text>
+          <Text variant="body">{t(statusNext(order.status, order.deliveryMethod))}</Text>
           <Text variant="hint">{t('orders.ref', { ref: order.ref })}</Text>
         </View>
+
+        {/* Waiting at the counter: where and when to come, in green. */}
+        {readyToCollect(order.status, order.deliveryMethod) && settings.status === 'loaded' && settings.data.pickup ? (
+          <View style={[styles.ready, row]}>
+            <Feather name="map-pin" size={IconSize.large} color={C.success} />
+            <View style={styles.flexText}>
+              <Text variant="rowTitle" tone={C.success}>
+                {t('checkout.pickupAt')}
+              </Text>
+              <Text variant="body" tone={C.text}>
+                {[settings.data.pickup.address, settings.data.pickup.hours].filter(Boolean).join(' · ')}
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         {!cancelled ? (
           <View style={styles.timeline} accessibilityRole="list">
@@ -195,7 +213,7 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
               const current = i === reached;
               const at = when(status);
               return (
-                <View key={status} style={[styles.step, row, i === FLOW.length - 1 && styles.stepLast]} accessibilityLabel={`${t(`status.${status}`)}${at ? `, ${formatDate(at, locale, true)}` : ''}`}>
+                <View key={status} style={[styles.step, row, i === FLOW.length - 1 && styles.stepLast]} accessibilityLabel={`${t(statusWord(status, order.deliveryMethod))}${at ? `, ${formatDate(at, locale, true)}` : ''}`}>
                   <View style={styles.rail}>
                     <View style={[styles.node, done && styles.nodeDone, current && styles.nodeCurrent]}>
                       {done && !current ? <Feather name="check" size={12} color={C.textInverse} /> : null}
@@ -204,7 +222,7 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
                   </View>
                   <View style={[styles.stepText, i === FLOW.length - 1 && styles.stepTextLast]}>
                     <Text variant={current ? 'rowTitle' : 'body'} tone={done ? C.text : C.textFaint}>
-                      {t(`status.${status}`)}
+                      {t(statusWord(status, order.deliveryMethod))}
                     </Text>
                     {at ? <Text variant="hint">{formatDate(at, locale, true)}</Text> : null}
                   </View>
@@ -334,6 +352,7 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
 const NODE = 22;
 
 const styles = StyleSheet.create({
+  ready: { alignItems: 'center', gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.card, backgroundColor: C.successSurface, borderWidth: Border.thin, borderColor: C.successBorder },
   cancelLink: { flexDirection: 'row', alignSelf: 'center', alignItems: 'center', gap: Spacing.one, minHeight: Tap.min, paddingHorizontal: Spacing.three, marginTop: Spacing.four },
   cancelText: { textDecorationLine: 'underline' },
   scroll: { paddingBottom: Spacing.six },

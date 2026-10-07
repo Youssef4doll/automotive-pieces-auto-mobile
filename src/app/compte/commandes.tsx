@@ -125,7 +125,7 @@ function OrderCard({ order, detail, loading, onPress }: { order: PlacedOrder; de
               {t('orders.more', { n: more })}
             </Text>
           ) : null}
-          {detail ? <StatusPill status={detail.status} /> : null}
+          {detail ? <StatusPill status={detail.status} method={detail.deliveryMethod} /> : null}
         </View>
         <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={C.textMuted} />
       </View>

@@ -28,8 +28,7 @@ export function ShopContact({ message, from }: { message: string; from: string }
       {whatsapp ? (
         <Button
           label={t('help.whatsapp')}
-          icon="message-circle"
-          variant="secondary"
+          variant="whatsapp"
           onPress={() => {
             track('whatsapp_opened', { from });
             void Linking.openURL(whatsappUrl(whatsapp, message)).catch(() => undefined);

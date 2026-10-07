@@ -173,6 +173,23 @@ export default function AskScreen() {
       <Stack.Screen options={{ title: t('ask.title') }} />
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.column}>
+          {/* WhatsApp first, where the shop has it: the green button with
+              its logo is what most customers reach for, and the message
+              leaves with the car already written. */}
+          {whatsapp ? (
+            <View style={styles.whatsapp}>
+              <Button label={t('help.whatsapp')} variant="whatsapp" onPress={openWhatsapp} testID="ask-whatsapp" />
+              <Text variant="hint" style={{ textAlign: 'center' }}>
+                {t('expert.whatsappWhy')}
+              </Text>
+              <View style={[row, styles.or]}>
+                <View style={styles.orRule} />
+                <Text variant="hint">{t('ask.orHere')}</Text>
+                <View style={styles.orRule} />
+              </View>
+            </View>
+          ) : null}
+
           <Text variant="body" style={align}>
             {photoFirst ? t('ask.leadPhoto') : t('ask.lead')}
           </Text>
@@ -295,14 +312,6 @@ export default function AskScreen() {
           ) : null}
           <Button label={t('ask.send')} icon="send" loading={busy} onPress={() => void submit()} testID="ask-send" />
 
-          {whatsapp ? (
-            <View style={styles.whatsapp}>
-              <Button label={t('expert.whatsappToo')} icon="message-circle" variant="secondary" onPress={openWhatsapp} />
-              <Text variant="hint" style={{ textAlign: 'center' }}>
-                {t('expert.whatsappWhy')}
-              </Text>
-            </View>
-          ) : null}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -335,5 +344,7 @@ const styles = StyleSheet.create({
   pickers: { gap: Spacing.two },
   notify: { alignItems: 'center', gap: Spacing.three, minHeight: Tap.min },
   link: { textDecorationLine: 'underline' },
-  whatsapp: { gap: Spacing.one, marginTop: Spacing.one },
+  whatsapp: { gap: Spacing.two },
+  or: { alignItems: 'center', gap: Spacing.two, marginTop: Spacing.one },
+  orRule: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: C.border },
 });

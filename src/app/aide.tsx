@@ -76,8 +76,7 @@ export default function HelpScreen() {
                 <>
                   <Button
                     label={t('help.whatsapp')}
-                    icon="message-circle"
-                    variant="secondary"
+                    variant="whatsapp"
                     onPress={() => {
                       track('whatsapp_opened', { from: 'help', vehicle: Boolean(vehicle) });
                       void open(whatsappUrl(c.whatsapp!, message));

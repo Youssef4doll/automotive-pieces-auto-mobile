@@ -57,6 +57,7 @@ export const Brand = {
    * invented its own colour for would put the two front doors in different
    * skins on the one signal a parts shop cannot afford to get wrong.
    */
+  green800: '#166534',
   green700: '#15803d',
   green600: '#16a34a',
   green200: '#bbf7d0',

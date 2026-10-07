@@ -1,8 +1,9 @@
 import { StyleSheet, View } from 'react-native';
 
-import type { OrderStatus } from '@/api/orders';
+import type { DeliveryMethod, OrderStatus } from '@/api/orders';
 import { Brand, C, familyFor, Radius } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
+import { readyToCollect, statusWord } from '@/lib/order-status';
 import { Text } from './text';
 
 /**
@@ -18,13 +19,14 @@ const TONE: Record<OrderStatus, { bg: string; fg: string; dot: string }> = {
   CANCELLED: { bg: C.dangerSurface, fg: C.danger, dot: C.danger },
 };
 
-export function StatusPill({ status }: { status: OrderStatus }) {
+export function StatusPill({ status, method }: { status: OrderStatus; method?: DeliveryMethod | null }) {
   const { t, rtl } = useI18n();
-  const tone = TONE[status];
+  // Ready at the counter is the customer's good news: green, like delivered.
+  const tone = readyToCollect(status, method) ? TONE.DELIVERED : TONE[status];
   return (
     <View style={[styles.pill, { backgroundColor: tone.bg, flexDirection: rtl ? 'row-reverse' : 'row' }]}>
       <View style={[styles.dot, { backgroundColor: tone.dot }]} />
-      <Text style={{ fontFamily: familyFor('bodySemi', rtl), fontSize: 12, lineHeight: 16, color: tone.fg }}>{t(`status.${status}`)}</Text>
+      <Text style={{ fontFamily: familyFor('bodySemi', rtl), fontSize: 12, lineHeight: 16, color: tone.fg }}>{t(statusWord(status, method))}</Text>
     </View>
   );
 }

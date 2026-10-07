@@ -33,6 +33,8 @@ import { useCart } from '@/store/cart';
 import { ProductTile } from '@/components/ui/product-tile';
 import { Rail } from '@/components/ui/rail';
 import { whatsappUrl } from '@/components/ui/shop-contact';
+import { MakeLogo } from '@/components/ui/make-logo';
+import { useVehicleLine } from '@/components/ui/vehicle-card';
 import { StockAlert } from '@/components/ui/stock-alert';
 
 /**
@@ -88,6 +90,7 @@ export default function ProductScreen() {
           headerRight: () =>
             product.status === 'loaded' ? (
               <View style={styles.headerActions}>
+                <PhotoButton sku={product.data.sku} />
                 <ShareButton product={product.data} />
               </View>
             ) : null,
@@ -240,6 +243,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
         refreshControl={refreshControl}
       >
         <View style={styles.column}>
+          <ShoppingFor />
           <Gallery product={product} />
 
           {/* Brand in the shop's red, then the name — the reference's order. */}
@@ -309,21 +313,17 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                   </Pressable>
                 ) : null}
                 {product.fitment === 'UNKNOWN' && settings?.contact.whatsapp ? (
-                  <Pressable
-                    accessibilityRole="button"
+                  <Button
+                    label={t('help.whatsapp')}
+                    variant="whatsapp"
                     onPress={() => {
                       track('whatsapp_opened', { from: 'to_check', sku: product.sku });
                       track('fitment_question_sent', { productId: product.id, sku: product.sku, channel: 'whatsapp' });
                       const text = t('product.whatsappCheck', { name: product.name, sku: product.sku, car: vehicleLabel(active) ?? '' });
                       void Linking.openURL(whatsappUrl(settings.contact.whatsapp!, text)).catch(() => undefined);
                     }}
-                    hitSlop={6}
-                    style={styles.fitLink}
-                  >
-                    <Text variant="hint" tone={C.text} style={styles.underline}>
-                      {t('help.whatsapp')}
-                    </Text>
-                  </Pressable>
+                    style={styles.waButton}
+                  />
                 ) : null}
                 {product.fitment === 'DOES_NOT_FIT' && active ? (
                   // The way out of a part that does not fit is the parts of
@@ -680,6 +680,64 @@ function KeyValue({ label, value, mono = false }: { label: string; value: string
 }
 
 /**
+ * "Envoyer une photo": the camera, one tap from any part — a photo of the
+ * old part goes to the shop with this part's reference and the car, and a
+ * seller answers (app/demande, photo first).
+ */
+function PhotoButton({ sku }: { sku: string }) {
+  const { t } = useI18n();
+  const router = useRouter();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t('search.sendPhoto')}
+      hitSlop={8}
+      onPress={() => router.push({ pathname: '/demande', params: { photo: '1', sku } })}
+      style={styles.share}
+    >
+      <Feather name="camera" size={IconSize.large} color={C.text} />
+    </Pressable>
+  );
+}
+
+/**
+ * Which car this page is judged against, said before anything else — the
+ * maker's mark, the car, the engine, and the way to change it. Without a
+ * car, the invitation to choose one.
+ */
+function ShoppingFor() {
+  const { t, rtl } = useI18n();
+  const router = useRouter();
+  const active = useGarage((s) => s.active);
+  const line = useVehicleLine();
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={active ? `${t('look.forVehicle', { car: `${active.makeName} ${active.modelName}` })}, ${t('home.change')}` : t('look.noVehicleLine')}
+      onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
+      style={({ pressed }) => [styles.forCar, row, pressed && { backgroundColor: C.surfacePressed }]}
+    >
+      {active ? (
+        <MakeLogo name={active.makeName} slug={active.makeSlug} size={32} lifted={false} />
+      ) : (
+        <Feather name="help-circle" size={IconSize.large} color={C.textMuted} />
+      )}
+      <View style={[styles.forCarText, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+        <Text variant="hint">{active ? t('product.shoppingFor') : t('look.noVehicleLine')}</Text>
+        {active ? (
+          <Text numberOfLines={1} style={[styles.forCarName, { fontFamily: familyFor('bodySemi', rtl) }]}>
+            {/* The maker's mark says the make; the model and engine fit the line. */}
+            {ltr([active.modelName, line(active)].filter(Boolean).join(' · '))}
+          </Text>
+        ) : null}
+      </View>
+      <Text style={[styles.forCarAction, { fontFamily: familyFor('bodySemi', rtl) }]}>{active ? t('home.change') : t('look.choose')}</Text>
+    </Pressable>
+  );
+}
+
+/**
  * Send the part's page on the website — to a mechanic, to a brother-in-law
  * who knows cars. The link is the shop's public page, which opens in any
  * browser, not an app link that only works on a phone with the app.
@@ -891,6 +949,11 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.two,
   },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
+  waButton: { marginTop: Spacing.two, alignSelf: 'stretch' },
+  forCar: { alignItems: 'center', gap: Spacing.three, minHeight: 52, paddingHorizontal: Spacing.three, marginTop: Spacing.two, marginBottom: Spacing.two, borderRadius: Radius.tile, backgroundColor: C.surface },
+  forCarText: { flex: 1, minWidth: 0 },
+  forCarName: { fontSize: 15, lineHeight: 20, color: C.text },
+  forCarAction: { fontSize: 14, lineHeight: 20, color: C.text, textDecorationLine: 'underline' },
   share: {
     width: Tap.min,
     height: Tap.min,

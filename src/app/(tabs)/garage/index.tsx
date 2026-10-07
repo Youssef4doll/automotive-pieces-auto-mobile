@@ -60,9 +60,8 @@ export default function GarageScreen() {
 
   // The principal first, then the others as they were added.
   const ordered = [active, ...vehicles.filter((v) => v.engineId !== active.engineId)];
-  // The rows under the car: what was ordered, every car, the next car.
+  // The rows under the car: every car, the next car. Orders live in Compte.
   const doors: { icon: React.ComponentProps<typeof Feather>['name']; label: string; hint: string; onPress: () => void; disabled?: boolean; accent?: boolean }[] = [
-    { icon: 'package', label: t('account.orders'), hint: t('look.bento.ordersHint'), onPress: () => router.push('/compte/commandes') },
     { icon: 'layers', label: t('look.myVehiclesTitle'), hint: t('look.myVehiclesHint'), onPress: () => router.push('/garage/vehicules') },
     { icon: 'plus', label: t('look.bento.add'), hint: t('look.find.carWhy'), onPress: () => router.push('/garage/ajouter'), disabled: isFull(), accent: true },
   ];

@@ -494,8 +494,7 @@ export default function SearchScreen() {
             {whatsapp ? (
               <Button
                 label={t('help.whatsapp')}
-                icon="message-circle"
-                variant="secondary"
+                variant="whatsapp"
                 onPress={() => {
                   track('whatsapp_opened', { from: 'zero_results' });
                   const text = [t('search.lookingFor', { q: trimmed }), active ? t('help.messageVehicle', { vehicle: vehicleLabel(active) ?? '' }) : null].filter(Boolean).join(' ');
