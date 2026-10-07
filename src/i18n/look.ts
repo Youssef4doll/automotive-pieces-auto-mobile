@@ -82,6 +82,7 @@ export const look = {
     'look.brandParts': '{n} pièce(s) de cette marque',
     'look.brandFamilies': 'Ses catégories',
     'look.brandAll': 'Toutes les pièces {brand}',
+    'brand.showAll': 'Tout afficher',
 
     'look.garageCount': '{n} véhicule(s)',
     'look.principalVehicle': 'Votre véhicule principal',
@@ -215,6 +216,7 @@ export const look = {
     'look.brandParts': '{n} part(s) from this brand',
     'look.brandFamilies': 'Categories',
     'look.brandAll': 'All {brand} parts',
+    'brand.showAll': 'Show all',
 
     'look.garageCount': '{n} vehicle(s)',
     'look.principalVehicle': 'Your main vehicle',
@@ -348,6 +350,7 @@ export const look = {
     'look.brandParts': '{n:one=قطعة واحدة;two=قطعتان;few=# قطع;many=# قطعة;other=# قطعة} من هذه العلامة',
     'look.brandFamilies': 'الفئات',
     'look.brandAll': 'كل قطع {brand}',
+    'brand.showAll': 'عرض الكل',
 
     'look.garageCount': '{n:one=سيارة واحدة;two=سيارتان;few=# سيارات;many=# سيارة;other=# سيارة}',
     'look.principalVehicle': 'سيارتك الرئيسية',

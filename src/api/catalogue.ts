@@ -168,8 +168,9 @@ export const productsApi = {
     if (engineId) params.set('engine', engineId);
     return get<ProductPage>(`/api/v1/catalogue/products?${params.toString()}`, { signal });
   },
-  ofBrand: (brandSlug: string, options: { engineId?: string; page?: number; sort?: ProductSort } = {}, signal?: AbortSignal) => {
+  ofBrand: (brandSlug: string, options: { engineId?: string; page?: number; sort?: ProductSort; family?: string } = {}, signal?: AbortSignal) => {
     const params = new URLSearchParams({ brand: brandSlug });
+    if (options.family) params.set('family', options.family);
     if (options.sort && options.sort !== 'relevance') params.set('sort', options.sort);
     if (options.engineId) params.set('engine', options.engineId);
     if (options.page && options.page > 1) params.set('page', String(options.page));

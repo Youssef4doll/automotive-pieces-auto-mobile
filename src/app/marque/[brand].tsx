@@ -1,7 +1,8 @@
+import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { catalogueApi, productsApi, type BrandFamily, type ProductSort } from '@/api/catalogue';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import { SortChip, SortSheet } from '@/components/ui/sort-sheet';
 import { Empty, Failed } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
 import { API_BASE_URL } from '@/constants/config';
-import { Border, Brand, C, Elevation, familyFor, Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { Border, Brand, C, Elevation, familyFor, Fonts, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useMoreProducts } from '@/hooks/use-more-products';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
@@ -27,37 +28,38 @@ import { useGarage } from '@/store/garage';
  * /admin/catalogue/marques, else the maker's real mark where one is on
  * record (illustrations/marques), else its name in type — never a logo drawn
  * for it. Then the families it has parts in, as the catalogue draws them,
- * each with how many of this maker's parts it holds; a family opens with
- * the maker already chosen. Then every one of its parts, judged against the
+ * each with how many of this maker's parts it holds; a family is a filter
+ * on this page — tap it and the list below keeps only that family, tap it
+ * again (or "Tout afficher") and it lets go. Then every one of its parts, judged against the
  * car in the garage, in the order the customer picks, the next page arriving
  * as the end of the grid comes into view.
  */
 export default function BrandScreen() {
   const { t, rtl } = useI18n();
-  const router = useRouter();
   const { width } = useWindowDimensions();
   const { brand, brandName } = useLocalSearchParams<{ brand: string; brandName?: string }>();
   const engineId = useGarage((s) => s.active?.engineId);
   const [sort, setSort] = useState<ProductSort>('relevance');
   const [sorting, setSorting] = useState(false);
+  const [family, setFamily] = useState<BrandFamily | null>(null);
 
   const loadPageInfo = useCallback((signal: AbortSignal) => catalogueApi.brand(brand, signal), [brand]);
   const info = useResource(loadPageInfo);
   const loadPage = useCallback(
-    (page: number, signal: AbortSignal) => productsApi.ofBrand(brand, { engineId, sort, page }, signal),
-    [brand, engineId, sort],
+    (page: number, signal: AbortSignal) => productsApi.ofBrand(brand, { engineId, sort, page, family: family?.slug }, signal),
+    [brand, engineId, sort, family],
   );
   const load = useCallback((signal: AbortSignal) => loadPage(1, signal), [loadPage]);
   const products = useResource(load);
-  const more = useMoreProducts(products, [brand, engineId, sort].join('|'), loadPage);
+  const more = useMoreProducts(products, [brand, engineId, sort, family?.slug ?? ''].join('|'), loadPage);
 
   const maker = info.status === 'loaded' ? info.data.brand : null;
   const title = maker?.name || brandName || (products.status === 'loaded' && products.data.products[0]?.brand) || brand;
   const columns = Math.min(width, MaxContentWidth) >= 600 ? 6 : 4;
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
-  const openFamily = (f: BrandFamily) =>
-    router.push({ pathname: '/famille/[family]', params: { family: f.slug, familyName: f.name, brand } });
+  // A filter, not a door: the same family again lets go.
+  const pickFamily = (f: BrandFamily) => setFamily((cur) => (cur?.slug === f.slug ? null : f));
 
   const header = (
     <View style={styles.header}>
@@ -85,34 +87,51 @@ export default function BrandScreen() {
                     <Skeleton style={styles.discSkeleton} />
                   </View>
                 ))
-              : info.data.families.map((f) => (
+              : info.data.families.map((f) => {
+                  const on = family?.slug === f.slug;
+                  return (
                   <PressScale
                     key={f.id}
                     accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
                     accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
-                    onPress={() => openFamily(f)}
-                    style={[styles.cell, { width: `${100 / columns}%` }]}
+                    onPress={() => pickFamily(f)}
+                    style={[styles.cell, { width: `${100 / columns}%` }, family && !on && styles.cellDim]}
                     scaleTo={0.94}
                   >
-                    <View style={styles.disc}>
+                    <View style={[styles.disc, on && styles.discOn]}>
                       <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 64 : 44} label={f.name} fit="cover" drawn />
+                      {on ? (
+                        <View style={styles.discCheck}>
+                          <Feather name="check" size={12} color={Brand.white} />
+                        </View>
+                      ) : null}
                     </View>
-                    <Text variant="hint" tone={C.text} numberOfLines={2} style={styles.familyName}>
+                    <Text variant="hint" tone={C.text} numberOfLines={2} style={[styles.familyName, on && { fontFamily: familyFor('bodySemi', rtl) }]}>
                       {f.name}
                     </Text>
                     <Text variant="hint" tone={C.textFaint} style={styles.count}>
                       {f.productCount}
                     </Text>
                   </PressScale>
-                ))}
+                  );
+                })}
           </View>
         </View>
       )}
 
       <View style={[styles.head, row]}>
         <Text style={[styles.sectionTitle, styles.flex, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
-          {t('look.brandAll', { brand: String(title) })}
+          {family ? `${family.name} · ${String(title)}` : t('look.brandAll', { brand: String(title) })}
         </Text>
+        {family ? (
+          <Pressable accessibilityRole="button" onPress={() => setFamily(null)} hitSlop={8} style={[styles.clear, row]}>
+            <Feather name="x" size={14} color={C.text} />
+            <Text variant="hint" tone={C.text}>
+              {t('brand.showAll')}
+            </Text>
+          </Pressable>
+        ) : null}
         <SortChip sort={sort} onPress={() => setSorting(true)} />
       </View>
     </View>
@@ -177,6 +196,10 @@ function Mark({ name, slug, logoUrl }: { name: string; slug: string; logoUrl: st
 }
 
 const styles = StyleSheet.create({
+  cellDim: { opacity: 0.55 },
+  discOn: { borderWidth: 2, borderColor: Brand.navy900 },
+  discCheck: { position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: 9, backgroundColor: Brand.navy900, alignItems: 'center', justifyContent: 'center' },
+  clear: { alignItems: 'center', gap: 4, minHeight: Tap.min, paddingHorizontal: Spacing.two, borderRadius: Radius.pill, backgroundColor: C.surface },
   root: { flex: 1, backgroundColor: C.background },
   pad: { padding: Spacing.three },
   header: { gap: Spacing.four, paddingTop: Spacing.three, paddingBottom: Spacing.one },

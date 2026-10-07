@@ -180,13 +180,17 @@ try {
   const brandTiles = await page.locator('[data-testid="brand-families"] [role="button"]').count();
   check(brandTiles === brandPage.families.length, 'brand: one tile per family it has parts in', { brandTiles, families: brandPage.families.length });
   check(await says(page, `Toutes les pièces ${topBrand.name}`), 'brand: then all its parts');
+  // A family is a filter on the page, not a door to another one.
   await page.locator('[data-testid="brand-families"] [role="button"]').first().click();
   await page.waitForTimeout(2500);
   check(
-    page.url().includes(`/famille/${brandPage.families[0].slug}`) && page.url().includes(`brand=${topBrand.slug}`),
-    'brand: a family opens with the maker chosen',
+    page.url().includes(`/marque/${topBrand.slug}`) && (await says(page, `${brandPage.families[0].name} · ${topBrand.name}`)),
+    'brand: a family filters the parts in place',
     page.url(),
   );
+  await page.locator('[data-testid="brand-families"] [role="button"]').first().click();
+  await page.waitForTimeout(2000);
+  check(await says(page, `Toutes les pièces ${topBrand.name}`), 'brand: the same family again lets go');
 
   // ---- four ways
   await go('/trouver');

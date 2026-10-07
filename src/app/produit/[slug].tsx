@@ -702,38 +702,93 @@ function PhotoButton({ sku }: { sku: string }) {
 
 /**
  * Which car this page is judged against, said before anything else — the
- * maker's mark, the car, the engine, and the way to change it. Without a
- * car, the invitation to choose one.
+ * maker's mark, the model and engine, and "Changer". Changing happens here:
+ * a sheet with the cars in the garage, and the verdict on this page follows
+ * the one picked (the page reloads for that engine). A car not yet in the
+ * garage still needs the picker, so that one row leaves the page.
  */
 function ShoppingFor() {
   const { t, rtl } = useI18n();
   const router = useRouter();
   const active = useGarage((s) => s.active);
+  const vehicles = useGarage((s) => s.vehicles);
+  const setActive = useGarage((s) => s.setActive);
+  const isFull = useGarage((s) => s.isFull);
   const line = useVehicleLine();
+  const [open, setOpen] = useState(false);
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  const start = { textAlign: rtl ? ('right' as const) : ('left' as const) };
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={active ? `${t('look.forVehicle', { car: `${active.makeName} ${active.modelName}` })}, ${t('home.change')}` : t('look.noVehicleLine')}
-      onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
-      style={({ pressed }) => [styles.forCar, row, pressed && { backgroundColor: C.surfacePressed }]}
-    >
-      {active ? (
-        <MakeLogo name={active.makeName} slug={active.makeSlug} size={32} lifted={false} />
-      ) : (
-        <Feather name="help-circle" size={IconSize.large} color={C.textMuted} />
-      )}
-      <View style={[styles.forCarText, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
-        <Text variant="hint">{active ? t('product.shoppingFor') : t('look.noVehicleLine')}</Text>
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={active ? `${t('look.forVehicle', { car: `${active.makeName} ${active.modelName}` })}, ${t('home.change')}` : t('look.noVehicleLine')}
+        onPress={() => (vehicles.length ? setOpen(true) : router.push('/garage/ajouter'))}
+        style={({ pressed }) => [styles.forCar, row, pressed && { backgroundColor: C.surfacePressed }]}
+      >
         {active ? (
-          <Text numberOfLines={1} style={[styles.forCarName, { fontFamily: familyFor('bodySemi', rtl) }]}>
-            {/* The maker's mark says the make; the model and engine fit the line. */}
-            {ltr([active.modelName, line(active)].filter(Boolean).join(' · '))}
-          </Text>
-        ) : null}
-      </View>
-      <Text style={[styles.forCarAction, { fontFamily: familyFor('bodySemi', rtl) }]}>{active ? t('home.change') : t('look.choose')}</Text>
-    </Pressable>
+          <MakeLogo name={active.makeName} slug={active.makeSlug} size={32} lifted={false} />
+        ) : (
+          <Feather name="help-circle" size={IconSize.large} color={C.textMuted} />
+        )}
+        <View style={[styles.forCarText, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+          <Text variant="hint">{active ? t('product.shoppingFor') : t('look.noVehicleLine')}</Text>
+          {active ? (
+            <Text numberOfLines={1} style={[styles.forCarName, { fontFamily: familyFor('bodySemi', rtl) }]}>
+              {/* The maker's mark says the make; the model and engine fit the line. */}
+              {ltr([active.modelName, line(active)].filter(Boolean).join(' · '))}
+            </Text>
+          ) : null}
+        </View>
+        <Text style={[styles.forCarAction, { fontFamily: familyFor('bodySemi', rtl) }]}>{active ? t('home.change') : t('look.choose')}</Text>
+      </Pressable>
+
+      <BottomSheet visible={open} onClose={() => setOpen(false)} title={t('look.myVehiclesTitle')}>
+        <ScrollView style={styles.carList}>
+          {vehicles.map((v) => {
+            const on = v.engineId === active?.engineId;
+            return (
+              <Pressable
+                key={v.engineId}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: on }}
+                onPress={() => {
+                  if (!on) setActive(v.engineId);
+                  setOpen(false);
+                }}
+                style={({ pressed }) => [styles.carRow, row, on && styles.carRowOn, pressed && { backgroundColor: C.surface }]}
+              >
+                <MakeLogo name={v.makeName} slug={v.makeSlug} size={36} lifted={false} />
+                <View style={styles.forCarText}>
+                  <Text numberOfLines={1} style={[styles.forCarName, start, { fontFamily: familyFor('bodySemi', rtl) }]}>
+                    {ltr(`${v.makeName} ${v.modelName}`)}
+                  </Text>
+                  <Text variant="hint" numberOfLines={1} style={start}>
+                    {line(v)}
+                  </Text>
+                </View>
+                {on ? <Feather name="check-circle" size={IconSize.large} color={C.success} /> : null}
+              </Pressable>
+            );
+          })}
+          {!isFull() ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                setOpen(false);
+                router.push('/garage/ajouter');
+              }}
+              style={({ pressed }) => [styles.carRow, row, pressed && { backgroundColor: C.surface }]}
+            >
+              <View style={styles.carAdd}>
+                <Feather name="plus" size={IconSize.medium} color={C.onAccent} />
+              </View>
+              <Text style={[styles.forCarName, styles.forCarText, start, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.bento.add')}</Text>
+            </Pressable>
+          ) : null}
+        </ScrollView>
+      </BottomSheet>
+    </>
   );
 }
 
@@ -953,6 +1008,10 @@ const styles = StyleSheet.create({
   forCar: { alignItems: 'center', gap: Spacing.three, minHeight: 52, paddingHorizontal: Spacing.three, marginTop: Spacing.two, marginBottom: Spacing.two, borderRadius: Radius.tile, backgroundColor: C.surface },
   forCarText: { flex: 1, minWidth: 0 },
   forCarName: { fontSize: 15, lineHeight: 20, color: C.text },
+  carList: { maxHeight: 420 },
+  carRow: { alignItems: 'center', gap: Spacing.three, minHeight: 60, paddingHorizontal: Spacing.two, borderRadius: Radius.tile },
+  carRowOn: { backgroundColor: C.surface },
+  carAdd: { width: 36, height: 36, borderRadius: 18, backgroundColor: Brand.gold500, alignItems: 'center', justifyContent: 'center' },
   forCarAction: { fontSize: 14, lineHeight: 20, color: C.text, textDecorationLine: 'underline' },
   share: {
     width: Tap.min,

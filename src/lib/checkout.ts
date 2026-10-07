@@ -41,10 +41,12 @@ export function checkoutProblems(d: CheckoutDetails): Partial<Record<CheckoutFie
   const email = d.email.trim();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) out.email = 'checkout.err.email';
 
-  if (!d.governorate) out.governorate = 'checkout.err.governorate';
-  else if (d.deliveryMethod === 'DELIVERY' && DELEGATIONS[d.governorate] && !d.delegation) out.delegation = 'checkout.err.delegation';
-
-  if (d.deliveryMethod === 'DELIVERY' && d.address.trim().length < 5) out.address = 'checkout.err.address';
+  // Where a driver goes. Collected in store, the shop is the place.
+  if (d.deliveryMethod === 'DELIVERY') {
+    if (!d.governorate) out.governorate = 'checkout.err.governorate';
+    else if (DELEGATIONS[d.governorate] && !d.delegation) out.delegation = 'checkout.err.delegation';
+    if (d.address.trim().length < 5) out.address = 'checkout.err.address';
+  }
 
   return out;
 }

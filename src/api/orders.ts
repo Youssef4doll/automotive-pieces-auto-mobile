@@ -143,7 +143,8 @@ export type OrderInput = {
   customerName: string;
   phone: string;
   email?: string;
-  governorate: string;
+  /** Required for delivery; collected in store, none is asked for. */
+  governorate?: string;
   address?: string;
   deliveryMethod: DeliveryMethod;
   paymentMethod: 'COD';

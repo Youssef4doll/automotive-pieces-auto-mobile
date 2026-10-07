@@ -81,7 +81,7 @@ export default function CheckoutScreen() {
   );
 }
 
-type Sheet = 'address' | 'governorate' | 'delegation' | 'contact' | 'note' | 'confirm' | null;
+type Sheet = 'address' | 'contact' | 'note' | 'confirm' | null;
 const CONTACT: CheckoutField[] = ['customerName', 'phone', 'email'];
 
 function Checkout({ settings }: { settings: ShopSettings }) {
@@ -99,6 +99,14 @@ function Checkout({ settings }: { settings: ShopSettings }) {
   const { state, retry } = useCartQuote(method);
   const quote = quoteOf(state);
   const [sheet, setSheet] = useState<Sheet>(null);
+  // Inside the address sheet: the form, or one of its two lists. One sheet
+  // whose content changes — iOS cannot present a modal while another is
+  // still closing, and the lists as sheets of their own never appeared.
+  const [pick, setPick] = useState<'governorate' | 'delegation' | null>(null);
+  const openSheet = (next: Sheet) => {
+    setPick(null);
+    setSheet(next);
+  };
   const [open, setOpen] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<CheckoutField, string>>>({});
   const [placing, setPlacing] = useState(false);
@@ -129,7 +137,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
         customerName: details.customerName.trim(),
         phone: details.phone.trim(),
         email: details.email.trim() || undefined,
-        governorate: details.governorate,
+        governorate: method === 'DELIVERY' ? details.governorate : undefined,
         // The delegation leads the address the driver reads.
         address: method === 'DELIVERY' ? [details.delegation, details.address.trim()].filter(Boolean).join(', ') : undefined,
         deliveryMethod: method,
@@ -188,7 +196,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
     setErrors(Object.fromEntries(Object.entries(problems).map(([k, v]) => [k, t(v)])));
     const missing = Object.keys(problems) as CheckoutField[];
     if (missing.length) {
-      setSheet(missing.some((f) => CONTACT.includes(f)) ? 'contact' : 'address');
+      openSheet(missing.some((f) => CONTACT.includes(f)) ? 'contact' : 'address');
       return;
     }
     update({ deliveryMethod: method });
@@ -204,11 +212,19 @@ function Checkout({ settings }: { settings: ShopSettings }) {
   const toCheck = active && quote ? quote.lines.filter((l) => l.product && fitState(l.product) !== 'FITS').length : 0;
   const canPlace = state.status === 'loaded' && !state.data.blocked && !placing;
   const where = [details.delegation, details.governorate].filter(Boolean).join(', ');
-  const addressSet = Boolean(details.governorate && (method === 'PICKUP' || details.address.trim()));
+  const addressSet = Boolean(details.governorate && details.address.trim());
   const contactSet = Boolean(details.customerName.trim() && details.phone.trim());
   const addressError = errors.governorate ?? errors.delegation ?? errors.address;
   const contactError = errors.customerName ?? errors.phone ?? errors.email;
-  const fee = quote ? quote.deliveryFee : settings.delivery.fee;
+  // Home delivery's own price, whichever option is picked: the quote's fee
+  // when it was priced for delivery; priced for pickup (0), the shop's fee
+  // unless the basket is over its free threshold. The order is priced again.
+  const fee =
+    method === 'DELIVERY' && quote
+      ? quote.deliveryFee
+      : quote && quote.subtotal - quote.discount >= quote.freeShippingThreshold
+        ? 0
+        : settings.delivery.fee;
 
   return (
     <View style={styles.root}>
@@ -298,18 +314,21 @@ function Checkout({ settings }: { settings: ShopSettings }) {
 
           {/* Where, and who. */}
           <Text style={[styles.h2, start, { fontFamily: familyFor('headingStrong', rtl) }]}>{t(method === 'PICKUP' ? 'checkout.pickupAt' : 'checkout.addressTitle')}</Text>
+          {/* Collected in store: the shop is the place — no address to give. */}
           {method === 'PICKUP' && settings.pickup ? (
             <Row icon="home" title={settings.pickup.address} sub={settings.pickup.hours} />
           ) : null}
-          <Row
-            icon="map-pin"
-            title={addressSet ? (method === 'PICKUP' ? details.governorate : details.address.trim()) : t('checkout.addAddress')}
-            sub={addressSet && method === 'DELIVERY' ? where : null}
-            strong={!addressSet}
-            error={addressError}
-            testID="checkout-address"
-            onPress={() => setSheet('address')}
-          />
+          {method === 'DELIVERY' ? (
+            <Row
+              icon="map-pin"
+              title={addressSet ? details.address.trim() : t('checkout.addAddress')}
+              sub={addressSet ? where : null}
+              strong={!addressSet}
+              error={addressError}
+              testID="checkout-address"
+              onPress={() => openSheet('address')}
+            />
+          ) : null}
           <Row
             icon="user"
             title={contactSet ? details.customerName.trim() : t('checkout.addContact')}
@@ -317,13 +336,13 @@ function Checkout({ settings }: { settings: ShopSettings }) {
             strong={!contactSet}
             error={contactError}
             testID="checkout-contact"
-            onPress={() => setSheet('contact')}
+            onPress={() => openSheet('contact')}
           />
           <Row
             icon="message-square"
             title={details.notes.trim() ? details.notes.trim() : t('checkout.noteRow')}
             sub={details.notes.trim() ? null : t('checkout.noteRowWhy')}
-            onPress={() => setSheet('note')}
+            onPress={() => openSheet('note')}
           />
 
           {/* How it is paid: one way, said plainly. */}
@@ -387,28 +406,63 @@ function Checkout({ settings }: { settings: ShopSettings }) {
         />
       </StickyBar>
 
-      {/* Where: governorate and delegation as lists inside the same sheet,
-          so a sheet never opens over a sheet. */}
-      <BottomSheet visible={sheet === 'address'} onClose={() => setSheet(null)} title={t('checkout.addressTitle')}>
-        <ScrollView style={styles.sheetBody} keyboardShouldPersistTaps="handled">
-          <View style={styles.fields}>
-            <Select
-              label={t('checkout.governorate')}
-              value={details.governorate}
-              placeholder={t('checkout.chooseGovernorate')}
-              error={errors.governorate}
-              onPress={() => setSheet('governorate')}
-            />
-            {method === 'DELIVERY' && delegations ? (
-              <Select
-                label={t('checkout.delegation')}
-                value={details.delegation ?? ''}
-                placeholder={t('checkout.chooseDelegation')}
-                error={errors.delegation}
-                onPress={() => setSheet('delegation')}
+      {/* Where: the form, and the governorate and delegation lists inside
+          the same sheet, so a sheet never opens over (or after) a sheet. */}
+      <BottomSheet
+        visible={sheet === 'address'}
+        onClose={() => (pick ? setPick(null) : setSheet(null))}
+        title={t(pick === 'governorate' ? 'checkout.chooseGovernorate' : pick === 'delegation' ? 'checkout.chooseDelegation' : 'checkout.addressTitle')}
+      >
+        {pick === 'governorate' ? (
+          <ScrollView style={styles.sheetList}>
+            {settings.governorates.map((g) => (
+              <Choice
+                key={g}
+                label={g}
+                selected={g === details.governorate}
+                onPress={() => {
+                  // A delegation belongs to its governorate; changing one clears the other.
+                  update({ governorate: g, ...(g !== details.governorate ? { delegation: '' } : {}) });
+                  setErrors((e) => ({ ...e, governorate: undefined }));
+                  setPick(null);
+                }}
               />
-            ) : null}
-            {method === 'DELIVERY' ? (
+            ))}
+          </ScrollView>
+        ) : pick === 'delegation' ? (
+          <ScrollView style={styles.sheetList}>
+            {(delegations ?? []).map((d) => (
+              <Choice
+                key={d}
+                label={d}
+                selected={d === details.delegation}
+                onPress={() => {
+                  update({ delegation: d });
+                  setErrors((e) => ({ ...e, delegation: undefined }));
+                  setPick(null);
+                }}
+              />
+            ))}
+          </ScrollView>
+        ) : (
+          <ScrollView style={styles.sheetBody} keyboardShouldPersistTaps="handled">
+            <View style={styles.fields}>
+              <Select
+                label={t('checkout.governorate')}
+                value={details.governorate}
+                placeholder={t('checkout.chooseGovernorate')}
+                error={errors.governorate}
+                onPress={() => setPick('governorate')}
+              />
+              {delegations ? (
+                <Select
+                  label={t('checkout.delegation')}
+                  value={details.delegation ?? ''}
+                  placeholder={t('checkout.chooseDelegation')}
+                  error={errors.delegation}
+                  onPress={() => setPick('delegation')}
+                />
+              ) : null}
               <FormField
                 label={t('checkout.address')}
                 hint={elsewhere ? t('checkout.addressElsewhere', { chosen: details.governorate, named: elsewhere }) : delegations ? t('checkout.addressHintShort') : t('checkout.addressHint')}
@@ -420,45 +474,10 @@ function Checkout({ settings }: { settings: ShopSettings }) {
                 multiline
                 maxLength={500}
               />
-            ) : null}
-            <Button label={t('checkout.save')} onPress={() => setSheet(null)} />
-          </View>
-        </ScrollView>
-      </BottomSheet>
-
-      <BottomSheet visible={sheet === 'governorate'} onClose={() => setSheet('address')} title={t('checkout.chooseGovernorate')}>
-        <ScrollView style={styles.sheetList}>
-          {settings.governorates.map((g) => (
-            <Choice
-              key={g}
-              label={g}
-              selected={g === details.governorate}
-              onPress={() => {
-                // A delegation belongs to its governorate; changing one clears the other.
-                update({ governorate: g, ...(g !== details.governorate ? { delegation: '' } : {}) });
-                setErrors((e) => ({ ...e, governorate: undefined }));
-                setSheet('address');
-              }}
-            />
-          ))}
-        </ScrollView>
-      </BottomSheet>
-
-      <BottomSheet visible={sheet === 'delegation'} onClose={() => setSheet('address')} title={t('checkout.chooseDelegation')}>
-        <ScrollView style={styles.sheetList}>
-          {(delegations ?? []).map((d) => (
-            <Choice
-              key={d}
-              label={d}
-              selected={d === details.delegation}
-              onPress={() => {
-                update({ delegation: d });
-                setErrors((e) => ({ ...e, delegation: undefined }));
-                setSheet('address');
-              }}
-            />
-          ))}
-        </ScrollView>
+              <Button label={t('checkout.save')} onPress={() => setSheet(null)} />
+            </View>
+          </ScrollView>
+        )}
       </BottomSheet>
 
       <BottomSheet visible={sheet === 'contact'} onClose={() => setSheet(null)} title={t('checkout.contactTitle')}>

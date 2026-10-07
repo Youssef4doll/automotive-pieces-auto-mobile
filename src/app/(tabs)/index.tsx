@@ -41,10 +41,9 @@ const LOGO = require('../../../assets/images/logo-lockup.png');
  * round doors on their arc.
  *
  * On the white sheet: the popular families (the four with the most parts,
- * counted), "Entretien auto" (a way into the filters — navigation, not a
- * promotion), the parts makers the shop carries, the shop's own campaigns
- * when it runs one, and "Besoin d'un conseil ?" — only when the shop has
- * published a way to be reached.
+ * counted), the shop's own campaigns when it runs one, "Entretien auto" (a
+ * way into the filters — navigation, not a promotion), the parts makers the
+ * shop carries, and "Besoin d'un conseil ?".
  *
  * Kept true where the reference could not be: the greeting uses the name the
  * customer gave at checkout, or none; there is no bell, because the app has
@@ -253,6 +252,11 @@ export default function HomeScreen() {
           {/* What the owner's own dates say is coming up for the main car. */}
           <CareDueStrip />
 
+          {/* The shop's real campaigns, when it is running one. */}
+          <View style={styles.promo}>
+            <PromoBanner />
+          </View>
+
           <View style={styles.column}>
             {families.status === 'loaded' ? (
               <View style={styles.care}>
@@ -260,11 +264,6 @@ export default function HomeScreen() {
               </View>
             ) : null}
 
-          </View>
-
-          {/* The shop's real campaigns, when it is running one. */}
-          <View style={styles.promo}>
-            <PromoBanner />
           </View>
 
           <View style={[styles.column, styles.block]}>
