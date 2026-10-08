@@ -2,20 +2,21 @@ import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { catalogueApi, productsApi, type BrandFamily, type ProductSort } from '@/api/catalogue';
 import { Button } from '@/components/ui/button';
 import { findMark, MarkGlyph } from '@/components/ui/make-logo';
 import { PartImage } from '@/components/ui/part-image';
 import { PressScale } from '@/components/ui/press-scale';
+import { Rail } from '@/components/ui/rail';
 import { ProductGrid } from '@/components/ui/product-grid';
 import { ProductListSkeleton, Skeleton } from '@/components/ui/skeleton';
 import { SortChip, SortSheet } from '@/components/ui/sort-sheet';
 import { Empty, Failed } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
 import { API_BASE_URL } from '@/constants/config';
-import { Border, Brand, C, Elevation, familyFor, Fonts, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
+import { Border, Brand, C, Elevation, familyFor, Fonts, Radius, Spacing, Tap } from '@/constants/theme';
 import { useMoreProducts } from '@/hooks/use-more-products';
 import { useResource } from '@/hooks/use-resource';
 import { useI18n } from '@/i18n/provider';
@@ -27,8 +28,8 @@ import { useGarage } from '@/store/garage';
  * The maker first, as the shop shows it: the mark uploaded in
  * /admin/catalogue/marques, else the maker's real mark where one is on
  * record (illustrations/marques), else its name in type — never a logo drawn
- * for it. Then the families it has parts in, as the catalogue draws them,
- * each with how many of this maker's parts it holds; a family is a filter
+ * for it. Then the families it has parts in, on one row that scrolls as on
+ * Home, each with how many of this maker's parts it holds; a family is a filter
  * on this page — tap it and the list below keeps only that family, tap it
  * again (or "Tout afficher") and it lets go. Then every one of its parts, judged against the
  * car in the garage, in the order the customer picks, the next page arriving
@@ -36,7 +37,6 @@ import { useGarage } from '@/store/garage';
  */
 export default function BrandScreen() {
   const { t, rtl } = useI18n();
-  const { width } = useWindowDimensions();
   const { brand, brandName } = useLocalSearchParams<{ brand: string; brandName?: string }>();
   const engineId = useGarage((s) => s.active?.engineId);
   const [sort, setSort] = useState<ProductSort>('relevance');
@@ -55,7 +55,6 @@ export default function BrandScreen() {
 
   const maker = info.status === 'loaded' ? info.data.brand : null;
   const title = maker?.name || brandName || (products.status === 'loaded' && products.data.products[0]?.brand) || brand;
-  const columns = Math.min(width, MaxContentWidth) >= 600 ? 6 : 4;
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   // A filter, not a door: the same family again lets go.
@@ -80,43 +79,45 @@ export default function BrandScreen() {
           <Text style={[styles.sectionTitle, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
             {t('look.brandFamilies')}
           </Text>
-          <View style={[styles.grid, row]} testID="brand-families">
+          {/* One row that scrolls, as on Home — not a grid that pushes the
+              parts down. */}
+          <Rail style={styles.bleed} contentContainerStyle={[styles.rail, row]} testID="brand-families">
             {info.status === 'loading'
-              ? Array.from({ length: 4 }, (_, i) => (
-                  <View key={i} style={[styles.cell, { width: `${100 / columns}%` }]}>
+              ? Array.from({ length: 5 }, (_, i) => (
+                  <View key={i} style={styles.cell}>
                     <Skeleton style={styles.discSkeleton} />
                   </View>
                 ))
               : info.data.families.map((f) => {
                   const on = family?.slug === f.slug;
                   return (
-                  <PressScale
-                    key={f.id}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: on }}
-                    accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
-                    onPress={() => pickFamily(f)}
-                    style={[styles.cell, { width: `${100 / columns}%` }, family && !on && styles.cellDim]}
-                    scaleTo={0.94}
-                  >
-                    <View style={[styles.disc, on && styles.discOn]}>
-                      <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 64 : 44} label={f.name} fit="cover" drawn />
-                      {on ? (
-                        <View style={styles.discCheck}>
-                          <Feather name="check" size={12} color={Brand.white} />
-                        </View>
-                      ) : null}
-                    </View>
-                    <Text variant="hint" tone={C.text} numberOfLines={2} style={[styles.familyName, on && { fontFamily: familyFor('bodySemi', rtl) }]}>
-                      {f.name}
-                    </Text>
-                    <Text variant="hint" tone={C.textFaint} style={styles.count}>
-                      {f.productCount}
-                    </Text>
-                  </PressScale>
+                    <PressScale
+                      key={f.id}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: on }}
+                      accessibilityLabel={`${f.name}, ${t('catalog.partCount', { n: f.productCount })}`}
+                      onPress={() => pickFamily(f)}
+                      style={[styles.cell, family && !on && styles.cellDim]}
+                      scaleTo={0.94}
+                    >
+                      <View style={[styles.disc, on && styles.discOn]}>
+                        <PartImage slug={f.slug} imageUrl={f.imageUrl} size={f.imageUrl ? 72 : 50} label={f.name} fit="cover" />
+                        {on ? (
+                          <View style={styles.discCheck}>
+                            <Feather name="check" size={12} color={Brand.white} />
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text variant="hint" tone={C.text} numberOfLines={2} style={[styles.familyName, on && { fontFamily: familyFor('bodySemi', rtl) }]}>
+                        {f.name}
+                      </Text>
+                      <Text variant="hint" tone={C.textFaint} style={styles.count}>
+                        {f.productCount}
+                      </Text>
+                    </PressScale>
                   );
                 })}
-          </View>
+          </Rail>
         </View>
       )}
 
@@ -223,12 +224,14 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.three },
   sectionTitle: { fontSize: 19, lineHeight: 25, color: C.text },
   flex: { flex: 1 },
-  grid: { flexWrap: 'wrap', rowGap: Spacing.three },
-  cell: { alignItems: 'center', gap: 4, paddingHorizontal: 2, paddingVertical: Spacing.one, borderRadius: Radius.tile },
+  // Home's rail (app/(tabs)/index): 84-wide cells, 72 discs, edge to edge.
+  bleed: { marginHorizontal: -Spacing.three },
+  rail: { gap: Spacing.two, paddingHorizontal: Spacing.three - 6, paddingVertical: Spacing.one },
+  cell: { width: 84, alignItems: 'center', gap: 4, paddingVertical: Spacing.one, borderRadius: Radius.tile },
   disc: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: Brand.white,
     borderWidth: 1,
     borderColor: C.border,
@@ -237,7 +240,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Elevation.resting,
   },
-  discSkeleton: { width: 64, height: 64, borderRadius: 32 },
+  discSkeleton: { width: 72, height: 72, borderRadius: 36 },
   familyName: { textAlign: 'center', fontSize: 12, lineHeight: 15, minHeight: 30 },
   count: { fontSize: 11, lineHeight: 13 },
   head: { alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },

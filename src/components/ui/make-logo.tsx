@@ -1,9 +1,13 @@
 import { Image } from 'expo-image';
+import { useCallback } from 'react';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { catalogueApi } from '@/api/catalogue';
+import { vehiclesApi } from '@/api/vehicles';
 import { API_BASE_URL } from '@/constants/config';
 import { Brand, C, Elevation, familyFor } from '@/constants/theme';
+import { useResource } from '@/hooks/use-resource';
 import { MAKE_MARKS, markKey, PARTS_BRAND_MARKS, type Mark } from '@/illustrations/marques';
 import { Text } from './text';
 
@@ -14,6 +18,12 @@ import { Text } from './text';
  * In order: the logo the shop uploaded in /admin; the real mark from
  * illustrations/marques; the initials, set in type, for a make nobody has a
  * mark for yet. Never an invented symbol.
+ *
+ * A caller that has the uploaded logo to hand passes it (the picker reads it
+ * with the makes). Everywhere else — a car in the garage keeps only its
+ * make's name and slug — the logo is looked up in the shop's list, so a make
+ * added in /admin with its logo (Škoda) shows it on Home, in the garage and
+ * on a part, not "SK".
  */
 export function MakeLogo({
   name,
@@ -33,6 +43,8 @@ export function MakeLogo({
   lifted?: boolean;
   style?: ViewStyle;
 }) {
+  const uploaded = useUploadedLogo(kind, slug ?? name, name, logoUrl === undefined);
+  const src = logoUrl ?? uploaded;
   const mark = findMark(kind, slug ?? name) ?? findMark(kind, name);
   const inner = Math.round(size * 0.56);
   return (
@@ -46,9 +58,9 @@ export function MakeLogo({
       accessibilityRole="image"
       accessibilityLabel={name}
     >
-      {logoUrl ? (
+      {src ? (
         <Image
-          source={{ uri: logoUrl.startsWith('http') ? logoUrl : `${API_BASE_URL}${logoUrl}` }}
+          source={{ uri: src.startsWith('http') ? src : `${API_BASE_URL}${src}` }}
           style={{ width: inner, height: inner }}
           contentFit="contain"
         />
@@ -63,6 +75,22 @@ export function MakeLogo({
       )}
     </View>
   );
+}
+
+type Listed = { slug: string; name: string; logoUrl: string | null };
+
+/** The uploaded logo of this make (or parts maker) in the shop's list, or null. */
+function useUploadedLogo(kind: 'make' | 'parts', slug: string, name: string, wanted: boolean): string | null {
+  const load = useCallback(
+    (signal: AbortSignal): Promise<Listed[]> =>
+      !wanted ? Promise.resolve([]) : kind === 'make' ? vehiclesApi.makes(signal) : catalogueApi.brands(signal),
+    [kind, wanted],
+  );
+  const list = useResource(load);
+  if (list.status !== 'loaded') return null;
+  const bySlug = slug.toLowerCase();
+  const byName = name.trim().toLowerCase();
+  return list.data.find((m) => m.slug === bySlug || m.name.toLowerCase() === byName)?.logoUrl ?? null;
 }
 
 /** Whether a real mark is on record, for layouts that change around one. */

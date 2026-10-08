@@ -68,8 +68,10 @@ export default function HomeScreen() {
   const artWidth = Math.round(artHeight * 0.75);
   const artSide = Math.round((width - column) / 2 + column * 0.885 - artWidth * DISC.x);
   const artTop = Math.round(insets.top + 118 - artHeight * DISC.y);
-  // The second line ends clear of the disc on a narrow phone too.
-  const sloganSize = column < 360 ? 22 : 26;
+  // A narrow phone: the second line ends clear of the disc, and the hero's
+  // lines keep their words.
+  const narrow = column < 360;
+  const sloganSize = narrow ? 22 : 26;
 
   // Light clock and battery over the night road; dark again on the white
   // screens. The tabs stay mounted, so this follows focus rather than mount.
@@ -108,11 +110,14 @@ export default function HomeScreen() {
             style={[styles.art, { top: artTop, width: artWidth, height: artHeight }, rtl ? { right: artSide, transform: [{ scaleX: -1 }] } : { left: artSide }]}
             pointerEvents="none"
           >
-            <Image source={RENDERS.hero} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityIgnoresInvertColors />
+            {/* Inset under the gradient's edge: flush, a one-pixel seam of the
+                bright floor showed down the hero as a line. */}
+            <Image source={RENDERS.hero} style={styles.artImage} contentFit="cover" accessibilityIgnoresInvertColors />
             {/* Into the navy on every side the text is: the photograph has no edge. */}
             <Svg style={StyleSheet.absoluteFill} width={artWidth} height={artHeight}>
               <Defs>
                 <LinearGradient id="fadeX" x1="0" y1="0" x2="1" y2="0">
+                  <Stop offset="0" stopColor={Brand.navy950} stopOpacity="1" />
                   <Stop offset="0.12" stopColor={Brand.navy950} stopOpacity="1" />
                   <Stop offset="0.42" stopColor={Brand.navy950} stopOpacity="0" />
                 </LinearGradient>
@@ -151,63 +156,71 @@ export default function HomeScreen() {
               <Text style={[styles.subtitle, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.slogan3')}</Text>
             </View>
 
-            {/* The main action, and the car it answers for, as one piece:
-                the search, and directly under it the line that says which
-                car every result will be judged against. */}
-            <PressScale
-              accessibilityRole="search"
-              accessibilityLabel={t('home.searchA11y')}
-              onPress={() => router.push('/recherche')}
-              style={[styles.searchPill, row]}
-              pressedStyle={styles.searchPillPressed}
-              scaleTo={0.985}
-            >
-              <Feather name="search" size={20} color={C.text} />
-              <Text numberOfLines={1} style={[styles.flex, styles.searchText, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>
-                {t('look.searchBig')}
-              </Text>
-              <View style={styles.searchGo}>
-                <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={18} color={C.onAccent} />
+            {/* The main action, and the car it answers for, as one white
+                card: the search, and under a rule the car every result will
+                be judged against. One card on the road, not three boxes. */}
+            <View style={styles.finder}>
+              <View style={styles.finderClip}>
+                <Pressable
+                  accessibilityRole="search"
+                  accessibilityLabel={t('home.searchA11y')}
+                  onPress={() => router.push('/recherche')}
+                  style={({ pressed }) => [styles.searchRow, row, pressed && styles.finderPressed]}
+                >
+                  <Feather name="search" size={20} color={C.text} />
+                  <Text numberOfLines={1} style={[styles.flex, styles.searchText, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+                    {t('look.searchBig')}
+                  </Text>
+                  <View style={styles.searchGo}>
+                    <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={18} color={C.onAccent} />
+                  </View>
+                </Pressable>
+                <View style={styles.finderRule} />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={active ? `${t('look.forVehicle', { car: `${active.makeName} ${active.modelName}` })}, ${t('home.change')}` : t('look.noVehicleLine')}
+                  onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
+                  style={({ pressed }) => [styles.carRow, row, pressed && styles.finderPressed]}
+                >
+                  {active ? (
+                    <MakeLogo name={active.makeName} slug={active.makeSlug} size={36} lifted={false} />
+                  ) : (
+                    <View style={styles.vehicleIcon}>
+                      <NavCar size={18} color={Brand.navy900} />
+                    </View>
+                  )}
+                  <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+                    <Text numberOfLines={1} style={[styles.vehicleName, { fontFamily: familyFor('bodySemi', rtl) }]}>
+                      {active ? `${active.makeName} ${active.modelName}` : t('look.noVehicleLine')}
+                    </Text>
+                    <Text numberOfLines={1} style={[styles.vehicleSub, { fontFamily: familyFor('body', rtl) }]}>
+                      {active ? vehicleLine(active) : t('look.chooseWhy')}
+                    </Text>
+                  </View>
+                  {/* The whole row is the action; its word only where the
+                      name keeps room beside it (no car: the line says it). */}
+                  <View style={[styles.vehicleAction, row]}>
+                    {active && !narrow ? (
+                      <Text style={[styles.vehicleActionText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('home.change')}</Text>
+                    ) : null}
+                    <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={18} color={C.text} />
+                  </View>
+                </Pressable>
               </View>
-            </PressScale>
+            </View>
 
-            <PressScale
+            {/* Every other way in (/trouver): a line to follow, not a fourth box. */}
+            <Pressable
               accessibilityRole="button"
-              accessibilityLabel={active ? `${t('look.forVehicle', { car: `${active.makeName} ${active.modelName}` })}, ${t('home.change')}` : t('look.noVehicleLine')}
-              onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
-              style={[styles.vehicleLine, row]}
-              scaleTo={0.985}
+              onPress={() => router.push('/trouver')}
+              style={({ pressed }) => [styles.allWays, row, pressed && { opacity: 0.7 }]}
             >
-              {active ? (
-                <MakeLogo name={active.makeName} slug={active.makeSlug} size={36} lifted={false} />
-              ) : (
-                <View style={styles.vehicleIcon}>
-                  <NavCar size={18} color={Brand.gold400} />
-                </View>
-              )}
-              <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
-                <Text numberOfLines={1} style={[styles.vehicleName, { fontFamily: familyFor('bodySemi', rtl) }]}>
-                  {active ? `${active.makeName} ${active.modelName}` : t('look.noVehicleLine')}
-                </Text>
-                <Text numberOfLines={1} style={[styles.vehicleSub, { fontFamily: familyFor('body', rtl) }]}>
-                  {active ? vehicleLine(active) : t('look.chooseWhy')}
-                </Text>
-              </View>
-              <Text style={[styles.vehicleAction, { fontFamily: familyFor('bodySemi', rtl) }]}>{active ? t('home.change') : t('look.choose')}</Text>
-            </PressScale>
-
+              <Text numberOfLines={1} style={[styles.allWaysText, narrow && styles.allWaysNarrow, { fontFamily: familyFor('bodySemi', rtl) }]}>
+                {t('look.find')}
+              </Text>
+              <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={16} color={Brand.white} />
+            </Pressable>
           </View>
-
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/trouver')}
-            style={({ pressed }) => [styles.allWays, row, pressed && { opacity: 0.7 }]}
-          >
-            <Text variant="hint" tone={Brand.white}>
-              {t('look.find')}
-            </Text>
-            <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={Brand.white} />
-          </Pressable>
         </View>
 
         {/* The white sheet, pulled up over the road. */}
@@ -275,6 +288,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   hero: { overflow: 'hidden' },
   art: { position: 'absolute' },
+  artImage: { position: 'absolute', top: 0, bottom: 0, left: 4, right: 0 },
   column: {
     width: '100%',
     maxWidth: MaxContentWidth,
@@ -295,51 +309,32 @@ const styles = StyleSheet.create({
   slogan: { paddingTop: Spacing.three, paddingBottom: Spacing.four, gap: Spacing.one },
   sloganText: { fontSize: 26, lineHeight: 32, letterSpacing: -0.4, color: Brand.white },
   sloganAccent: { color: Brand.gold500 },
-  searchPill: {
-    marginTop: 0,
-    alignItems: 'center',
-    gap: Spacing.two,
-    minHeight: 56,
-    paddingLeft: Spacing.three,
-    paddingRight: 6,
-    borderRadius: Radius.pill,
-    backgroundColor: Brand.white,
-    ...Elevation.resting,
-  },
-  searchPillPressed: { backgroundColor: C.surface },
+  // The search and the car in one white card; the clip keeps the pressed
+  // rows inside its corners while the outer view keeps the shadow.
+  finder: { borderRadius: Radius.card, backgroundColor: Brand.white, ...Elevation.resting },
+  finderClip: { borderRadius: Radius.card, overflow: 'hidden' },
+  finderPressed: { backgroundColor: C.surface },
+  finderRule: { height: StyleSheet.hairlineWidth, backgroundColor: C.border, marginHorizontal: Spacing.three },
+  searchRow: { alignItems: 'center', gap: Spacing.two, minHeight: 60, paddingLeft: Spacing.three, paddingRight: Spacing.two },
   searchText: { fontSize: 16, lineHeight: 22, color: C.textMuted },
   searchGo: { width: 44, height: 44, borderRadius: 22, backgroundColor: Brand.gold500, alignItems: 'center', justifyContent: 'center' },
-  // The car, part of the hero rather than a card on it.
-  vehicleLine: {
-    marginTop: Spacing.two,
-    alignItems: 'center',
-    gap: Spacing.three,
-    minHeight: 56,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.tile,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-  },
-  vehicleIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(251,192,0,0.14)', alignItems: 'center', justifyContent: 'center' },
-  vehicleName: { fontSize: 15, lineHeight: 20, color: Brand.white },
-  vehicleSub: { fontSize: 13, lineHeight: 17, color: '#aab6cc' },
-  vehicleAction: { fontSize: 14, color: Brand.gold400 },
-  // On its own dark pill: it sits over the road's centre line.
+  carRow: { alignItems: 'center', gap: Spacing.three, minHeight: 64, paddingHorizontal: Spacing.three },
+  vehicleIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
+  vehicleName: { fontSize: 15, lineHeight: 20, color: C.text },
+  vehicleSub: { fontSize: 13, lineHeight: 17, color: C.textMuted },
+  vehicleAction: { alignItems: 'center', gap: 2 },
+  vehicleActionText: { fontSize: 14, lineHeight: 18, color: C.text },
   subtitle: { fontSize: 15, lineHeight: 21, color: '#c7d1e3', maxWidth: 320 },
   allWays: {
     alignSelf: 'center',
     alignItems: 'center',
     gap: 6,
     minHeight: Tap.min,
-    paddingHorizontal: Spacing.four,
     marginTop: Spacing.two,
-    marginBottom: Spacing.four,
-    borderRadius: Radius.pill,
-    backgroundColor: Brand.navy900,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    marginBottom: Spacing.three,
   },
+  allWaysText: { fontSize: 14, lineHeight: 18, color: Brand.white, flexShrink: 1 },
+  allWaysNarrow: { fontSize: 13, lineHeight: 17 },
   // The white sheet runs to the bottom of the content, so a short page never
   // shows the navy root beneath it.
   scroll: { flexGrow: 1 },
