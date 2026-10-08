@@ -9,7 +9,7 @@ import { Text } from '@/components/ui/text';
 import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 
-import { MakeLogo, MarkGlyph } from '@/components/ui/make-logo';
+import { initials, MakeLogo, MarkGlyph } from '@/components/ui/make-logo';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { MAKE_MARKS, markKey } from '@/illustrations/marques';
 import { AdviceCard } from '@/components/ui/advice-card';
@@ -185,11 +185,15 @@ function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehic
           <Path d={rtl ? 'M140 0 L0 0 L0 210 L220 210 Z' : 'M200 0 L340 0 L340 210 L120 210 Z'} fill={Brand.white} opacity={0.035} />
           <Path d={rtl ? 'M90 0 L0 0 L0 210 L150 210 Z' : 'M250 0 L340 0 L340 210 L190 210 Z'} fill={Brand.white} opacity={0.03} />
         </Svg>
-        {mark ? (
-          <View style={[styles.watermark, rtl ? { left: -36 } : { right: -36 }]} pointerEvents="none">
+        {/* The make large and faded behind the words — every car has one:
+            a make the app has no mark for shows its initials there. */}
+        <View style={[styles.watermark, rtl ? { left: -36 } : { right: -36 }]} pointerEvents="none">
+          {mark ? (
             <MarkGlyph mark={mark} size={184} color={Brand.white} />
-          </View>
-        ) : null}
+          ) : (
+            <Text style={[styles.watermarkText, { fontFamily: familyFor('headingStrong', false) }]}>{initials(vehicle.makeName)}</Text>
+          )}
+        </View>
         {/* The whole pass opens "Mes véhicules" — a layer behind the words,
             so the "Rendre principal" button on it is not a button inside a
             button. */}
@@ -300,6 +304,7 @@ const styles = StyleSheet.create({
     ...Elevation.lifted,
   },
   watermark: { position: 'absolute', top: 26, opacity: 0.08 },
+  watermarkText: { width: 184, fontSize: 120, lineHeight: 184, textAlign: 'center', color: Brand.white },
   passHead: { alignItems: 'center', gap: Spacing.two },
   kicker: { fontSize: 12, lineHeight: 16, letterSpacing: 1.6, color: Brand.navy300, textTransform: 'uppercase', flexShrink: 1 },
   passTag: { alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.pill, backgroundColor: Brand.gold500 },

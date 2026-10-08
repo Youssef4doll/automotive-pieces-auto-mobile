@@ -10,9 +10,9 @@ what that became, and the rules it keeps.
 | A product with a photograph | the photograph | uploaded in /admin (`ProductImage`) |
 | A product without one | the family's studio render, tagged **Illustration** | `assets/renders/<family>.webp` |
 | A family (tiles, rails, family hero, search) | the family picture uploaded in /admin, else the family's render | `Category.imageUrl` / `assets/renders` |
-| A car (vehicle cards, garage hero, home vehicle line, picker) | the make's real mark in a white disc | `VehicleMake.logoUrl`, else `src/illustrations/marques.ts` |
+| A car (vehicle cards, garage hero, home vehicle line, picker) | the make's real mark in a white disc, and large and faded behind the garage pass | `src/illustrations/marques.ts`; the logo uploaded in /admin (`VehicleMake.logoUrl`) only for a make with no mark there; else the initials |
 | A parts maker (brand strip, search) | the uploaded logo, else the real mark where on record, else the name in type | `Brand.logoUrl` / `marques.ts` |
-| Home hero | a drilled disc under a gold caliper on a dark studio floor | `assets/renders/hero.webp` |
+| Home hero | no picture: the shop's navy as a gradient (navy950 → navy700) | `app/(tabs)/index.tsx` |
 | The car key (garage, Mes véhicules, error pages), the carte grise (VIN screen, picker shortcut), and the four ways in on /trouver: key, brake disc, reference label, phone asking the shop (also on the photo request and Mes questions) | the shop artist's drawings | `assets/illustrations/*.svg` → `src/illustrations/drawn` |
 
 ## Why renders, and not stock photographs
@@ -37,9 +37,18 @@ licence nobody holds. The make's mark says which car it is, truthfully, the
 way every parts catalogue does. The marks come from
 [Simple Icons](https://simpleicons.org) (SVG data released CC0); they remain
 their owners' trademarks and are used to identify the make, never as an
-endorsement. A logo the shop uploads always wins. The owner should confirm
-they are content to show them; removing one is deleting its line in
-`marques.ts` — the card falls back to initials.
+endorsement. For a car make the mark wins over a logo uploaded in /admin
+(the owner, October 2026: the uploaded ones were not good enough); the
+upload is shown only for a make with no mark. For a parts maker the upload
+wins. The owner should confirm they are content to show them; removing one
+is deleting its line in `marques.ts` — the card falls back to the upload,
+then to initials.
+
+Adding a make: `tools/marks/add-make-marks.js` (Simple Icons 16, installed
+outside the app — the script's header has the two commands). It has 36
+car makes on record. Simple Icons has no mark for Mercedes-Benz, Alfa
+Romeo, Land Rover, Jaguar, Chery, Geely, BYD, Isuzu, Lexus or Haval: those
+show the logo uploaded in /admin, else their initials.
 
 A procedural car was modelled and rejected: at the quality a lofted mesh
 reaches it reads as a toy, which is worse than no car.

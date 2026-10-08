@@ -122,7 +122,7 @@ async function launch({ reducedMotion = 'no-preference' } = {}) {
 
     await page.waitForTimeout(600);
     const home = await page.evaluate(() => document.body.innerText);
-    check(/La bonne pièce/.test(home), 'the home is underneath, ready', home.slice(0, 80));
+    check(/Pièce, référence/.test(home), 'the home is underneath, ready', home.slice(0, 80));
     await page.screenshot({ path: `${SHOTS}-home.png` });
     check(errors.length === 0, 'no errors on the way in', errors.slice(0, 3));
   } catch (e) {

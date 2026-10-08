@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Border, C, familyFor, Radius, Spacing } from '@/constants/theme';
+import { Border, Brand, C, familyFor, Radius, Spacing } from '@/constants/theme';
 import { formatDT } from '@/lib/format';
 import { useI18n } from '@/i18n/provider';
 import { Text } from './text';
@@ -10,6 +10,10 @@ import { Text } from './text';
  * the same rows on the basket, on the payment step and on a tracked order, so
  * the figure a customer agreed to reads the same way wherever they meet it
  * again.
+ *
+ * Delivery the basket earned for free shows what it would have cost, struck
+ * through beside a red "Gratuite" — the figure the shop sends
+ * (deliveryFeeWaived), never one worked out here.
  *
  * The stamp duty row appears only when the shop charges one. It is a real
  * dinar when it applies and it is inside the total; a row showing "0,00 DT"
@@ -21,6 +25,7 @@ export function OrderSummary({
   discount = 0,
   promoCode = null,
   deliveryFee,
+  deliveryFeeWaived = 0,
   stampDuty,
   total,
   deliveryLabel,
@@ -31,6 +36,8 @@ export function OrderSummary({
   discount?: number;
   promoCode?: string | null;
   deliveryFee: number;
+  /** The fee the shop waived because the basket is over its threshold. */
+  deliveryFeeWaived?: number;
   stampDuty: number;
   total: number;
   /** "Livraison", or "Retrait en magasin" when collecting. */
@@ -57,9 +64,20 @@ export function OrderSummary({
       ) : null}
       <View style={[styles.row, row]}>
         <Text variant="body">{deliveryLabel ?? t('cart.delivery')}</Text>
-        <Text variant="body" tone={deliveryFee === 0 ? C.success : C.text}>
-          {deliveryFee === 0 ? t('cart.free') : formatDT(deliveryFee)}
-        </Text>
+        {deliveryFee === 0 && deliveryFeeWaived > 0 ? (
+          <View style={[styles.waived, row]} accessibilityLabel={`${t('cart.free')}, ${formatDT(deliveryFeeWaived)}`}>
+            <View style={styles.badge}>
+              <Text style={[styles.badgeText, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('cart.freeBadge')}</Text>
+            </View>
+            <Text variant="body" tone={C.textMuted} style={styles.struck}>
+              {formatDT(deliveryFeeWaived)}
+            </Text>
+          </View>
+        ) : (
+          <Text variant="body" tone={deliveryFee === 0 ? C.success : C.text}>
+            {deliveryFee === 0 ? t('cart.free') : formatDT(deliveryFee)}
+          </Text>
+        )}
       </View>
       {stampDuty > 0 ? (
         <View style={[styles.row, row]}>
@@ -92,6 +110,10 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: Spacing.three,
   },
+  waived: { alignItems: 'center', gap: Spacing.two },
+  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: Brand.red600 },
+  badgeText: { fontSize: 12, lineHeight: 16, letterSpacing: 0.4, color: Brand.white },
+  struck: { textDecorationLine: 'line-through' },
   totalRow: {
     marginTop: Spacing.one,
     paddingTop: Spacing.two,

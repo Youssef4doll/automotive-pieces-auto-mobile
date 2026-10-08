@@ -261,7 +261,6 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
             variant={order.questions?.length ? 'secondary' : 'primary'}
             onPress={() => router.push({ pathname: '/demande', params: { order: order.ref } })}
           />
-          {!order.questions?.length ? <Text variant="hint">{t('track.askHint')}</Text> : null}
           <ShopContact message={t('track.whatsappMsg', { ref: order.ref })} from="order" />
         </View>
         {/* The way out, apart from the help and quieter than it: a red

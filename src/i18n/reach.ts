@@ -5,14 +5,13 @@
 export const reach = {
   fr: {
     'ask.title': 'Demander à la boutique',
-    'ask.lead': 'Une question sur une pièce, une commande, votre voiture ? Écrivez-la ici : un vendeur vous répond dans l’application, ou vous rappelle.',
-    'ask.leadPhoto': 'Envoyez une photo de la pièce (et de sa référence si elle est gravée) : un vendeur la reconnaît et vous répond.',
-    'ask.orHere': 'Ou ici, dans l\'application',
+    'ask.leadPhoto': 'Photographiez la pièce, et sa référence si elle est gravée.',
+    'ask.orHere': 'ou',
     'ask.aboutOrder': 'Au sujet de la commande {ref}',
     'ask.aboutPart': 'Au sujet de la pièce {sku}',
     'ask.question': 'Votre question',
-    'ask.questionPlaceholder': 'Ex. : cette plaquette va-t-elle sur ma voiture ? Quand ma commande part-elle ?',
-    'ask.photos': 'Photos — facultatif ({n}/3)',
+    'ask.questionPlaceholder': 'Ex. : cette plaquette va-t-elle sur ma voiture ?',
+    'ask.photos': 'Photos ({n}/3)',
     'ask.photoFailed': 'Cette photo n’a pas pu être ajoutée. Essayez-en une autre.',
     'ask.needSomething': 'Écrivez votre question ou ajoutez une photo.',
     'ask.notify': 'Me prévenir quand la boutique répond',
@@ -23,7 +22,6 @@ export const reach = {
     'ask.sentOrder': 'La réponse s’affichera aussi sur la page de la commande {ref}.',
     'ask.seeQuestions': 'Voir mes questions',
     'ask.backToOrder': 'Revenir à la commande',
-    'ask.phoneHint': 'Si la boutique préfère vous appeler, c’est à ce numéro.',
 
     'questions.title': 'Mes questions',
     'questions.emptyTitle': 'Aucune question pour l’instant',
@@ -40,7 +38,6 @@ export const reach = {
     'account.questionsNew': '{n:one=# nouvelle réponse;other=# nouvelles réponses}',
 
     'track.askShop': 'Demander à la boutique',
-    'track.askHint': 'Votre question part avec la référence de la commande ; la réponse s’affiche ici.',
 
     'help.ask': 'Poser une question',
     'help.photo': 'Envoyer une photo de la pièce',
@@ -125,14 +122,13 @@ export const reach = {
   },
   en: {
     'ask.title': 'Ask the shop',
-    'ask.lead': 'A question about a part, an order, your car? Write it here: someone at the shop answers you in the app, or calls you back.',
-    'ask.leadPhoto': 'Send a photo of the part (and of its reference if one is stamped on it): someone at the shop recognises it and answers you.',
-    'ask.orHere': 'Or here, in the app',
+    'ask.leadPhoto': 'Photograph the part, and its reference if one is stamped on it.',
+    'ask.orHere': 'or',
     'ask.aboutOrder': 'About order {ref}',
     'ask.aboutPart': 'About part {sku}',
     'ask.question': 'Your question',
-    'ask.questionPlaceholder': 'E.g. does this pad fit my car? When does my order leave?',
-    'ask.photos': 'Photos — optional ({n}/3)',
+    'ask.questionPlaceholder': 'E.g. does this pad fit my car?',
+    'ask.photos': 'Photos ({n}/3)',
     'ask.photoFailed': 'That photo could not be added. Try another one.',
     'ask.needSomething': 'Write your question or add a photo.',
     'ask.notify': 'Tell me when the shop answers',
@@ -143,7 +139,6 @@ export const reach = {
     'ask.sentOrder': 'The answer will also show on the page of order {ref}.',
     'ask.seeQuestions': 'See my questions',
     'ask.backToOrder': 'Back to the order',
-    'ask.phoneHint': 'If the shop would rather call you, it is on this number.',
 
     'questions.title': 'My questions',
     'questions.emptyTitle': 'No questions yet',
@@ -160,7 +155,6 @@ export const reach = {
     'account.questionsNew': '{n:one=# new answer;other=# new answers}',
 
     'track.askShop': 'Ask the shop',
-    'track.askHint': 'Your question goes with the order’s reference; the answer shows here.',
 
     'help.ask': 'Ask a question',
     'help.photo': 'Send a photo of the part',
@@ -245,14 +239,13 @@ export const reach = {
   },
   ar: {
     'ask.title': 'اسأل المحل',
-    'ask.lead': 'سؤال عن قطعة أو طلب أو سيارتك؟ اكتبه هنا: يجيبك بائع في التطبيق أو يتصل بك.',
-    'ask.leadPhoto': 'أرسل صورة القطعة (وصورة مرجعها إن كان محفورًا عليها): يتعرّف عليها بائع ويجيبك.',
-    'ask.orHere': 'أو هنا، داخل التطبيق',
+    'ask.leadPhoto': 'صوّر القطعة، ومرجعها إن كان محفورًا عليها.',
+    'ask.orHere': 'أو',
     'ask.aboutOrder': 'بخصوص الطلب {ref}',
     'ask.aboutPart': 'بخصوص القطعة {sku}',
     'ask.question': 'سؤالك',
-    'ask.questionPlaceholder': 'مثال: هل تناسب هذه الوسادة سيارتي؟ متى يُرسل طلبي؟',
-    'ask.photos': 'صور — اختياري ({n}/3)',
+    'ask.questionPlaceholder': 'مثال: هل تناسب هذه الوسادة سيارتي؟',
+    'ask.photos': 'صور ({n}/3)',
     'ask.photoFailed': 'تعذّرت إضافة هذه الصورة. جرّب صورة أخرى.',
     'ask.needSomething': 'اكتب سؤالك أو أضف صورة.',
     'ask.notify': 'أعلمني عندما يردّ المحل',
@@ -263,7 +256,6 @@ export const reach = {
     'ask.sentOrder': 'سيظهر الرد أيضًا في صفحة الطلب {ref}.',
     'ask.seeQuestions': 'عرض أسئلتي',
     'ask.backToOrder': 'العودة إلى الطلب',
-    'ask.phoneHint': 'إن فضّل المحل الاتصال بك، فعلى هذا الرقم.',
 
     'questions.title': 'أسئلتي',
     'questions.emptyTitle': 'لا أسئلة بعد',
@@ -280,7 +272,6 @@ export const reach = {
     'account.questionsNew': '{n:one=ردّ جديد;two=ردّان جديدان;few=# ردود جديدة;other=# ردًّا جديدًا}',
 
     'track.askShop': 'اسأل المحل',
-    'track.askHint': 'يُرسل سؤالك مع مرجع الطلب، ويظهر الرد هنا.',
 
     'help.ask': 'طرح سؤال',
     'help.photo': 'إرسال صورة القطعة',

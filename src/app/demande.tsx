@@ -179,9 +179,6 @@ export default function AskScreen() {
           {whatsapp ? (
             <View style={styles.whatsapp}>
               <Button label={t('help.whatsapp')} variant="whatsapp" onPress={openWhatsapp} testID="ask-whatsapp" />
-              <Text variant="hint" style={{ textAlign: 'center' }}>
-                {t('expert.whatsappWhy')}
-              </Text>
               <View style={[row, styles.or]}>
                 <View style={styles.orRule} />
                 <Text variant="hint">{t('ask.orHere')}</Text>
@@ -190,9 +187,13 @@ export default function AskScreen() {
             </View>
           ) : null}
 
-          <Text variant="body" style={align}>
-            {photoFirst ? t('ask.leadPhoto') : t('ask.lead')}
-          </Text>
+          {/* A question needs no preface: the field says it. A photo says
+              what to photograph. */}
+          {photoFirst ? (
+            <Text variant="body" style={align}>
+              {t('ask.leadPhoto')}
+            </Text>
+          ) : null}
 
           {/* What it is about: the order, the part, the car — attached on their own. */}
           <View style={styles.context}>
@@ -287,7 +288,6 @@ export default function AskScreen() {
             prefix="+216"
             ltr
             placeholder="22 334 455"
-            hint={t('ask.phoneHint')}
             error={touched && phoneBad ? t('checkout.err.phone') : null}
           />
 

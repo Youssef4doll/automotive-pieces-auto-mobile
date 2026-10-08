@@ -1895,3 +1895,38 @@ At the owner's request, from screenshots of the app in English:
   chevron. The photograph is inset 4 px under its gradient: flush, its
   bright floor showed down the hero as a one-pixel line. The families
   below are as they were.
+
+**The same day, third round** (the owner's answers to the second).
+
+- *Home's top: no photograph, no slogan.* The hero is the shop's navy as
+  a gradient (navy950 → navy700), running on under the sheet's rounded
+  corners. "La bonne pièce, pour la bonne route." is gone from Home (the
+  welcome keeps it). The search is its own white pill again and the car
+  its own translucent bar — the make's mark, the car, "Changer" in gold —
+  as before the second round. Without a car, or under 360 pt, the bar
+  ends in a chevron.
+- *Car makes: the app's marks first.* The logos uploaded in /admin were
+  not good enough, so for a car make `MakeLogo` draws the mark from
+  `illustrations/marques.ts` and only falls back to the upload for a make
+  with no mark there (then initials); it looks the upload up only then.
+  26 makes were added from Simple Icons (Škoda, Audi, SEAT, Ford, Opel,
+  Nissan…) by `tools/marks/add-make-marks.js`. Parts makers keep their
+  upload first. The garage pass draws every make large behind the words —
+  the mark, or its initials for a make with none.
+- *Free delivery says what it saved.* The quote carries
+  `deliveryFeeWaived` — the home-delivery fee the threshold waived, worked
+  out by the shop (`waivedDeliveryFee` in the website's `lib/shipping`;
+  0 for pickup or a charged delivery). The checkout's receipt shows it
+  struck through beside a red "GRATUITE". The app never computes it.
+- *"Pièces à vérifier" in the checkout* is one bold line ("1 pièce à
+  vérifier"); why, the promise and "Demander à la boutique" open from its
+  (i).
+- *A maker's page keeps its row.* Picking a family reloaded the parts in a
+  different tree, so the header — and the families' row in it — was
+  rebuilt and scrolled back to the first family. The page is now one
+  product list whatever its state (skeleton, empty, failed and "more" are
+  its footer), and a picked family's name has a line of its own above
+  "Tout afficher" and "Trier".
+- *Less to read when asking.* "Demander à la boutique" lost its preface,
+  the WhatsApp caption, the phone hint and half its placeholder; the
+  divider says "ou". The order page lost the line under its button.

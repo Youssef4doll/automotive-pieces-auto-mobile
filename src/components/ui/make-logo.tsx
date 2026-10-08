@@ -15,15 +15,16 @@ import { Text } from './text';
  * A maker's mark in a white disc — the car's make on a vehicle card, a
  * make in the picker, a parts maker in the brand strip.
  *
- * In order: the logo the shop uploaded in /admin; the real mark from
- * illustrations/marques; the initials, set in type, for a make nobody has a
- * mark for yet. Never an invented symbol.
+ * A car make: its real mark from illustrations/marques, drawn by the app
+ * (the owner, October 2026: the logos uploaded in /admin are not good
+ * enough); the uploaded logo only for a make the app has no mark for; the
+ * initials, set in type, when neither exists. A parts maker: the uploaded
+ * logo first, then the mark, then the initials. Never an invented symbol.
  *
  * A caller that has the uploaded logo to hand passes it (the picker reads it
  * with the makes). Everywhere else — a car in the garage keeps only its
- * make's name and slug — the logo is looked up in the shop's list, so a make
- * added in /admin with its logo (Škoda) shows it on Home, in the garage and
- * on a part, not "SK".
+ * make's name and slug — it is looked up in the shop's list, and only when
+ * it would be shown.
  */
 export function MakeLogo({
   name,
@@ -43,9 +44,11 @@ export function MakeLogo({
   lifted?: boolean;
   style?: ViewStyle;
 }) {
-  const uploaded = useUploadedLogo(kind, slug ?? name, name, logoUrl === undefined);
-  const src = logoUrl ?? uploaded;
   const mark = findMark(kind, slug ?? name) ?? findMark(kind, name);
+  // A make's own mark wins over anything uploaded; a parts maker's upload wins.
+  const markFirst = kind === 'make' && mark !== null;
+  const uploaded = useUploadedLogo(kind, slug ?? name, name, logoUrl === undefined && !markFirst);
+  const src = markFirst ? null : (logoUrl ?? uploaded);
   const inner = Math.round(size * 0.56);
   return (
     <View
@@ -113,7 +116,7 @@ export function findMark(kind: 'make' | 'parts', nameOrSlug: string): Mark | nul
 }
 
 /** "BMW" stays "BMW"; "Land Rover" becomes "LR"; "Citroën" becomes "CI". */
-function initials(name: string) {
+export function initials(name: string) {
   const words = name.trim().split(/[\s-]+/).filter(Boolean);
   if (words.length > 1) return words.slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
   const w = words[0] ?? '';

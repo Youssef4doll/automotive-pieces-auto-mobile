@@ -108,6 +108,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
     setSheet(next);
   };
   const [open, setOpen] = useState(false);
+  const [whyCheck, setWhyCheck] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<CheckoutField, string>>>({});
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<DictKey | null>(null);
@@ -272,19 +273,40 @@ function Checkout({ settings }: { settings: ShopSettings }) {
             </View>
           ) : null}
 
+          {/* Parts not confirmed for the car: one short line in bold; the
+              why, the promise and the way to ask behind the (i). */}
           {toCheck > 0 ? (
-            <View style={[styles.toCheck, row]}>
-              <Feather name="help-circle" size={IconSize.large} color={C.caution} />
-              <View style={[styles.flex, { gap: Spacing.two }]}>
-                <Text variant="hint" tone={C.text} style={start}>
-                  {t('checkout.toCheck', { n: toCheck })}
+            <View style={styles.toCheck}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: whyCheck }}
+                accessibilityHint={t('product.fitWhy')}
+                onPress={() => setWhyCheck((v) => !v)}
+                testID="checkout-to-check"
+                style={({ pressed }) => [styles.toCheckHead, row, pressed && { opacity: 0.7 }]}
+              >
+                <Feather name="help-circle" size={IconSize.medium} color={C.caution} />
+                <Text style={[styles.flex, styles.toCheckTitle, start, { fontFamily: familyFor('bodySemi', rtl) }]}>
+                  {t('checkout.toCheckTitle', { n: toCheck })}
                 </Text>
-                <Pressable accessibilityRole="button" onPress={() => router.push('/demande')} hitSlop={6} style={{ alignSelf: rtl ? 'flex-end' : 'flex-start' }}>
-                  <Text variant="hint" tone={C.text} style={styles.underline}>
-                    {t('expert.askShop')}
+                <Feather name={whyCheck ? 'x' : 'info'} size={IconSize.medium} color={C.text} />
+              </Pressable>
+              {whyCheck ? (
+                <View style={styles.toCheckBody}>
+                  <Text variant="hint" tone={C.text} style={start}>
+                    {t('checkout.toCheckWhy', { n: toCheck })}
                   </Text>
-                </Pressable>
-              </View>
+                  <Pressable
+                    accessibilityRole="link"
+                    onPress={() => router.push('/demande')}
+                    style={[styles.toCheckLink, { alignSelf: rtl ? 'flex-end' : 'flex-start' }]}
+                  >
+                    <Text variant="hint" tone={C.text} style={styles.underline}>
+                      {t('expert.askShop')}
+                    </Text>
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
           ) : null}
 
@@ -374,6 +396,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
                 discount={quote.discount}
                 promoCode={quote.promo?.code}
                 deliveryFee={quote.deliveryFee}
+                deliveryFeeWaived={quote.deliveryFeeWaived ?? 0}
                 stampDuty={quote.stampDuty}
                 total={quote.total}
                 deliveryLabel={t(method === 'PICKUP' ? 'checkout.pickup' : 'cart.deliveryHome')}
@@ -774,6 +797,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0, gap: 2 },
   pressed: { backgroundColor: C.surface },
   underline: { textDecorationLine: 'underline' },
+  toCheckHead: { alignItems: 'center', gap: Spacing.two, minHeight: Tap.min + 4 },
+  toCheckTitle: { fontSize: 15, lineHeight: 20, color: C.text },
+  toCheckBody: { paddingBottom: Spacing.two },
+  toCheckLink: { minHeight: Tap.min, justifyContent: 'center' },
   orderHead: { alignItems: 'center', gap: Spacing.two, paddingTop: Spacing.four, paddingBottom: Spacing.two },
   h1: { fontSize: 26, lineHeight: 32, letterSpacing: -0.3, color: C.text },
   h2: { fontSize: 21, lineHeight: 27, color: C.text, paddingTop: Spacing.four, paddingBottom: Spacing.two },
@@ -781,9 +808,7 @@ const styles = StyleSheet.create({
   lineRow: { gap: Spacing.three, alignItems: 'flex-start' },
   fitLine: { alignItems: 'center', gap: Spacing.one, marginTop: 2 },
   toCheck: {
-    alignItems: 'flex-start',
-    gap: Spacing.three,
-    padding: Spacing.three,
+    paddingHorizontal: Spacing.three,
     marginTop: Spacing.two,
     borderRadius: Radius.card,
     borderWidth: Border.thin,

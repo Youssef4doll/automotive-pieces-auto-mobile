@@ -29,6 +29,9 @@ export type CartQuote = {
   suggestion: Product | null;
   deliveryMethod: DeliveryMethod;
   deliveryFee: number;
+  /** The home-delivery fee the threshold waived, to strike through beside
+   *  "Gratuite"; 0 for pickup, when delivery is charged, or from an older shop. */
+  deliveryFeeWaived?: number;
   stampDuty: number;
   total: number;
   freeShippingThreshold: number;

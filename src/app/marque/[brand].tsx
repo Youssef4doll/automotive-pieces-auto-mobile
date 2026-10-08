@@ -121,19 +121,30 @@ export default function BrandScreen() {
         </View>
       )}
 
-      <View style={[styles.head, row]}>
-        <Text style={[styles.sectionTitle, styles.flex, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
-          {family ? `${family.name} · ${String(title)}` : t('look.brandAll', { brand: String(title) })}
-        </Text>
+      {/* With a family picked, its name has the line to itself and the
+          two chips go under it: a long family ("Refroidissement moteur")
+          beside them broke mid-word and pushed "Trier" off the screen. */}
+      <View style={styles.headWrap}>
         {family ? (
-          <Pressable accessibilityRole="button" onPress={() => setFamily(null)} hitSlop={8} style={[styles.clear, row]}>
-            <Feather name="x" size={14} color={C.text} />
-            <Text variant="hint" tone={C.text}>
-              {t('brand.showAll')}
-            </Text>
-          </Pressable>
+          <Text style={[styles.sectionTitle, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+            {`${family.name} · ${String(title)}`}
+          </Text>
         ) : null}
-        <SortChip sort={sort} onPress={() => setSorting(true)} />
+        <View style={[styles.head, row]}>
+          {family ? (
+            <Pressable accessibilityRole="button" onPress={() => setFamily(null)} hitSlop={8} style={[styles.clear, row]}>
+              <Feather name="x" size={14} color={C.text} />
+              <Text variant="hint" tone={C.text}>
+                {t('brand.showAll')}
+              </Text>
+            </Pressable>
+          ) : (
+            <Text style={[styles.sectionTitle, styles.flex, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+              {t('look.brandAll', { brand: String(title) })}
+            </Text>
+          )}
+          <SortChip sort={sort} onPress={() => setSorting(true)} />
+        </View>
       </View>
     </View>
   );
@@ -142,34 +153,37 @@ export default function BrandScreen() {
     <View style={styles.root}>
       <Stack.Screen options={{ title: String(title) }} />
       <SortSheet visible={sorting} sort={sort} onChoose={setSort} onClose={() => setSorting(false)} />
-      {products.status === 'loading' ? (
-        <View style={styles.pad}>
-          {header}
-          <ProductListSkeleton />
-        </View>
-      ) : products.status === 'failed' ? (
-        <Failed failure={products.failure} onRetry={products.retry} />
-      ) : products.data.products.length === 0 ? (
-        <Empty title={t('catalog.empty')} body={t('catalog.emptyWhy')} />
-      ) : (
-        <ProductGrid
-          products={more.products}
-          onEndReached={more.loadMore}
-          header={header}
-          footer={
-            more.loadingMore ? (
-              <View style={styles.more}>
-                <ActivityIndicator color={C.textMuted} />
-              </View>
-            ) : more.failedMore ? (
-              <View style={styles.more}>
-                <Text variant="hint">{t('catalog.moreFailed')}</Text>
-                <Button label={t('catalog.moreRetry')} variant="secondary" onPress={more.loadMore} />
-              </View>
-            ) : null
-          }
-        />
-      )}
+      {/* One list whatever the parts are doing, so the header — and the
+          families' row with it — stays where the customer scrolled it while
+          a family's parts load: a family far along the row, tapped, no
+          longer sends the row back to its first family. */}
+      <ProductGrid
+        products={products.status === 'loaded' ? more.products : []}
+        onEndReached={products.status === 'loaded' ? more.loadMore : undefined}
+        header={header}
+        footer={
+          products.status === 'loading' ? (
+            <ProductListSkeleton />
+          ) : products.status === 'failed' ? (
+            <View style={styles.state}>
+              <Failed failure={products.failure} onRetry={products.retry} />
+            </View>
+          ) : products.data.products.length === 0 ? (
+            <View style={styles.state}>
+              <Empty title={t('catalog.empty')} body={t('catalog.emptyWhy')} />
+            </View>
+          ) : more.loadingMore ? (
+            <View style={styles.more}>
+              <ActivityIndicator color={C.textMuted} />
+            </View>
+          ) : more.failedMore ? (
+            <View style={styles.more}>
+              <Text variant="hint">{t('catalog.moreFailed')}</Text>
+              <Button label={t('catalog.moreRetry')} variant="secondary" onPress={more.loadMore} />
+            </View>
+          ) : null
+        }
+      />
     </View>
   );
 }
@@ -202,7 +216,7 @@ const styles = StyleSheet.create({
   discCheck: { position: 'absolute', top: 2, right: 2, width: 18, height: 18, borderRadius: 9, backgroundColor: Brand.navy900, alignItems: 'center', justifyContent: 'center' },
   clear: { alignItems: 'center', gap: 4, minHeight: Tap.min, paddingHorizontal: Spacing.two, borderRadius: Radius.pill, backgroundColor: C.surface },
   root: { flex: 1, backgroundColor: C.background },
-  pad: { padding: Spacing.three },
+  state: { minHeight: 280 },
   header: { gap: Spacing.four, paddingTop: Spacing.three, paddingBottom: Spacing.one },
   hero: { alignItems: 'center', gap: Spacing.two },
   markCard: {
@@ -243,6 +257,7 @@ const styles = StyleSheet.create({
   discSkeleton: { width: 72, height: 72, borderRadius: 36 },
   familyName: { textAlign: 'center', fontSize: 12, lineHeight: 15, minHeight: 30 },
   count: { fontSize: 11, lineHeight: 13 },
+  headWrap: { gap: Spacing.two },
   head: { alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   more: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.four },
 });
