@@ -313,16 +313,16 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
               {fit.why ? <Feather name={whyOpen ? 'x' : 'info'} size={20} color={C.textMuted} /> : null}
             </Pressable>
             {whyOpen && fit.why ? (
-              <Text variant="hint" tone={C.textMuted} style={{ textAlign: rtl ? 'right' : 'left' }}>
+              <Text variant="hint" tone={C.textMuted} style={[styles.fitWhy, { textAlign: rtl ? 'right' : 'left' }]}>
                 {fit.why}
               </Text>
             ) : null}
             {product.fitment === null ? (
-              <Button label={t('look.changeVehicle')} icon="plus" variant="secondary" onPress={() => router.push('/garage/ajouter')} />
+              <Button label={t('look.changeVehicle')} icon="plus" variant="secondary" onPress={() => router.push('/garage/ajouter')} style={styles.fitButton} />
             ) : (
               <View style={[row, styles.fitActions]}>
                 {product.compatibility.total > 0 ? (
-                  <Pressable accessibilityRole="button" onPress={openCompat} hitSlop={10} style={styles.fitLink}>
+                  <Pressable accessibilityRole="button" onPress={openCompat} style={styles.fitLink}>
                     <Text variant="hint" tone={C.text} style={styles.underline}>
                       {t('look.seeFits')}
                     </Text>
@@ -330,7 +330,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                 ) : null}
                 {product.fitment === 'FITS' ? (
                   // The shop's own guarantee for a part it confirmed (/garanties).
-                  <Pressable accessibilityRole="link" onPress={() => router.push('/garanties')} hitSlop={10} style={styles.fitLink}>
+                  <Pressable accessibilityRole="link" onPress={() => router.push('/garanties')} style={styles.fitLink}>
                     <Text variant="hint" tone={C.text} style={styles.underline}>
                       {t('look.ourGuarantees')}
                     </Text>
@@ -340,7 +340,6 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => router.push({ pathname: '/demande', params: { sku: product.sku } })}
-                    hitSlop={10}
                     style={styles.fitLink}
                   >
                     <Text variant="hint" tone={C.text} style={styles.underline}>
@@ -360,7 +359,6 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                       const text = t('product.whatsappCheck', { name: product.name, sku: product.sku, car: vehicleLabel(active) ?? '' });
                       void Linking.openURL(whatsappUrl(settings.contact.whatsapp!, text)).catch(() => undefined);
                     }}
-                    hitSlop={10}
                     style={[row, styles.fitLink, styles.waLink]}
                   >
                     <FontAwesome name="whatsapp" size={16} color={Brand.green700} />
@@ -375,7 +373,6 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                   <Pressable
                     accessibilityRole="button"
                     onPress={() => router.push({ pathname: '/famille/[family]', params: { family: product.familySlug } })}
-                    hitSlop={10}
                     style={styles.fitLink}
                   >
                     <Text variant="hint" tone={C.text} style={styles.underline}>
@@ -1010,12 +1007,16 @@ const styles = StyleSheet.create({
   togetherRow: { gap: Spacing.two, paddingBottom: Spacing.two },
   togetherTile: { width: 172 },
   viewCart: { paddingHorizontal: Spacing.three },
-  fitBlock: { marginTop: Spacing.three, borderRadius: Radius.tile, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, gap: Spacing.one },
-  fitHead: { alignItems: 'center', gap: Spacing.two, minHeight: 36 },
+  // Every line a full 44 high for the thumb; the block's own padding is
+  // small so it still reads as one compact line.
+  fitBlock: { marginTop: Spacing.three, borderRadius: Radius.tile, paddingHorizontal: Spacing.three, paddingVertical: Spacing.one },
+  fitHead: { alignItems: 'center', gap: Spacing.two, minHeight: Tap.min },
   fitTitle: { fontSize: 15, lineHeight: 20 },
-  // Small links on one line where they fit; the hit slop makes up the 44.
+  fitWhy: { paddingBottom: Spacing.two },
+  fitButton: { marginBottom: Spacing.two },
+  // Small links on one line where they fit.
   fitActions: { flexWrap: 'wrap', columnGap: Spacing.three, rowGap: 0 },
-  fitLink: { minHeight: 30, justifyContent: 'center' },
+  fitLink: { minHeight: Tap.min, justifyContent: 'center' },
   waLink: { alignItems: 'center', gap: 6 },
   underline: { textDecorationLine: 'underline' },
   sheetBody: {
