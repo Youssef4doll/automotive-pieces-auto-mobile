@@ -9,7 +9,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { catalogueApi, type Family } from '@/api/catalogue';
 import { BrandStrip } from '@/components/ui/brand-strip';
-import { CareBanner } from '@/components/ui/care-banner';
 import { CareDueStrip } from '@/components/ui/care-due';
 import { AdviceCard } from '@/components/ui/advice-card';
 import { PartImage } from '@/components/ui/part-image';
@@ -32,18 +31,20 @@ import { Rail } from '@/components/ui/rail';
 
 const LOGO = require('../../../assets/images/logo-lockup.png');
 
+/** Where the disc is in the hero render, as fractions of its width and height. */
+const DISC = { x: 0.53, y: 0.55 };
+
 /**
  * Accueil — the reference's home, top to bottom, on the shop's data.
  *
- * On the night road: the shop's own logo and the search, the slogan, a
+ * On the night road, kept short so the families are on the first screen:
+ * the shop's own logo and the search, the slogan with the disc beside it, a
  * search box, and "Votre véhicule" — the car in the garage, or the
- * invitation to choose one. Then "Que recherchez-vous ?" and the three
- * round doors on their arc.
+ * invitation to choose one — then "Comment trouver votre pièce ?".
  *
- * On the white sheet: the popular families (the four with the most parts,
- * counted), the shop's own campaigns when it runs one, "Entretien auto" (a
- * way into the filters — navigation, not a promotion), the parts makers the
- * shop carries, and "Besoin d'un conseil ?".
+ * On the white sheet: every family, most parts first, the shop's own
+ * campaigns when it runs one, the parts makers the shop carries, and
+ * "Besoin d'un conseil ?".
  *
  * Kept true where the reference could not be: the greeting uses the name the
  * customer gave at checkout, or none; there is no bell, because the app has
@@ -59,10 +60,16 @@ export default function HomeScreen() {
   const { t, rtl } = useI18n();
   const active = useGarage((s) => s.active);
   const vehicleLine = useVehicleLine();
-  // The hero photograph is 3:4; it is lifted so the part sits beside the
-  // slogan and under the search, then fades into the navy below.
-  const heroHeight = Math.round(Math.min(width, MaxContentWidth + 120) * 4 / 3);
-  const heroLift = Math.round(heroHeight * 0.06);
+  // The hero photograph (3:4) sits beside the slogan, its disc near the
+  // column's far edge, rather than in a band of its own: the families are
+  // on the first screen. Mirrored for Arabic.
+  const column = Math.min(width, MaxContentWidth);
+  const artHeight = Math.round(Math.min(column, 460) * 1.04);
+  const artWidth = Math.round(artHeight * 0.75);
+  const artSide = Math.round((width - column) / 2 + column * 0.885 - artWidth * DISC.x);
+  const artTop = Math.round(insets.top + 118 - artHeight * DISC.y);
+  // The second line ends clear of the disc on a narrow phone too.
+  const sloganSize = column < 360 ? 22 : 26;
 
   // Light clock and battery over the night road; dark again on the white
   // screens. The tabs stay mounted, so this follows focus rather than mount.
@@ -96,31 +103,28 @@ export default function HomeScreen() {
     <View style={styles.root}>
       {focused ? <StatusBar style="light" /> : null}
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
-        <View>
-          <View style={[styles.heroBg, { top: -heroLift }]} pointerEvents="none">
-            <Image
-              source={RENDERS.hero}
-              style={{ width: '100%', height: heroHeight, transform: rtl ? [{ scaleX: -1 }] : undefined }}
-              contentFit="cover"
-              contentPosition={rtl ? 'left center' : 'right center'}
-              accessibilityIgnoresInvertColors
-            />
-            {/* Into the navy: the photograph ends where the questions start. */}
-            <Svg style={StyleSheet.absoluteFill} width="100%" height={heroHeight}>
+        <View style={styles.hero}>
+          <View
+            style={[styles.art, { top: artTop, width: artWidth, height: artHeight }, rtl ? { right: artSide, transform: [{ scaleX: -1 }] } : { left: artSide }]}
+            pointerEvents="none"
+          >
+            <Image source={RENDERS.hero} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityIgnoresInvertColors />
+            {/* Into the navy on every side the text is: the photograph has no edge. */}
+            <Svg style={StyleSheet.absoluteFill} width={artWidth} height={artHeight}>
               <Defs>
-                <LinearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
-                  <Stop offset="0" stopColor={Brand.navy950} stopOpacity="0.55" />
-                  <Stop offset="0.3" stopColor={Brand.navy950} stopOpacity="0.05" />
-                  <Stop offset="0.72" stopColor={Brand.navy950} stopOpacity="0.15" />
-                  <Stop offset="0.94" stopColor={Brand.navy950} stopOpacity="1" />
+                <LinearGradient id="fadeX" x1="0" y1="0" x2="1" y2="0">
+                  <Stop offset="0.12" stopColor={Brand.navy950} stopOpacity="1" />
+                  <Stop offset="0.42" stopColor={Brand.navy950} stopOpacity="0" />
                 </LinearGradient>
-                <LinearGradient id="side" x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="0">
-                  <Stop offset="0" stopColor={Brand.navy950} stopOpacity="0.5" />
-                  <Stop offset="0.5" stopColor={Brand.navy950} stopOpacity="0" />
+                <LinearGradient id="fadeY" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0.18" stopColor={Brand.navy950} stopOpacity="0.9" />
+                  <Stop offset="0.36" stopColor={Brand.navy950} stopOpacity="0" />
+                  <Stop offset="0.6" stopColor={Brand.navy950} stopOpacity="0" />
+                  <Stop offset="0.74" stopColor={Brand.navy950} stopOpacity="1" />
                 </LinearGradient>
               </Defs>
-              <Rect x="0" y="0" width="100%" height={heroHeight} fill="url(#side)" />
-              <Rect x="0" y="0" width="100%" height={heroHeight} fill="url(#fade)" />
+              <Rect x="0" y="0" width={artWidth} height={artHeight} fill="url(#fadeX)" />
+              <Rect x="0" y="0" width={artWidth} height={artHeight} fill="url(#fadeY)" />
             </Svg>
           </View>
 
@@ -138,18 +142,14 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.slogan}>
-              <Text style={[styles.sloganText, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+              <Text style={[styles.sloganText, { fontSize: sloganSize, lineHeight: sloganSize + 6, fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}>
                 {t('look.slogan1')}
                 {'\n'}
                 {t('look.slogan2')}
-                <Text style={[styles.sloganText, styles.sloganAccent, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('look.slogan2Accent')}</Text>
+                <Text style={[styles.sloganText, styles.sloganAccent, { fontSize: sloganSize, lineHeight: sloganSize + 6, fontFamily: familyFor('headingStrong', rtl) }]}>{t('look.slogan2Accent')}</Text>
               </Text>
               <Text style={[styles.subtitle, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('look.slogan3')}</Text>
             </View>
-
-            {/* Room for the photograph between the promise and the search, as
-                the reference leaves room for its car. */}
-            <View style={{ height: Math.round(heroHeight * 0.44) }} />
 
             {/* The main action, and the car it answers for, as one piece:
                 the search, and directly under it the line that says which
@@ -253,18 +253,7 @@ export default function HomeScreen() {
           <CareDueStrip />
 
           {/* The shop's real campaigns, when it is running one. */}
-          <View style={styles.promo}>
-            <PromoBanner />
-          </View>
-
-          <View style={styles.column}>
-            {families.status === 'loaded' ? (
-              <View style={styles.care}>
-                <CareBanner families={families.data} onOpen={openFamily} />
-              </View>
-            ) : null}
-
-          </View>
+          <PromoBanner />
 
           <View style={[styles.column, styles.block]}>
             <BrandStrip />
@@ -284,7 +273,8 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Brand.navy950 },
   flex: { flex: 1, minWidth: 0 },
-  heroBg: { position: 'absolute', top: 0, left: 0, right: 0 },
+  hero: { overflow: 'hidden' },
+  art: { position: 'absolute' },
   column: {
     width: '100%',
     maxWidth: MaxContentWidth,
@@ -302,8 +292,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
   roundBtnPressed: { backgroundColor: 'rgba(255,255,255,0.24)' },
-  slogan: { paddingTop: Spacing.four, gap: Spacing.two },
-  sloganText: { fontSize: 30, lineHeight: 36, letterSpacing: -0.4, color: Brand.white },
+  slogan: { paddingTop: Spacing.three, paddingBottom: Spacing.four, gap: Spacing.one },
+  sloganText: { fontSize: 26, lineHeight: 32, letterSpacing: -0.4, color: Brand.white },
   sloganAccent: { color: Brand.gold500 },
   searchPill: {
     marginTop: 0,
@@ -343,7 +333,7 @@ const styles = StyleSheet.create({
     gap: 6,
     minHeight: Tap.min,
     paddingHorizontal: Spacing.four,
-    marginTop: Spacing.three,
+    marginTop: Spacing.two,
     marginBottom: Spacing.four,
     borderRadius: Radius.pill,
     backgroundColor: Brand.navy900,
@@ -382,8 +372,6 @@ const styles = StyleSheet.create({
   },
   catSkeleton: { width: 72, height: 72, borderRadius: 36 },
   catName: { textAlign: 'center' },
-  care: { marginTop: Spacing.four },
   adviceWrap: { marginTop: Spacing.four },
   block: { paddingTop: Spacing.four },
-  promo: { paddingTop: Spacing.four },
 });

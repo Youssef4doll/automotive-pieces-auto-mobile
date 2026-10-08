@@ -74,3 +74,24 @@ sheet on the app's grey for judging.
    `src/illustrations/renders.ts`.
 
 Until then the family shows the website's line drawing, as before.
+
+## A family picture uploaded in /admin
+
+A picture uploaded on a family (the category form in /admin/catalogue) wins
+over everything above. It is drawn **cover** into a round disc — 64 pt in
+the catalogue and on a maker's page, 72 pt on Home, 176 pt square at the top
+of the family page — so whatever lies outside the circle is cut off.
+
+- **Canvas:** 600 × 600 px, square, PNG with a transparent (or white)
+  background. 600 is the family page's 176 pt at 3×, with room.
+- **Safe zone:** the whole part inside a centred circle of **500 px**
+  (50 px clear at the middle of each edge; the corners stay empty). The
+  template is `docs/templates/famille-gabarit-600.png`: put it under the
+  drawing as a guide layer, and hide it before exporting.
+- **Size:** the part's longest side about 460–500 px. A long part (a
+  steering rack, a driveshaft) goes on the diagonal; a compact one (a
+  battery, a clutch) can stay nearer 400 px.
+
+Measured on the owner's screenshot of the catalogue, Freinage and Moteur are
+the two that sit right: the brake disc's farthest point is at 0.83 of the
+radius — the 500 px circle above.

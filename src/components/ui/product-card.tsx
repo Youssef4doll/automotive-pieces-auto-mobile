@@ -68,8 +68,8 @@ export function ProductCard({ product }: { product: Product }) {
       }
     : null;
   const quickAdd = product.availability !== 'UNAVAILABLE' && product.fitment !== 'DOES_NOT_FIT';
-  const stockLine =
-    product.lowStockQty !== null ? t('stock.low', { n: product.lowStockQty }) : t(stock.label);
+  // In stock or not — never how many (the owner's rule).
+  const stockLine = t(stock.label);
 
   return (
     <View style={styles.card}>

@@ -110,20 +110,27 @@ export default function FamilyScreen() {
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   const back = () => (router.canGoBack() ? router.back() : router.navigate('/catalogue'));
+  // The picture starts under the title, however many lines it took.
+  const [barHeight, setBarHeight] = useState<number>(Tap.min);
 
   const head = (
     <View>
       <View style={[styles.hero, { paddingTop: insets.top + Spacing.two }]}>
         <View style={styles.glow} pointerEvents="none" />
-        <View style={[row, styles.bar]}>
+        <View style={[row, styles.bar]} onLayout={(e) => setBarHeight(Math.round(e.nativeEvent.layout.height))}>
           <Pressable accessibilityRole="button" accessibilityLabel={t('a11y.back')} onPress={back} style={styles.iconBtn}>
             <Feather name={rtl ? 'arrow-right' : 'arrow-left'} size={22} color={Brand.white} />
           </Pressable>
-          <Text numberOfLines={1} style={[styles.title, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+          {/* A long name ("Steering & suspension arms") wraps to a second,
+              smaller line rather than losing its end. */}
+          <Text numberOfLines={2} style={[styles.title, name.length > 18 && styles.titleLong, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}>
             {name}
           </Text>
         </View>
-        <View style={[styles.art, rtl ? { left: Spacing.three } : { right: Spacing.three }]} pointerEvents="none">
+        <View
+          style={[styles.art, { top: insets.top + Spacing.two + barHeight + Spacing.one }, rtl ? { left: Spacing.three } : { right: Spacing.three }]}
+          pointerEvents="none"
+        >
           <PartImage slug={family} imageUrl={current?.imageUrl} size={176} label={name} fit={current?.imageUrl ? 'cover' : 'contain'} />
         </View>
         <Text style={[styles.tagline, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{tagline}</Text>
@@ -290,7 +297,8 @@ const styles = StyleSheet.create({
   bar: { alignItems: 'center', gap: Spacing.one, minHeight: Tap.min },
   iconBtn: { width: Tap.min, height: Tap.min, alignItems: 'center', justifyContent: 'center', marginHorizontal: -Spacing.two },
   title: { flex: 1, fontSize: 26, lineHeight: 32, color: Brand.white, paddingHorizontal: Spacing.two },
-  art: { position: 'absolute', top: 64, width: 150, height: 150, alignItems: 'center', justifyContent: 'center' },
+  titleLong: { fontSize: 22, lineHeight: 27 },
+  art: { position: 'absolute', width: 150, height: 150, alignItems: 'center', justifyContent: 'center' },
   // Clear of the picture: it is drawn 176 wide from the right edge, and at
   // 58% "Pour un moteur qui respire bien" ran under the oil can on a 390pt phone.
   tagline: { marginTop: 128, fontSize: 15, lineHeight: 20, color: '#d4dcea', maxWidth: '48%' },

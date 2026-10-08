@@ -35,7 +35,6 @@ const base = {
     'stock.inStock': 'En stock',
     'stock.onOrder': 'Sur commande',
     'stock.unavailable': 'Indisponible',
-    'stock.low': '{n} en stock',
 
     'home.heroTitle': 'Trouvez la bonne pièce',
     'home.heroTitle2': 'pour votre voiture.',
@@ -177,7 +176,6 @@ const base = {
     'stock.inStock': 'In stock',
     'stock.onOrder': 'On order',
     'stock.unavailable': 'Unavailable',
-    'stock.low': '{n} in stock',
 
     'home.heroTitle': 'Find the right part',
     'home.heroTitle2': 'for your car.',
@@ -316,7 +314,6 @@ const base = {
     'stock.inStock': 'متوفّرة',
     'stock.onOrder': 'عند الطلب',
     'stock.unavailable': 'غير متوفّرة',
-    'stock.low': '{n} متوفّرة',
 
     'home.heroTitle': 'اعثر على القطعة',
     'home.heroTitle2': 'المناسبة لسيارتك.',

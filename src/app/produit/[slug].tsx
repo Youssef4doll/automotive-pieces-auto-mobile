@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Feather, FontAwesome } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -10,6 +10,7 @@ import { productApi, type ProductDetail } from '@/api/product';
 import type { ShopSettings } from '@/api/shop';
 import { Accordion } from '@/components/ui/accordion';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { Button } from '@/components/ui/button';
 import { QuantityStepper } from '@/components/ui/quantity-stepper';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -136,6 +137,8 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   const active = useGarage((s) => s.active);
   const [qty, setQty] = useState(1);
   const [confirming, setConfirming] = useState(false);
+  // The verdict's reasons, opened from its (i).
+  const [whyOpen, setWhyOpen] = useState(false);
   const [compatKey, setCompatKey] = useState(0);
   const scroll = useRef<ScrollView>(null);
   const compatY = useRef(0);
@@ -220,7 +223,8 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
       ? {
           icon: 'check' as const,
           tone: C.success,
-          label: product.lowStockQty !== null ? t('stock.low', { n: product.lowStockQty }) : t('stock.inStock'),
+          // In stock, without a count: the owner's rule.
+          label: t('stock.inStock'),
           detail: null,
         }
       : product.availability === 'ON_ORDER'
@@ -246,11 +250,9 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
           <ShoppingFor />
           <Gallery product={product} />
 
-          {/* Brand in the shop's red, then the name — the reference's order. */}
+          {/* The maker's logo, then the name — the reference's order. */}
           <View style={styles.identity}>
-            {product.brand ? (
-              <Text style={[styles.brand, { fontFamily: familyFor('headingStrong', rtl) }]}>{product.brand.toUpperCase()}</Text>
-            ) : null}
+            {product.brand ? <BrandLogo name={product.brand} /> : null}
             <Text style={[styles.name, { fontFamily: familyFor('heading', rtl) }]}>{product.name}</Text>
             <View style={[styles.refRow, row]}>
               <Text variant="hint" selectable>
@@ -264,83 +266,6 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                 </View>
               ))}
             </View>
-          </View>
-
-          {/* The verdict against THEIR car — the strongest thing on the
-              page after the part itself. Never an error screen: when it does
-              not fit, it says why, from the shop's own table, and what to do. */}
-          <View style={[styles.fitBlock, { backgroundColor: fit.bg }]}>
-            <View style={[row, styles.fitHead]}>
-              <Feather name={fit.icon} size={22} color={fit.fg} />
-              <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start', gap: 2 }]}>
-                <Text style={[styles.fitTitle, { fontFamily: familyFor('bodySemi', rtl), color: fit.titleTone, textAlign: rtl ? 'right' : 'left' }]}>{fit.text}</Text>
-                {fit.why ? (
-                  <Text variant="hint" tone={C.textMuted} style={{ textAlign: rtl ? 'right' : 'left' }}>
-                    {fit.why}
-                  </Text>
-                ) : null}
-              </View>
-            </View>
-            {product.fitment === null ? (
-              <Button label={t('look.changeVehicle')} icon="plus" variant="secondary" onPress={() => router.push('/garage/ajouter')} />
-            ) : (
-              <View style={[row, styles.fitActions]}>
-                {product.compatibility.total > 0 ? (
-                  <Pressable accessibilityRole="button" onPress={openCompat} hitSlop={6} style={styles.fitLink}>
-                    <Text variant="hint" tone={C.text} style={styles.underline}>
-                      {t('look.seeFits')}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                {product.fitment === 'FITS' ? (
-                  // The shop's own guarantee for a part it confirmed (/garanties).
-                  <Pressable accessibilityRole="link" onPress={() => router.push('/garanties')} hitSlop={6} style={styles.fitLink}>
-                    <Text variant="hint" tone={C.text} style={styles.underline}>
-                      {t('look.ourGuarantees')}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                {product.fitment === 'UNKNOWN' ? (
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => router.push({ pathname: '/demande', params: { sku: product.sku } })}
-                    hitSlop={6}
-                    style={styles.fitLink}
-                  >
-                    <Text variant="hint" tone={C.text} style={styles.underline}>
-                      {t('expert.askShop')}
-                    </Text>
-                  </Pressable>
-                ) : null}
-                {product.fitment === 'UNKNOWN' && settings?.contact.whatsapp ? (
-                  <Button
-                    label={t('help.whatsapp')}
-                    variant="whatsapp"
-                    onPress={() => {
-                      track('whatsapp_opened', { from: 'to_check', sku: product.sku });
-                      track('fitment_question_sent', { productId: product.id, sku: product.sku, channel: 'whatsapp' });
-                      const text = t('product.whatsappCheck', { name: product.name, sku: product.sku, car: vehicleLabel(active) ?? '' });
-                      void Linking.openURL(whatsappUrl(settings.contact.whatsapp!, text)).catch(() => undefined);
-                    }}
-                    style={styles.waButton}
-                  />
-                ) : null}
-                {product.fitment === 'DOES_NOT_FIT' && active ? (
-                  // The way out of a part that does not fit is the parts of
-                  // the same kind that do — for this car, compatible first.
-                  <Pressable
-                    accessibilityRole="button"
-                    onPress={() => router.push({ pathname: '/famille/[family]', params: { family: product.familySlug } })}
-                    hitSlop={6}
-                    style={styles.fitLink}
-                  >
-                    <Text variant="hint" tone={C.text} style={styles.underline}>
-                      {t('look.seeFitsMine', { make: active.makeName })}
-                    </Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            )}
           </View>
 
           <View style={[styles.priceRow, row]}>
@@ -369,6 +294,99 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
           {stock.detail ? <Text variant="hint">{stock.detail}</Text> : null}
           {/* Not on the shelf: one push the day it is (phones with push only). */}
           {product.availability !== 'IN_STOCK' ? <StockAlert slug={product.slug} /> : null}
+
+          {/* The verdict against their car, on one line. Why — the shop's
+              own reasons — opens under it from the (i), so the price and the
+              button stay the loudest things here. */}
+          <View style={[styles.fitBlock, { backgroundColor: fit.bg }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={fit.why ? { expanded: whyOpen } : undefined}
+              accessibilityHint={fit.why ? t('product.fitWhy') : undefined}
+              disabled={!fit.why}
+              onPress={() => setWhyOpen((v) => !v)}
+              testID="fit-info"
+              style={[row, styles.fitHead]}
+            >
+              <Feather name={fit.icon} size={20} color={fit.fg} />
+              <Text style={[styles.fitTitle, styles.flex, { fontFamily: familyFor('bodySemi', rtl), color: fit.titleTone, textAlign: rtl ? 'right' : 'left' }]}>{fit.text}</Text>
+              {fit.why ? <Feather name={whyOpen ? 'x' : 'info'} size={20} color={C.textMuted} /> : null}
+            </Pressable>
+            {whyOpen && fit.why ? (
+              <Text variant="hint" tone={C.textMuted} style={{ textAlign: rtl ? 'right' : 'left' }}>
+                {fit.why}
+              </Text>
+            ) : null}
+            {product.fitment === null ? (
+              <Button label={t('look.changeVehicle')} icon="plus" variant="secondary" onPress={() => router.push('/garage/ajouter')} />
+            ) : (
+              <View style={[row, styles.fitActions]}>
+                {product.compatibility.total > 0 ? (
+                  <Pressable accessibilityRole="button" onPress={openCompat} hitSlop={10} style={styles.fitLink}>
+                    <Text variant="hint" tone={C.text} style={styles.underline}>
+                      {t('look.seeFits')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {product.fitment === 'FITS' ? (
+                  // The shop's own guarantee for a part it confirmed (/garanties).
+                  <Pressable accessibilityRole="link" onPress={() => router.push('/garanties')} hitSlop={10} style={styles.fitLink}>
+                    <Text variant="hint" tone={C.text} style={styles.underline}>
+                      {t('look.ourGuarantees')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {product.fitment === 'UNKNOWN' ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push({ pathname: '/demande', params: { sku: product.sku } })}
+                    hitSlop={10}
+                    style={styles.fitLink}
+                  >
+                    <Text variant="hint" tone={C.text} style={styles.underline}>
+                      {t('expert.askShop')}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {product.fitment === 'UNKNOWN' && settings?.contact.whatsapp ? (
+                  // A link with the green mark, not a green button: the
+                  // question is a side door, the basket is the way on.
+                  <Pressable
+                    accessibilityRole="link"
+                    accessibilityLabel={t('help.whatsapp')}
+                    onPress={() => {
+                      track('whatsapp_opened', { from: 'to_check', sku: product.sku });
+                      track('fitment_question_sent', { productId: product.id, sku: product.sku, channel: 'whatsapp' });
+                      const text = t('product.whatsappCheck', { name: product.name, sku: product.sku, car: vehicleLabel(active) ?? '' });
+                      void Linking.openURL(whatsappUrl(settings.contact.whatsapp!, text)).catch(() => undefined);
+                    }}
+                    hitSlop={10}
+                    style={[row, styles.fitLink, styles.waLink]}
+                  >
+                    <FontAwesome name="whatsapp" size={16} color={Brand.green700} />
+                    <Text variant="hint" tone={Brand.green800} style={styles.underline}>
+                      WhatsApp
+                    </Text>
+                  </Pressable>
+                ) : null}
+                {product.fitment === 'DOES_NOT_FIT' && active ? (
+                  // The way out of a part that does not fit is the parts of
+                  // the same kind that do — for this car, compatible first.
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push({ pathname: '/famille/[family]', params: { family: product.familySlug } })}
+                    hitSlop={10}
+                    style={styles.fitLink}
+                  >
+                    <Text variant="hint" tone={C.text} style={styles.underline}>
+                      {t('look.seeFitsMine', { make: active.makeName })}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            )}
+          </View>
+
 
           {/* Quantity and the button, side by side, as in the reference. */}
           {/* Three facts, each the shop's own: its delay, its warranty, its
@@ -866,7 +884,6 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.three,
     gap: Spacing.one,
   },
-  brand: { fontSize: 15, lineHeight: 20, letterSpacing: 0.6, color: Brand.red600 },
   name: { fontSize: 21, lineHeight: 27, color: C.text },
   pill: {
     alignItems: 'center',
@@ -993,18 +1010,19 @@ const styles = StyleSheet.create({
   togetherRow: { gap: Spacing.two, paddingBottom: Spacing.two },
   togetherTile: { width: 172 },
   viewCart: { paddingHorizontal: Spacing.three },
-  fitBlock: { marginTop: Spacing.three, borderRadius: Radius.tile, padding: Spacing.three, gap: Spacing.two },
-  fitHead: { alignItems: 'flex-start', gap: Spacing.three },
-  fitTitle: { fontSize: 16, lineHeight: 21 },
-  fitActions: { flexWrap: 'wrap', gap: Spacing.three },
-  fitLink: { minHeight: Tap.min, justifyContent: 'center' },
+  fitBlock: { marginTop: Spacing.three, borderRadius: Radius.tile, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, gap: Spacing.one },
+  fitHead: { alignItems: 'center', gap: Spacing.two, minHeight: 36 },
+  fitTitle: { fontSize: 15, lineHeight: 20 },
+  // Small links on one line where they fit; the hit slop makes up the 44.
+  fitActions: { flexWrap: 'wrap', columnGap: Spacing.three, rowGap: 0 },
+  fitLink: { minHeight: 30, justifyContent: 'center' },
+  waLink: { alignItems: 'center', gap: 6 },
   underline: { textDecorationLine: 'underline' },
   sheetBody: {
     gap: Spacing.three,
     paddingBottom: Spacing.two,
   },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
-  waButton: { marginTop: Spacing.two, alignSelf: 'stretch' },
   forCar: { alignItems: 'center', gap: Spacing.three, minHeight: 52, paddingHorizontal: Spacing.three, marginTop: Spacing.two, marginBottom: Spacing.two, borderRadius: Radius.tile, backgroundColor: C.surface },
   forCarText: { flex: 1, minWidth: 0 },
   forCarName: { fontSize: 15, lineHeight: 20, color: C.text },

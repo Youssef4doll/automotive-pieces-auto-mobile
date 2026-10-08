@@ -1111,11 +1111,9 @@ the favourites".
   gold (`illustrations/empty-art.tsx`: a trolley on tyres, a taped parcel)
   or a studio render (search, help). The basket tab uses `NavCart`, drawn in
   NavCar's grammar so the bar reads as one set.
-- **Entretien auto** (`components/ui/care-banner.tsx`) is built from the
-  family pictures of the rail above it — lubrifiant, filtres, allumage — in
-  the same white discs, over a navy gradient with a gold arc. Upload a new
-  family picture and the banner follows; a family with no parts is not shown,
-  and the eyebrow names only the families shown.
+- **Entretien auto** is gone from Home (and `components/ui/care-banner.tsx`
+  with it), at the owner's request: the families rail above it already opens
+  the same families.
 - **Favourites are gone**: the heart, `store/favourites.ts`, `compte/favoris`
   and the `favorite_added` event. Old installs keep an unread
   `apa-favourites` entry in storage; nothing reads it.
@@ -1853,3 +1851,31 @@ and brands, reviews, good/better/best tiers, card payment, delivery dates
 promised per governorate (a dispatch cut-off), SMS on every status, a
 personal Home and a smaller hero (Home kept as chosen on October 5),
 notification preferences, referral and pro mode.
+
+## 29. A shorter Home, a quieter product page (October 8, 2026)
+
+At the owner's request, from screenshots of the app in English:
+
+- **Home's night road is short.** The photograph no longer has a band of
+  its own between the slogan and the search: the render is drawn at about
+  the column's width, its disc beside the slogan near the far edge
+  (`DISC` gives where the disc is in the render), faded into the navy on
+  the side of the text and below. On a 390 pt phone the families rail is
+  on the first screen. Under 360 pt the slogan drops to 22 pt so its
+  second line ends clear of the disc. "Entretien auto" is gone, and the
+  doubled padding above the shop's campaign with it.
+- **The product page** reads logo, name, reference, price, stock, then
+  the verdict. The maker is its logo (`components/ui/brand-logo.tsx`, the
+  same order as "Nos marques": the uploaded logo, the mark on record, the
+  name). The verdict is one tinted line; its reasons open under it from
+  the (i). WhatsApp is a link with the green mark beside "Demander à la
+  boutique", not a green button over the price.
+- **Never how many.** No customer screen says "3 en stock" any more —
+  the product page, cards and tiles say "En stock". The staff screens
+  still count.
+- **A long family name** ("Steering & suspension arms") wraps to a second,
+  smaller line; the picture starts under it.
+- **Family pictures uploaded in /admin** are drawn cover into a circle, so
+  the owner's own drawings must keep inside it: 600 × 600 px, the part
+  within a centred 500 px circle (`docs/imagery.md`, template in
+  `docs/templates`).

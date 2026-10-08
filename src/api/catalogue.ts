@@ -83,7 +83,10 @@ export type Product = {
   price: number;
   compareAtPrice: number | null;
   availability: Availability;
-  /** Only when the shop set a threshold and stock is at or under it. */
+  /**
+   * Only when the shop set a threshold and stock is at or under it. Sent by
+   * the shop, never shown: the app says "in stock", not how many.
+   */
   lowStockQty: number | null;
   /** A real photograph, or null — which is most of the catalogue. */
   imageUrl: string | null;

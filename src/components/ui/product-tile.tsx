@@ -46,7 +46,8 @@ export function ProductTile({ product }: { product: Product }) {
   const state = fitState(product);
   const fit = state ? { icon: FIT_LOOK[state].icon, iconTone: FIT_LOOK[state].iconTone, tone: FIT_LOOK[state].tone, key: FIT_LOOK[state].short } : null;
   const stock = STOCK[product.availability];
-  const stockLine = product.lowStockQty !== null ? t('stock.low', { n: product.lowStockQty }) : t(stock.key);
+  // In stock or not — never how many (the owner's rule).
+  const stockLine = t(stock.key);
   const start = { alignItems: rtl ? ('flex-end' as const) : ('flex-start' as const) };
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
