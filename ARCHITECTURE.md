@@ -1930,3 +1930,8 @@ At the owner's request, from screenshots of the app in English:
 - *Less to read when asking.* "Demander à la boutique" lost its preface,
   the WhatsApp caption, the phone hint and half its placeholder; the
   divider says "ou". The order page lost the line under its button.
+
+**Fourth round.** The owner preferred the second round's Home: it is back
+as it was — the disc photograph, the search and the car in one white card —
+with only the slogan's words taken out. Their height is kept as an empty
+space, so the disc and the card sit exactly where they were.
