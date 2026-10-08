@@ -1879,3 +1879,19 @@ At the owner's request, from screenshots of the app in English:
   the owner's own drawings must keep inside it: 600 × 600 px, the part
   within a centred 500 px circle (`docs/imagery.md`, template in
   `docs/templates`).
+
+**The same day, second round.**
+
+- *Make logos from /admin, everywhere.* Only the picker passed the uploaded
+  logo to `MakeLogo`; a car in the garage keeps the make's name and slug,
+  so a make added in /admin with its logo (Škoda) showed "SK" on Home, in
+  the garage and on a part. `MakeLogo` now looks the logo up in the shop's
+  list of makes (or of parts makers) whenever its caller passes none.
+- *A maker's families on a rail*, Home's exact cells (84 wide, 72 discs),
+  edge to edge, still a filter in place.
+- *Home's top, calmer.* The search and the car are one white card with a
+  rule between them; "Comment trouver votre pièce ?" is a plain line with
+  an arrow. Under 360 pt the car row drops the word "Changer" for its
+  chevron. The photograph is inset 4 px under its gradient: flush, its
+  bright floor showed down the hero as a one-pixel line. The families
+  below are as they were.
