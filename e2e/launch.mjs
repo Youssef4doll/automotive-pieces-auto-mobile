@@ -77,7 +77,9 @@ async function launch({ reducedMotion = 'no-preference' } = {}) {
     const drawn = () =>
       page.evaluate(() => {
         const window = document.querySelector('[data-testid="preloader-swoosh"]');
-        return window ? Math.round((window.getBoundingClientRect().width / 360) * 100) / 100 : null;
+        // The layout width, not the painted one: on its way out the whole
+        // screen lifts to 104%, and a sample taken then read 1.01.
+        return window ? Math.round((window.offsetWidth / 360) * 100) / 100 : null;
       });
     const early = await drawn();
 

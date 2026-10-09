@@ -1033,7 +1033,7 @@ const styles = StyleSheet.create({
     borderRadius: Tap.min / 2,
     backgroundColor: Brand.navy950,
   },
-  islandBtn: { width: 40, height: Tap.min, alignItems: 'center', justifyContent: 'center', borderRadius: Tap.min / 2 },
+  islandBtn: { width: Tap.min, height: Tap.min, alignItems: 'center', justifyContent: 'center', borderRadius: Tap.min / 2 },
   islandCart: { alignItems: 'center', gap: Spacing.two, height: Tap.min, minWidth: 44, paddingHorizontal: 12, justifyContent: 'center', borderRadius: Tap.min / 2 },
   islandPressed: { backgroundColor: 'rgba(255,255,255,0.14)' },
   islandAdded: { alignItems: 'center', gap: 4 },
