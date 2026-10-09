@@ -1965,3 +1965,10 @@ picker's last step. The engine is never chosen for the customer: a European
 VIN does not carry it. Several models → "Lequel est le vôtre ?"; the make
 alone → the picker on that make, as before; "Ce n'est pas ma voiture" is
 always there.
+
+**The garage, the same day.** The shortcuts are three tiles — add a
+vehicle, by registration (the VIN screen), my vehicles — and the empty
+garage offers the VIN too. Passes in the carousel have no shadow (the
+scroller cut it into a grey box); on a narrow phone the button and the
+kicker keep their words. The Home proposed with it was declined; Home stays
+as it is.
