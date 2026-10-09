@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Modal, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
+import Animated, { ReduceMotion, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { productApi, type ProductDetail } from '@/api/product';
@@ -139,25 +139,28 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   const [confirming, setConfirming] = useState(false);
   // The verdict's reasons, opened from its (i).
   const [whyOpen, setWhyOpen] = useState(false);
-  const [compatKey, setCompatKey] = useState(0);
-  const scroll = useRef<ScrollView>(null);
-  const compatY = useRef(0);
+  // The vehicles the part is listed for, opened inside the verdict itself
+  // (the owner, October 2026) — no jump down the page to find them.
+  const [fitsOpen, setFitsOpen] = useState(false);
   const insets = useSafeAreaInsets();
 
   // The purchase bar is pinned to the foot of the screen, always within
-  // reach. Once the part is in the cart the bar becomes the cart's own
-  // counter for it (− n +, down to zero to take it out) beside "Voir le
-  // panier (n)" — the state stays on screen instead of a message that
-  // vanished before it was read.
-  const inCart = useCart((s) => s.items.find((i) => i.productId === product.id)?.qty ?? 0);
-  const setCartQty = useCart((s) => s.setQty);
+  // reach, and it does not change shape: the basket is its own button at
+  // the leading end — outlined, with the count on it — and "Ajouter au
+  // panier" stays "Ajouter au panier". The owner, October 2026: when the add
+  // button turned into "Voir le panier", customers lost the way to the
+  // basket. An add says so in a toast, with "Voir le panier" on it.
   const cartCount = useCart((s) => s.items.reduce((n, i) => n + i.qty, 0));
   const commit = () => {
-    if (!addToCart(product, qty, { silent: true })) return;
+    if (!addToCart(product, qty)) return;
     setQty(1);
   };
 
   const buyable = product.availability !== 'UNAVAILABLE';
+  // Three things side by side: on a phone the add button says "Ajouter"
+  // (beside "Panier" it can mean nothing else) so it stays one line; the
+  // whole phrase where there is room, and always for a screen reader.
+  const wideBar = useWindowDimensions().width >= 420;
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   const add = () => {
@@ -211,10 +214,6 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
           : product.fitment === 'UNKNOWN'
             ? { icon: 'search' as const, fg: C.textMuted, titleTone: C.text, bg: C.surface, text: t('fit.unknown'), why: `${t('look.unknownWhy', { car: carName })} ${t('product.unknownNote')}` }
             : { icon: 'info' as const, fg: C.text, titleTone: C.text, bg: C.surface, text: t('look.chooseToCheck'), why: null };
-  const openCompat = () => {
-    setCompatKey((k) => k + 1);
-    requestAnimationFrame(() => scroll.current?.scrollTo({ y: compatY.current, animated: true }));
-  };
 
   const refCount = product.oeGroups.reduce((n, g) => n + g.refs.length, 0) + product.aftermarketRefs.length;
 
@@ -241,7 +240,6 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   return (
     <View style={styles.root}>
       <ScrollView
-        ref={scroll}
         contentContainerStyle={[styles.scroll, { paddingBottom: BAR_HEIGHT + insets.bottom + Spacing.four }]}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
@@ -286,10 +284,10 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
           </View>
           <View style={[styles.stock, row]}>
             <View style={[styles.dot, { backgroundColor: stock.tone }]} />
-            <Text variant="hint" tone={stock.tone}>
+            <Text variant="hint" tone={stock.tone} style={styles.noShrink}>
               {stock.label}
             </Text>
-            {buyable && shipLine ? <Text variant="hint">{`·  ${shipLine}`}</Text> : null}
+            {buyable && shipLine ? <Text variant="hint" style={styles.shrink}>{`·  ${shipLine}`}</Text> : null}
           </View>
           {stock.detail ? <Text variant="hint">{stock.detail}</Text> : null}
           {/* Not on the shelf: one push the day it is (phones with push only). */}
@@ -319,15 +317,15 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
             ) : null}
             {product.fitment === null ? (
               <Button label={t('look.changeVehicle')} icon="plus" variant="secondary" onPress={() => router.push('/garage/ajouter')} style={styles.fitButton} />
-            ) : (
+            ) : null}
+            {product.fitment === null && product.compatibility.total > 0 ? (
               <View style={[row, styles.fitActions]}>
-                {product.compatibility.total > 0 ? (
-                  <Pressable accessibilityRole="button" onPress={openCompat} style={styles.fitLink}>
-                    <Text variant="hint" tone={C.text} style={styles.underline}>
-                      {t('look.seeFits')}
-                    </Text>
-                  </Pressable>
-                ) : null}
+                <FitsToggle open={fitsOpen} onPress={() => setFitsOpen((v) => !v)} />
+              </View>
+            ) : null}
+            {product.fitment !== null ? (
+              <View style={[row, styles.fitActions]}>
+                {product.compatibility.total > 0 ? <FitsToggle open={fitsOpen} onPress={() => setFitsOpen((v) => !v)} /> : null}
                 {product.fitment === 'FITS' ? (
                   // The shop's own guarantee for a part it confirmed (/garanties).
                   <Pressable accessibilityRole="link" onPress={() => router.push('/garanties')} style={styles.fitLink}>
@@ -381,7 +379,12 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
                   </Pressable>
                 ) : null}
               </View>
-            )}
+            ) : null}
+            {fitsOpen && product.compatibility.total > 0 ? (
+              <View style={styles.fitList} testID="fit-vehicles">
+                <Compatibility product={product} activeEngineId={active?.engineId} />
+              </View>
+            ) : null}
           </View>
 
 
@@ -422,20 +425,16 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
               </Accordion>
             ) : null}
 
-            <View onLayout={(e) => (compatY.current = e.nativeEvent.layout.y)}>
-              <Accordion
-                key={compatKey}
-                initiallyOpen={compatKey > 0}
-                title={t('product.compat')}
-                summary={
-                  product.compatibility.total
-                    ? t('product.compatCount', { n: product.compatibility.total })
-                    : t('fit.unknownShort')
-                }
-              >
-                <Compatibility product={product} activeEngineId={active?.engineId} />
-              </Accordion>
-            </View>
+            <Accordion
+              title={t('product.compat')}
+              summary={
+                product.compatibility.total
+                  ? t('product.compatCount', { n: product.compatibility.total })
+                  : t('fit.unknownShort')
+              }
+            >
+              <Compatibility product={product} activeEngineId={active?.engineId} />
+            </Accordion>
 
             {refCount ? (
               <Accordion title={t('product.oemLong')}>
@@ -510,22 +509,13 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
 
       <View style={[styles.bar, { paddingBottom: insets.bottom + Spacing.three }]}>
         <View style={[styles.barInner, row]}>
+          <CartButton count={cartCount} onPress={() => router.navigate('/panier')} />
           {!buyable ? (
             <Button label={t('stock.unavailable')} onPress={() => undefined} disabled style={styles.flex} />
-          ) : inCart > 0 ? (
-            <Animated.View entering={FadeIn.duration(160).reduceMotion(ReduceMotion.System)} style={[styles.flex, row, styles.addedRow]}>
-              <View style={styles.inCart}>
-                <Text accessibilityLiveRegion="polite" variant="hint" tone={C.success} style={{ fontFamily: familyFor('bodySemi', rtl) }}>
-                  {t('look.inCart')}
-                </Text>
-                <QuantityStepper value={inCart} onChange={(q) => setCartQty(product.id, q)} min={0} size="compact" />
-              </View>
-              <Button label={t('look.viewCartN', { n: cartCount })} icon="shopping-cart" onPress={() => router.navigate('/panier')} style={styles.flex} />
-            </Animated.View>
           ) : (
             <>
               <QuantityStepper value={qty} onChange={setQty} size="compact" />
-              <Button label={t('product.add')} icon="shopping-cart" onPress={add} style={styles.flex} />
+              <Button label={wideBar ? t('product.add') : t('product.addShort')} accessibilityLabel={t('product.add')} icon="plus" onPress={add} style={styles.flex} />
             </>
           )}
         </View>
@@ -663,6 +653,45 @@ function Compatibility({ product, activeEngineId }: { product: ProductDetail; ac
       })}
       {total > vehicles.length ? <Text variant="hint">{t('product.compatMore', { n: total - vehicles.length })}</Text> : null}
     </View>
+  );
+}
+
+/** "Voir les véhicules compatibles" ⇄ "Masquer", inside the verdict. */
+function FitsToggle({ open, onPress }: { open: boolean; onPress: () => void }) {
+  const { t } = useI18n();
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={onPress} style={styles.fitLink} testID="fit-vehicles-toggle">
+      <Text variant="hint" tone={C.text} style={styles.underline}>
+        {open ? t('look.fitsHide') : t('look.seeFits')}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * The basket, as a button of its own: outlined navy, the cart and the word,
+ * and the number of parts in it on a gold badge that pops when it changes.
+ */
+function CartButton({ count, onPress }: { count: number; onPress: () => void }) {
+  const { t, rtl } = useI18n();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={count > 0 ? `${t('look.cartButton')}, ${t('look.viewCartN', { n: count })}` : t('look.cartButton')}
+      onPress={onPress}
+      style={({ pressed }) => [styles.cartBtn, pressed && styles.cartBtnPressed]}
+      testID="product-cart-button"
+    >
+      <Feather name="shopping-cart" size={20} color={Brand.navy900} />
+      <Text style={[styles.cartBtnText, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={1}>
+        {t('look.cartButton')}
+      </Text>
+      {count > 0 ? (
+        <Animated.View key={count} entering={ZoomIn.duration(220).reduceMotion(ReduceMotion.System)} style={[styles.cartBadge, rtl ? { left: -6 } : { right: -6 }]}>
+          <Text style={[styles.cartBadgeText, { fontFamily: familyFor('headingStrong', false) }]}>{count > 99 ? '99+' : String(count)}</Text>
+        </Animated.View>
+      ) : null}
+    </Pressable>
   );
 }
 
@@ -995,8 +1024,36 @@ const styles = StyleSheet.create({
     borderTopColor: C.border,
   },
   barInner: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', alignItems: 'center', gap: Spacing.two, minHeight: Tap.primary },
-  addedRow: { alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
-  inCart: { alignItems: 'center', gap: 2 },
+  cartBtn: {
+    width: 64,
+    height: Tap.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+    borderRadius: Radius.card,
+    borderWidth: 1.5,
+    borderColor: Brand.navy900,
+    backgroundColor: Brand.white,
+  },
+  cartBtnPressed: { backgroundColor: C.surface },
+  cartBtnText: { fontSize: 11, lineHeight: 14, color: Brand.navy900 },
+  cartBadge: {
+    position: 'absolute',
+    top: -7,
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 5,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: Brand.white,
+    backgroundColor: Brand.gold500,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cartBadgeText: { fontSize: 11, lineHeight: 14, color: Brand.navy950 },
+  fitList: { paddingTop: Spacing.one, paddingBottom: Spacing.two },
+  noShrink: { flexShrink: 0 },
+  shrink: { flexShrink: 1 },
   zoom: { flex: 1, backgroundColor: 'rgba(3,10,26,0.96)' },
   zoomContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
   zoomClose: { position: 'absolute', top: 48, right: 20, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.12)' },

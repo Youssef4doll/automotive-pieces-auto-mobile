@@ -64,6 +64,7 @@ export function PickerScreen<T>({
   subtitle,
   filterPlaceholder,
   alwaysFilter = false,
+  lead,
 }: {
   /** Marque → Modèle → Motorisation, with what has been chosen so far. */
   trail: TrailStep[];
@@ -84,8 +85,8 @@ export function PickerScreen<T>({
    */
   footer?: string | null;
   /**
-   * Shortcuts above the list — on the first step, the registration card,
-   * the cars already in the garage and the makes with the most parts. Hidden
+   * Shortcuts above the list — on the first step, the cars already in the
+   * garage and the makes with the most parts. Hidden
    * while the customer is filtering: they have said what they are looking
    * for, and the shortcuts would push it down.
    */
@@ -97,6 +98,13 @@ export function PickerScreen<T>({
   filterPlaceholder?: string;
   /** Show the search box however short the list — the makes screen leads with it. */
   alwaysFilter?: boolean;
+  /**
+   * Above everything, the step included — the makes screen's VIN card, the
+   * first way in for a customer who does not know their car. With it the
+   * step's head and its search box scroll with the list, so the card does
+   * not hold a third of the screen while the makes are scanned.
+   */
+  lead?: React.ReactNode;
 }) {
   const { t, rtl } = useI18n();
   const [filter, setFilter] = useState('');
@@ -113,6 +121,81 @@ export function PickerScreen<T>({
   );
 
   const grid = layout === 'grid';
+
+  const head = (
+    <View style={styles.head}>
+      <StepProgress steps={trail} />
+      <Trail steps={trail} />
+      <Text variant="screenTitle" style={styles.heading}>
+        {heading}
+      </Text>
+      {subtitle ? (
+        <Text variant="hint" tone={C.textMuted} style={{ textAlign: rtl ? 'right' : 'left' }}>
+          {subtitle}
+        </Text>
+      ) : null}
+    </View>
+  );
+
+  const footerBar = footer ? (
+    <View style={styles.footerBar}>
+      <Text variant="hint" tone={C.textFaint} style={{ textAlign: rtl ? 'right' : 'left' }}>
+        {footer}
+      </Text>
+    </View>
+  ) : null;
+
+  const renderItem = ({ item }: { item: PickerItem }) =>
+    grid ? (
+      <Tile title={item.title} detail={item.subtitle} note={item.note} marked={item.marked} onPress={item.onPress} />
+    ) : (
+      <ListRow leading={item.leading} title={item.title} subtitle={item.subtitle} note={item.note} onPress={item.onPress} />
+    );
+
+  if (lead) {
+    // One scroll: the lead, the step, its search box, the shortcuts, the
+    // list. The lead and the shortcuts step aside while a name is typed.
+    const loaded = resource.status === 'loaded';
+    return (
+      <Screen edges={['left', 'right', 'bottom']}>
+        <FlatList
+          data={loaded ? shown : []}
+          keyExtractor={(item) => item.key}
+          key={layout}
+          initialNumToRender={Math.max(10, shown.length)}
+          numColumns={grid ? 2 : 1}
+          columnWrapperStyle={grid ? styles.gridRow : undefined}
+          renderItem={renderItem}
+          ItemSeparatorComponent={Gap}
+          ListHeaderComponent={
+            <View>
+              {!needle ? <View style={styles.lead}>{lead}</View> : null}
+              {head}
+              {loaded && items.length > 0 ? (
+                <FilterField value={filter} onChange={setFilter} placeholder={filterPlaceholder ?? t('picker.filter')} />
+              ) : null}
+              {header && !needle && loaded && items.length > 0 ? <View style={styles.header}>{header}</View> : null}
+            </View>
+          }
+          ListEmptyComponent={
+            resource.status === 'loading' ? (
+              <Loading />
+            ) : resource.status === 'failed' ? (
+              <Failed failure={resource.failure} onRetry={resource.retry} />
+            ) : items.length === 0 ? (
+              <Empty title={emptyTitle} body={emptyBody} />
+            ) : (
+              <Empty title={t('picker.noMatch', { q: filter })} body={t('picker.noMatchHint')} />
+            )
+          }
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+        {footerBar}
+      </Screen>
+    );
+  }
 
   return (
     <Screen edges={['left', 'right', 'bottom']}>
@@ -174,25 +257,7 @@ export function PickerScreen<T>({
                 initialNumToRender={Math.max(10, shown.length)}
                 numColumns={grid ? 2 : 1}
                 columnWrapperStyle={grid ? styles.gridRow : undefined}
-                renderItem={({ item }) =>
-                  grid ? (
-                    <Tile
-                      title={item.title}
-                      detail={item.subtitle}
-                      note={item.note}
-                      marked={item.marked}
-                      onPress={item.onPress}
-                    />
-                  ) : (
-                    <ListRow
-                      leading={item.leading}
-                      title={item.title}
-                      subtitle={item.subtitle}
-                      note={item.note}
-                      onPress={item.onPress}
-                    />
-                  )
-                }
+                renderItem={renderItem}
                 ItemSeparatorComponent={Gap}
                 ListHeaderComponent={header && !needle ? <View style={styles.header}>{header}</View> : null}
                 keyboardShouldPersistTaps="handled"
@@ -204,13 +269,7 @@ export function PickerScreen<T>({
         )
       ) : null}
 
-      {footer ? (
-        <View style={styles.footerBar}>
-          <Text variant="hint" tone={C.textFaint} style={{ textAlign: rtl ? 'right' : 'left' }}>
-            {footer}
-          </Text>
-        </View>
-      ) : null}
+      {footerBar}
     </Screen>
   );
 }
@@ -239,6 +298,10 @@ const styles = StyleSheet.create({
   header: {
     gap: Spacing.four,
     paddingBottom: Spacing.four,
+  },
+  lead: {
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.two,
   },
   list: {
     paddingBottom: Spacing.six,

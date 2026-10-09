@@ -17,6 +17,7 @@ import { PromoBanner } from '@/components/ui/promo-banner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { MakeLogo } from '@/components/ui/make-logo';
+import { MakeRail } from '@/components/ui/make-rail';
 import { useVehicleLine } from '@/components/ui/vehicle-card';
 import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
@@ -42,9 +43,9 @@ const DISC = { x: 0.53, y: 0.55 };
  * search box, and "Votre véhicule" — the car in the garage, or the
  * invitation to choose one — then "Comment trouver votre pièce ?".
  *
- * On the white sheet: every family, most parts first, the shop's own
- * campaigns when it runs one, the parts makers the shop carries, and
- * "Besoin d'un conseil ?".
+ * On the white sheet: every family, most parts first, the car makes (a door
+ * into the picker at each), the shop's own campaigns when it runs one, the
+ * parts makers the shop carries, and "Besoin d'un conseil ?".
  *
  * Kept true where the reference could not be: the greeting uses the name the
  * customer gave at checkout, or none; there is no bell, because the app has
@@ -256,6 +257,9 @@ export default function HomeScreen() {
                   </PressScale>
                 ))}
           </Rail>
+          {/* The car makes, each a door into the picker at that make. */}
+          <MakeRail />
+
           {/* What the owner's own dates say is coming up for the main car. */}
           <CareDueStrip />
 

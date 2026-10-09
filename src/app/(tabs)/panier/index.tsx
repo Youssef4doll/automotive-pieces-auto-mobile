@@ -137,7 +137,6 @@ export default function CartScreen() {
 
             {quote && quote.remainingForFree > 0 ? (
               <FreeDelivery
-                remaining={quote.remainingForFree}
                 threshold={quote.freeShippingThreshold}
                 subtotal={quote.subtotal - quote.discount}
                 suggestion={null}
@@ -365,8 +364,10 @@ function Line({
 }
 
 /**
- * How far off free delivery is — a bar and a sentence, both from the shop's
- * own threshold. Shown only while there is a difference to make up.
+ * Free delivery from the shop's own threshold — the sentence names the
+ * threshold itself (the owner, October 2026: "dès 150 DT", not what is left
+ * to spend), and the bar shows how far the basket is towards it. Shown only
+ * while there is a difference to make up.
  *
  * Under it, when the shop has one, a single part that closes the gap: one
  * the shop links to something in the basket, or one confirmed for the
@@ -374,14 +375,12 @@ function Line({
  * make a number go up.
  */
 function FreeDelivery({
-  remaining,
   threshold,
   subtotal,
   suggestion,
   onAdd,
   onOpen,
 }: {
-  remaining: number;
   threshold: number;
   subtotal: number;
   suggestion: Product | null;
@@ -396,7 +395,7 @@ function FreeDelivery({
       <View style={[styles.freeHead, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
         <Feather name="truck" size={IconSize.medium} color={C.text} />
         <Text variant="hint" tone={C.text} style={styles.lineText}>
-          {t('cart.toFree', { amount: formatDT(remaining) })}
+          {t('cart.toFree', { amount: formatDT(threshold) })}
         </Text>
       </View>
       <View style={[styles.track, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>

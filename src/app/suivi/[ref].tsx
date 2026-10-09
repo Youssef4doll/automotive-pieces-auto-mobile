@@ -8,7 +8,6 @@ import { ordersApi, type Order, type OrderStatus } from '@/api/orders';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { QuestionThread } from '@/components/ui/question-thread';
-import { ShopContact } from '@/components/ui/shop-contact';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { arrivalWindow, sameDay } from '@/lib/arrival';
 import { deliveryDelay } from '@/lib/checkout';
@@ -21,7 +20,6 @@ import { PartImage } from '@/components/ui/part-image';
 import { formatDate, formatDT } from '@/lib/format';
 import { DELIVERY_FLOW, PICKUP_FLOW, readyToCollect, statusNext, statusWord } from '@/lib/order-status';
 import { useI18n } from '@/i18n/provider';
-import { useCart } from '@/store/cart';
 import { useOrders } from '@/store/orders';
 import { useQuestions } from '@/store/questions';
 import { useToast } from '@/store/toast';
@@ -101,7 +99,6 @@ export default function TrackingScreen() {
 function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void }) {
   const { t, locale, rtl } = useI18n();
   const router = useRouter();
-  const add = useCart((s) => s.add);
   const toast = useToast((s) => s.show);
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
@@ -113,22 +110,6 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
   const reached = cancelled ? -1 : FLOW.indexOf(pickup && order.status === 'SHIPPED' ? 'PREPARED' : order.status);
   const when = (status: OrderStatus) => order.history.filter((h) => h.status === status).at(-1)?.at ?? null;
 
-  const buyAgain = () => {
-    let n = 0;
-    for (const item of order.items) {
-      if (!item.productId || !item.slug) continue;
-      const ok = add(
-        { id: item.productId, slug: item.slug, name: item.name, sku: item.sku, brand: null, familySlug: item.familySlug ?? '', imageUrl: null },
-        item.qty,
-      );
-      if (ok) n += 1;
-    }
-    toast({
-      message: t('track.buyAgainDone', { n }),
-      action: { label: t('product.viewCart'), onPress: () => router.navigate('/panier') },
-    });
-  };
-  const canBuyAgain = order.items.some((i) => i.slug);
 
   // An answer shown here is an answer read: "Mes questions" stops calling it new.
   useEffect(() => {
@@ -248,10 +229,10 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
         <OrderReturns order={order} onChanged={onRefresh} />
         {!cancelled && order.status !== 'DELIVERED' ? <OrderNotify orderRef={order.ref} /> : null}
 
-        {/* A question about this order: asked in the app — always there,
-            whatever the shop has published — with the answers under it; the
-            shop's WhatsApp and phone when it has them; and, while nothing has
-            started, a way out. */}
+        {/* A question about this order: asked in the app, with the answers
+            under it — the one way to reach the shop from here (the owner,
+            October 2026: the chat only, no WhatsApp or phone beside it); and,
+            while nothing has started, a way out. */}
         <View style={styles.help} testID="order-questions">
           <Text variant="rowTitle">{t('track.help')}</Text>
           {order.questions?.map((q) => <QuestionThread key={q.id} q={q} />)}
@@ -261,7 +242,6 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
             variant={order.questions?.length ? 'secondary' : 'primary'}
             onPress={() => router.push({ pathname: '/demande', params: { order: order.ref } })}
           />
-          <ShopContact message={t('track.whatsappMsg', { ref: order.ref })} from="order" />
         </View>
         {/* The way out, apart from the help and quieter than it: a red
             full-width button right under "WhatsApp" was one slip from a
@@ -330,11 +310,6 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
           deliveryLabel={t(order.deliveryMethod === 'PICKUP' ? 'checkout.pickup' : 'cart.delivery')}
         />
 
-        {canBuyAgain ? (
-          <View style={styles.again}>
-            <Button label={t('track.buyAgain')} variant="secondary" icon="rotate-cw" onPress={buyAgain} />
-          </View>
-        ) : null}
       </View>
 
       <BottomSheet visible={confirmCancel} onClose={() => setConfirmCancel(false)} title={t('track.cancelTitle')}>
@@ -456,8 +431,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.card,
     borderWidth: Border.thin,
     borderColor: C.border,
-  },
-  again: {
-    paddingTop: Spacing.three,
   },
 });

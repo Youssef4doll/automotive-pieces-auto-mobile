@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { catalogueApi, type ProductSort, productsApi, type Family } from '@/api/catalogue';
+import { MakeLogo } from '@/components/ui/make-logo';
 import { PartImage } from '@/components/ui/part-image';
 import { ProductGrid } from '@/components/ui/product-grid';
 import { ProductListSkeleton } from '@/components/ui/skeleton';
@@ -16,6 +17,7 @@ import { useResource } from '@/hooks/use-resource';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
+import { NavCar } from '@/illustrations/vehicle';
 import { track } from '@/services/analytics';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { Rail } from '@/components/ui/rail';
@@ -59,7 +61,8 @@ export default function FamilyScreen() {
     brand?: string;
   }>();
 
-  const engineId = useGarage((s) => s.active?.engineId);
+  const active = useGarage((s) => s.active);
+  const engineId = active?.engineId;
   const [subcategory, setSubcategory] = useState<string | null>(initialSubcategory ?? null);
   // Sort and filters: the order (a sheet of five), on the shelf only, marked
   // down, one brand.
@@ -134,6 +137,28 @@ export default function FamilyScreen() {
           <PartImage slug={family} imageUrl={current?.imageUrl} size={176} label={name} fit={current?.imageUrl ? 'cover' : 'contain'} />
         </View>
         <Text style={[styles.tagline, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{tagline}</Text>
+        {/* Which car this list is for (the owner, October 2026: "what you
+            are shopping for"): its maker's mark and its name — every tile
+            below is judged against it. Without one, the way to choose it. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={active ? `${t('look.shoppingForShort', { car: `${active.makeName} ${active.modelName}` })}, ${t('home.change')}` : t('look.noVehicleLine')}
+          onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
+          style={({ pressed }) => [row, styles.forCar, { alignSelf: rtl ? 'flex-end' : 'flex-start' }, pressed && styles.forCarPressed]}
+          testID="family-car"
+        >
+          {active ? (
+            <MakeLogo name={active.makeName} slug={active.makeSlug} size={28} lifted={false} />
+          ) : (
+            <View style={styles.forCarIcon}>
+              <NavCar size={15} color={Brand.navy900} />
+            </View>
+          )}
+          <Text numberOfLines={1} style={[styles.forCarText, { fontFamily: familyFor('bodySemi', rtl) }]}>
+            {active ? t('look.shoppingForShort', { car: `${active.makeName} ${active.modelName}` }) : t('look.noVehicleLine')}
+          </Text>
+          <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={16} color={Brand.white} />
+        </Pressable>
       </View>
 
       <View style={styles.sheet}>
@@ -302,6 +327,20 @@ const styles = StyleSheet.create({
   // Clear of the picture: it is drawn 176 wide from the right edge, and at
   // 58% "Pour un moteur qui respire bien" ran under the oil can on a 390pt phone.
   tagline: { marginTop: 128, fontSize: 15, lineHeight: 20, color: '#d4dcea', maxWidth: '48%' },
+  forCar: {
+    alignItems: 'center',
+    gap: Spacing.two,
+    maxWidth: '100%',
+    minHeight: Tap.min,
+    marginTop: Spacing.three,
+    paddingLeft: 6,
+    paddingRight: Spacing.three,
+    borderRadius: Tap.min / 2,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  forCarPressed: { backgroundColor: 'rgba(255,255,255,0.22)' },
+  forCarIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: Brand.white, alignItems: 'center', justifyContent: 'center' },
+  forCarText: { flexShrink: 1, fontSize: 14, lineHeight: 18, color: Brand.white },
   sheet: {
     marginTop: -Spacing.four,
     backgroundColor: C.background,

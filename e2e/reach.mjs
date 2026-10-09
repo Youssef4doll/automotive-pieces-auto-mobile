@@ -154,7 +154,8 @@ try {
   check(await says(page, 'Écrire sur WhatsApp'), 'help: WhatsApp appears as soon as the shop has a number');
   await shot(page, 'help-with-whatsapp');
   await go(page, `/suivi/${ref}`, 3500);
-  check(await says(page, 'Écrire sur WhatsApp'), 'order: WhatsApp beside "Demander à la boutique"');
+  // The owner, October 2026: on an order, the in-app chat only.
+  check((await says(page, 'Demander à la boutique')) && !(await says(page, 'Écrire sur WhatsApp')), 'order: the chat only, no WhatsApp beside it');
   await go(page, `/produit/${part.slug}`);
   await page.getByRole('button', { name: /Ajouter au panier/ }).first().click();
   await page.waitForTimeout(800);

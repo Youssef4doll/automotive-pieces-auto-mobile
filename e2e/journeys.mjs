@@ -168,10 +168,8 @@ await journey('7/8 order, track, again', async ({ page }) => {
   const text = await bodyText(page);
   check(text.includes('En attente') && text.includes('Nous confirmons votre commande'), '8 track: status and next step shown');
 
-  await page.getByRole('button', { name: /Commander à nouveau/ }).click();
-  await page.waitForTimeout(1500);
-  const badge = await page.evaluate(() => [...document.querySelectorAll('[aria-label*="dans le panier"]')].map((e) => e.getAttribute('aria-label'))[0] ?? null);
-  check(Boolean(badge), '7 again: the parts are back in the basket', badge);
+  // The owner, October 2026: no "Commander à nouveau" on the order.
+  check(!text.includes('Commander à nouveau'), '8 track: no order-again button');
 }, { token: (await testAccount('Test Journées')).token });
 
 // The order API, attacked from outside.

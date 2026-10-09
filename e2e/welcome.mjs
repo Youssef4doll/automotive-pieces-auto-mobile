@@ -90,7 +90,7 @@ const says = async (page, s) => (await text(page)).toLowerCase().includes(s.toLo
     const p2 = await fresh.newPage();
     await p2.goto(`${APP_URL}/produit/${slug}`, { waitUntil: 'networkidle' });
     await p2.waitForTimeout(3000);
-    check(p2.url().includes('/produit/') && (await says(p2, 'Ajouter au panier')), 'deep link: the product, not the welcome', p2.url());
+    check(p2.url().includes('/produit/') && (await p2.getByRole('button', { name: 'Ajouter au panier' }).count()) > 0, 'deep link: the product, not the welcome', p2.url());
   } catch (e) {
     check(false, 'deep link threw', String(e).split('\n')[0]);
   } finally {

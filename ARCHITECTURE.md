@@ -1972,3 +1972,36 @@ garage offers the VIN too. Passes in the carousel have no shadow (the
 scroller cut it into a grey box); on a narrow phone the button and the
 kicker keep their words. The Home proposed with it was declined; Home stays
 as it is.
+
+## 31. Easier for a customer who does not know their car (October 9, 2026)
+
+The owner's list, after watching customers use the app:
+
+- **The VIN first.** "Choisir ma voiture" opens on a large navy card — "Votre
+  carte grise suffit", what the VIN gives (the make, and often the model and
+  year), and a gold "Entrer mon VIN" — then "Ou choisissez vous-même" and the
+  make step. `PickerScreen` takes a `lead`; with one, the step's head and
+  search box scroll with the list so the card does not hold the screen.
+- **The engine step helps.** Fuel chips (Tous · Essence · Diesel) when the
+  model has more than one fuel, from the engines the shop recorded; "Je ne
+  connais pas ma motorisation" says what on the card tells it and offers the
+  VIN or a question to the shop (`/demande`, photo first).
+- **A saved car lands on the garage**, with the toast — no parts list pushed
+  on top of it any more.
+- **Home: "Marques automobiles"**, a rail of car makes (most parts, then most
+  models, as the picker), each opening the picker at that make
+  (`components/ui/make-rail`).
+- **A family says which car it is for**: "Pour votre BMW Série 1 (E87)" with
+  the maker's mark, under the tagline; without a car, the way to choose one.
+- **The product page.** "Voir les véhicules compatibles" opens the list
+  inside the verdict (it used to scroll to a position measured inside the
+  sections block, which sent the page near the top). The purchase bar keeps
+  its shape: a basket button of its own — outlined, "Panier", the count on a
+  gold badge that pops — the quantity, and "Ajouter" ("Ajouter au panier"
+  where there is room, and always to a screen reader). The add is said in a
+  toast with "Voir le panier".
+- **Basket**: "Livraison offerte dès 150,000 DT" — the threshold itself, with
+  the bar under it, instead of what is left to spend.
+- **An order's page**: the in-app question only ("Demander à la boutique"),
+  no WhatsApp or call beside it; no "Commander à nouveau".
+- **Garage**: no "Besoin d'un conseil ?" card at the foot.

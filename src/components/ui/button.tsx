@@ -46,8 +46,11 @@ export function Button({
   icon,
   style,
   testID,
+  accessibilityLabel,
 }: {
   label: string;
+  /** What a screen reader says, when the visible label is a short form of it. */
+  accessibilityLabel?: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'danger' | 'whatsapp';
   disabled?: boolean;
@@ -63,6 +66,7 @@ export function Button({
     <Pressable
       testID={testID}
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
       disabled={disabled || loading}
       onPress={onPress}

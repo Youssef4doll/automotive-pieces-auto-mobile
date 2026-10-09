@@ -12,7 +12,6 @@ import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { initials, MakeLogo, MarkGlyph } from '@/components/ui/make-logo';
 import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { MAKE_MARKS, markKey } from '@/illustrations/marques';
-import { AdviceCard } from '@/components/ui/advice-card';
 import { CareDueStrip } from '@/components/ui/care-due';
 import { CarKey } from '@/illustrations/car-key';
 import { useI18n } from '@/i18n/provider';
@@ -143,8 +142,6 @@ export default function GarageScreen() {
             {t('garage.full')}
           </Text>
         ) : null}
-
-        <AdviceCard />
       </View>
     </ScrollView>
   );

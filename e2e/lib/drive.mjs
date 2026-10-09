@@ -207,13 +207,8 @@ export async function addBmw(page) {
   await tap(page, 'Série 1 (E87)');
   await page.waitForTimeout(500);
   await tap(page, '116i');
+  // Saved, the car lands on the garage, where the suites expect to stand.
   await page.waitForTimeout(1600);
-  // A new car opens its compatible parts over the garage; back is the garage,
-  // where the suites expect to stand (the tab bar is on it).
-  if (page.url().includes('/pieces-compatibles')) {
-    await page.goBack();
-    await page.waitForTimeout(1000);
-  }
 }
 
 /**

@@ -1,13 +1,14 @@
-import { Feather } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { vehiclesApi, type Make } from '@/api/vehicles';
 import { PickerScreen, type PickerItem } from '@/components/picker-screen';
 import type { TrailStep } from '@/components/ui/chip';
+import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { Border, C, Elevation, familyFor, IconSize, Radius, Spacing } from '@/constants/theme';
+import { Border, Brand, C, Elevation, familyFor, Radius, Spacing } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { CarteGrise } from '@/illustrations/carte-grise';
 import { MakeLogo } from '@/components/ui/make-logo';
@@ -29,10 +30,13 @@ const RAIL_SIZE = 8;
  * whose car was missing from it would conclude the shop does not serve their
  * car rather than that this particular table is incomplete.
  *
- * Above the list, three shortcuts, each only when it has something behind it:
+ * First, before the step itself, the registration card, large: most
+ * customers do not know their model's generation or their engine, and the
+ * VIN on the card names the make — and for many cars the model and the
+ * year — without their having to (the owner, October 2026: "the VIN decoder
+ * first, as a big option"). Then "or choose it yourself", and the step.
  *
- *   the registration card, for a customer holding it — it names the make
- *   from the VIN and saves one step, and says that that is all it does;
+ * Above the list, two shortcuts, each only when it has something behind it:
  *
  *   the cars already in the garage, one tap to switch back to one;
  *
@@ -105,6 +109,7 @@ export default function MakesScreen() {
         emptyTitle={t('picker.noMakes')}
         footer={t('picker.missingData')}
         header={<Shortcuts topMakes={topMakes} onMake={open} />}
+        lead={<VinFirst />}
       />
     </>
   );
@@ -157,42 +162,71 @@ function Shortcuts({ topMakes, onMake }: { topMakes: Make[]; onMake: (make: Make
         </View>
       ) : null}
 
-      <Pressable
-        accessibilityRole="button"
-        onPress={() => router.push('/garage/vin')}
-        style={({ pressed }) => [styles.vin, row, pressed && styles.pressed]}
-      >
-        <View style={styles.vinIcon}>
-          <CarteGrise width={60} />
-        </View>
-        <View style={styles.flex}>
-          <Text variant="rowTitle">{t('look.scanCard')}</Text>
-          <Text variant="hint">{t('look.scanCardWhy')}</Text>
-        </View>
-        <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={C.textMuted} />
-      </Pressable>
-
       <Text style={[styles.section, { fontFamily: familyFor('heading', rtl), textAlign: rtl ? 'right' : 'left' }]}>{t('picker.allMakes')}</Text>
     </>
   );
 }
 
+/**
+ * The registration card as the first way in: the shop's navy, the drawing
+ * of the card with the serial-number line, what the VIN gives (said as it
+ * is — the make, and often the model and year), and the gold button. Under
+ * it, "or choose it yourself" leads into the make step.
+ */
+function VinFirst() {
+  const { t, rtl } = useI18n();
+  const router = useRouter();
+  const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  return (
+    <View style={styles.vinWrap}>
+      <View style={styles.vinCard} testID="vin-first">
+        <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 340 240" preserveAspectRatio="none">
+          <Defs>
+            <LinearGradient id="vinFirst" x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="1">
+              <Stop offset="0" stopColor={Brand.navy700} />
+              <Stop offset="1" stopColor={Brand.navy950} />
+            </LinearGradient>
+          </Defs>
+          <Rect x={0} y={0} width={340} height={240} fill="url(#vinFirst)" />
+        </Svg>
+        <View style={[row, styles.vinTop]}>
+          <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+            <Text style={[styles.vinKicker, align, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.vinFirstKicker')}</Text>
+            <Text style={[styles.vinTitle, align, { fontFamily: familyFor('headingStrong', rtl) }]}>{t('look.vinFirstTitle')}</Text>
+          </View>
+          <View style={styles.vinArt} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <CarteGrise width={92} />
+          </View>
+        </View>
+        <Text style={[styles.vinWhy, align, { fontFamily: familyFor('body', rtl) }]}>{t('look.vinFirstWhy')}</Text>
+        <Button label={t('look.vinFirstCta')} icon="credit-card" onPress={() => router.push('/garage/vin')} />
+      </View>
+      <View style={[row, styles.orRow]}>
+        <View style={styles.orLine} />
+        <Text variant="hint" tone={C.textMuted}>
+          {t('look.orPickMake')}
+        </Text>
+        <View style={styles.orLine} />
+      </View>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   flex: { flex: 1, gap: 2 },
   pressed: { opacity: 0.7 },
   section: { fontSize: 17, lineHeight: 23, color: C.text },
-  vin: {
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.card,
-    borderWidth: Border.thin,
-    borderColor: C.border,
-    backgroundColor: C.background,
-  },
-  // The drawing is wider than tall, so its tile is too.
-  vinIcon: { width: 68, height: 56, borderRadius: Radius.tile, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
+  vinWrap: { gap: Spacing.three },
+  vinCard: { gap: Spacing.three, padding: Spacing.four, borderRadius: Radius.card, overflow: 'hidden', ...Elevation.resting },
+  vinTop: { alignItems: 'center', gap: Spacing.three },
+  vinKicker: { fontSize: 12, lineHeight: 16, letterSpacing: 1, textTransform: 'uppercase', color: Brand.gold400 },
+  vinTitle: { fontSize: 22, lineHeight: 28, color: Brand.white },
+  vinWhy: { fontSize: 14, lineHeight: 20, color: C.heroTextMuted },
+  // The card drawing on a white tile, as it is printed: white paper.
+  vinArt: { padding: 6, borderRadius: Radius.tile, backgroundColor: Brand.white },
+  orRow: { alignItems: 'center', gap: Spacing.two },
+  orLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: C.border },
   block: { gap: Spacing.two },
   // The rail bleeds to the screen edge so the next badge peeks.
   railBar: { flexGrow: 0, flexShrink: 0, marginHorizontal: -Spacing.three },

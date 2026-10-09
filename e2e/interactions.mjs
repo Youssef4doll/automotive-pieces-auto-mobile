@@ -46,22 +46,53 @@ const go = async (path, wait = 2600) => {
 try {
   await addBmw(page);
 
+  // ---- home: the car makes, each a door into the picker at that make
+  await go('/', 3000);
+  const makeRail = page.getByTestId('make-rail');
+  check((await makeRail.count()) === 1 && (await makeRail.textContent())?.includes('Marques automobiles'), 'home: a rail of car makes');
+  await makeRail.getByRole('button', { name: 'Renault', exact: true }).click();
+  await page.waitForTimeout(2000);
+  check(page.url().includes('/garage/ajouter/renault') && (await says(page, 'Clio IV')), 'home: a make opens its models', page.url());
+
+  // ---- a family says which car it is for
+  await go('/famille/filtres', 2500);
+  check((await page.getByTestId('family-car').textContent())?.includes('Pour votre BMW Série 1'), 'family: the car being shopped for, with its mark');
+
   // ---- product: the pinned bar
   await go(`/produit/${fitting[0].slug}`);
   check(await says(page, 'Compatible avec votre BMW Série 1'), 'product: the verdict names the car');
+  // The vehicles it is listed for open inside the verdict, where the eye is.
+  await page.getByTestId('fit-vehicles-toggle').click();
+  await page.waitForTimeout(400);
+  const fitsInVerdict = await page.evaluate(() => {
+    const list = document.querySelector('[data-testid="fit-vehicles"]');
+    const r = list?.getBoundingClientRect();
+    return list ? { text: list.textContent ?? '', top: r.top, inView: r.top >= 0 && r.top < window.innerHeight } : null;
+  });
+  check(Boolean(fitsInVerdict?.text.includes('BMW Série 1')) && fitsInVerdict.inView, 'product: "Voir les véhicules compatibles" opens the list in the verdict, in view', fitsInVerdict && { top: fitsInVerdict.top });
+  await page.getByTestId('fit-vehicles-toggle').click();
+  // The basket is a button of its own; "Ajouter au panier" never turns into
+  // something else (the owner, October 2026).
+  const cartButton = page.getByTestId('product-cart-button');
+  check((await cartButton.count()) === 1 && !(await cartButton.getAttribute('aria-label'))?.includes('('), 'product: a basket button of its own, empty at first');
   await page.getByRole('button', { name: /Ajouter au panier/ }).first().click();
   await page.waitForTimeout(500);
-  check((await says(page, 'Dans le panier')) && (await says(page, 'Voir le panier (1)')), 'product: the bar becomes the cart counter for this part');
-  const toastOver = await page.evaluate(() => [...document.querySelectorAll('[aria-live]')].some((e) => e.textContent?.includes('Voir le panier') && e.getBoundingClientRect().top < window.innerHeight - 140));
-  check(!toastOver, 'product: no toast floating over the part');
-  await page.waitForTimeout(3300);
-  check(await says(page, 'Voir le panier (1)'), 'product: the in-cart state stays (no vanishing message)');
+  check((await cartButton.getAttribute('aria-label'))?.includes('Voir le panier (1)'), 'product: the basket button counts the part', await cartButton.getAttribute('aria-label'));
+  check((await page.getByRole('button', { name: /Ajouter au panier/ }).count()) > 0, 'product: "Ajouter au panier" stays itself after the add');
+  const toast = await page.evaluate(() => {
+    const t = [...document.querySelectorAll('[aria-live]')].find((e) => e.textContent?.includes('Voir le panier'));
+    const bar = document.querySelector('[data-testid="product-cart-button"]');
+    return t && bar ? { toastBottom: t.getBoundingClientRect().bottom, barTop: bar.getBoundingClientRect().top } : null;
+  });
+  check(Boolean(toast) && toast.toastBottom <= toast.barTop, 'product: the add is said in a toast above the bar, with the way to the basket', toast);
   await page.getByRole('button', { name: 'Un de plus' }).last().click();
-  await page.waitForTimeout(400);
-  check(await says(page, 'Voir le panier (2)'), 'product: + on the bar adds one to the cart');
-  await page.getByRole('button', { name: 'Voir le panier (2)' }).click();
+  await page.waitForTimeout(300);
+  await page.getByRole('button', { name: /Ajouter au panier/ }).first().click();
+  await page.waitForTimeout(500);
+  check((await cartButton.getAttribute('aria-label'))?.includes('Voir le panier (3)'), 'product: two more with the stepper make three', await cartButton.getAttribute('aria-label'));
+  await cartButton.click();
   await page.waitForTimeout(2500);
-  check(page.url().endsWith('/panier') && (await says(page, fitting[0].name)), 'product: "Voir le panier" opens the basket with the part', page.url());
+  check(page.url().endsWith('/panier') && (await says(page, fitting[0].name)), 'product: the basket button opens the basket with the part', page.url());
 
   // ---- basket: quantity, total, remove
   const totalOf = async () => {
@@ -106,7 +137,8 @@ try {
     check(await says(page, 'Ajouter quand même'), 'misfit: adding asks first');
     await page.getByRole('button', { name: 'Ajouter quand même' }).click();
     await page.waitForTimeout(700);
-    check((await badge(page)) === before + 1 || (await says(page, 'Dans le panier')), 'misfit: added after the confirmation', { before, after: await badge(page) });
+    const counted = await page.getByTestId('product-cart-button').getAttribute('aria-label');
+    check((await badge(page)) === before + 1 || /Voir le panier \(\d+\)/.test(counted ?? ''), 'misfit: added after the confirmation', { before, after: await badge(page), counted });
     check(await says(page, 'Voir les pièces qui vont sur ma BMW'), 'misfit: a way to the parts that do fit');
     await page.evaluate((v) => (v ? localStorage.setItem('apa-vehicle', v) : localStorage.removeItem('apa-vehicle')), saved);
     await go('/', 1500);
@@ -198,8 +230,14 @@ try {
   await page.waitForTimeout(1500);
   check(page.url().includes('mode=reference'), 'find: one tap down the reference path', page.url());
 
-  // ---- picker: progress, save confirmation, carousel
+  // ---- picker: the VIN first, progress, save confirmation, carousel
   await go('/garage/ajouter');
+  const vinFirst = await page.evaluate(() => {
+    const card = document.querySelector('[data-testid="vin-first"]')?.getBoundingClientRect();
+    const step = [...document.querySelectorAll('div')].find((d) => d.textContent === 'Étape 1 sur 3')?.getBoundingClientRect();
+    return card && step ? card.bottom <= step.top : false;
+  });
+  check(vinFirst && (await says(page, 'Entrer mon VIN')), 'picker: the registration card (VIN) comes first, before the make step');
   check(await says(page, 'Étape 1 sur 3'), 'picker: step 1 of 3');
   await tap(page, 'Renault');
   await page.waitForTimeout(1500);
@@ -207,14 +245,15 @@ try {
   await tap(page, 'Clio IV');
   await page.waitForTimeout(1500);
   check(await says(page, 'Étape 3 sur 3'), 'picker: step 3 of 3');
+  await page.getByTestId('engine-help').click();
+  await page.waitForTimeout(300);
+  check((await says(page, 'Essayer avec mon VIN')) && (await says(page, 'Demander à la boutique')), 'picker: "Je ne connais pas ma motorisation" offers the VIN and the shop');
   await tap(page, '1.5 dCi');
   await page.waitForTimeout(1200);
   check(await says(page, 'Renault Clio IV enregistrée'), 'picker: the saved car is confirmed');
   await page.waitForTimeout(2000);
-  // A new car opens its own parts (confirmed, then to confirm); back is the garage.
-  check(page.url().includes('/pieces-compatibles') && (await says(page, 'Renault Clio IV · 1.5 dCi')), 'picker: a new car opens its parts', page.url());
-  await page.goBack();
-  await page.waitForTimeout(1500);
+  // The owner, October 2026: back to the garage, no list of parts on top.
+  check(page.url().endsWith('/garage') && !page.url().includes('/pieces-compatibles'), 'picker: a new car lands on the garage, not on a parts list', page.url());
   check((await says(page, 'Renault Clio IV')) && (await page.locator('[style*="width: 18px"]').count()) >= 0, 'garage: shows the new principal');
   const cards = await page.evaluate(() => (document.body.innerText.match(/Pièces compatibles/g) ?? []).length);
   check(cards >= 2, 'garage: a carousel of both cars', cards);
