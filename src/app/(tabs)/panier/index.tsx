@@ -137,6 +137,7 @@ export default function CartScreen() {
 
             {quote && quote.remainingForFree > 0 ? (
               <FreeDelivery
+                remaining={quote.remainingForFree}
                 threshold={quote.freeShippingThreshold}
                 subtotal={quote.subtotal - quote.discount}
                 suggestion={null}
@@ -364,10 +365,9 @@ function Line({
 }
 
 /**
- * Free delivery from the shop's own threshold — the sentence names the
- * threshold itself (the owner, October 2026: "dès 150 DT", not what is left
- * to spend), and the bar shows how far the basket is towards it. Shown only
- * while there is a difference to make up.
+ * How far off free delivery is — what is left to spend, the bar, and under
+ * its end the shop's own threshold ("Offerte dès 150,000 DT"), all from the
+ * shop's settings. Shown only while there is a difference to make up.
  *
  * Under it, when the shop has one, a single part that closes the gap: one
  * the shop links to something in the basket, or one confirmed for the
@@ -375,12 +375,14 @@ function Line({
  * make a number go up.
  */
 function FreeDelivery({
+  remaining,
   threshold,
   subtotal,
   suggestion,
   onAdd,
   onOpen,
 }: {
+  remaining: number;
   threshold: number;
   subtotal: number;
   suggestion: Product | null;
@@ -395,13 +397,16 @@ function FreeDelivery({
       <View style={[styles.freeHead, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
         <Feather name="truck" size={IconSize.medium} color={C.text} />
         <Text variant="hint" tone={C.text} style={styles.lineText}>
-          {t('cart.toFree', { amount: formatDT(threshold) })}
+          {t('cart.toFree', { amount: formatDT(remaining) })}
         </Text>
       </View>
       <View style={[styles.track, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
         <View style={[styles.fill, { flex: share }]} />
         <View style={{ flex: 1 - share }} />
       </View>
+      <Text variant="hint" tone={C.textMuted} style={{ textAlign: rtl ? 'left' : 'right' }}>
+        {t('cart.freeFrom', { amount: formatDT(threshold) })}
+      </Text>
       {suggestion ? (
         <View style={styles.suggest}>
           <Text variant="hint" tone={C.text} style={{ textAlign: rtl ? 'right' : 'left' }}>

@@ -169,9 +169,9 @@ function Shortcuts({ topMakes, onMake }: { topMakes: Make[]; onMake: (make: Make
 
 /**
  * The registration card as the first way in: the shop's navy, the drawing
- * of the card with the serial-number line, what the VIN gives (said as it
- * is — the make, and often the model and year), and the gold button. Under
- * it, "or choose it yourself" leads into the make step.
+ * of the card with the serial-number line, its title and the gold button —
+ * no paragraph (the owner, October 2026). Under it, "or choose it
+ * yourself" leads into the make step.
  */
 function VinFirst() {
   const { t, rtl } = useI18n();
@@ -199,7 +199,6 @@ function VinFirst() {
             <CarteGrise width={92} />
           </View>
         </View>
-        <Text style={[styles.vinWhy, align, { fontFamily: familyFor('body', rtl) }]}>{t('look.vinFirstWhy')}</Text>
         <Button label={t('look.vinFirstCta')} icon="credit-card" onPress={() => router.push('/garage/vin')} />
       </View>
       <View style={[row, styles.orRow]}>
@@ -222,7 +221,6 @@ const styles = StyleSheet.create({
   vinTop: { alignItems: 'center', gap: Spacing.three },
   vinKicker: { fontSize: 12, lineHeight: 16, letterSpacing: 1, textTransform: 'uppercase', color: Brand.gold400 },
   vinTitle: { fontSize: 22, lineHeight: 28, color: Brand.white },
-  vinWhy: { fontSize: 14, lineHeight: 20, color: C.heroTextMuted },
   // The card drawing on a white tile, as it is printed: white paper.
   vinArt: { padding: 6, borderRadius: Radius.tile, backgroundColor: Brand.white },
   orRow: { alignItems: 'center', gap: Spacing.two },

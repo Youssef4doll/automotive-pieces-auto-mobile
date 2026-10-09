@@ -1966,9 +1966,9 @@ VIN does not carry it. Several models → "Lequel est le vôtre ?"; the make
 alone → the picker on that make, as before; "Ce n'est pas ma voiture" is
 always there.
 
-**The garage, the same day.** The shortcuts are three tiles — add a
+**The garage, the same day.** The shortcuts were three tiles — add a
 vehicle, by registration (the VIN screen), my vehicles — and the empty
-garage offers the VIN too. Passes in the carousel have no shadow (the
+garage offered the VIN too (taken back the same evening, §31). Passes in the carousel have no shadow (the
 scroller cut it into a grey box); on a narrow phone the button and the
 kicker keep their words. The Home proposed with it was declined; Home stays
 as it is.
@@ -1978,9 +1978,8 @@ as it is.
 The owner's list, after watching customers use the app:
 
 - **The VIN first.** "Choisir ma voiture" opens on a large navy card — "Votre
-  carte grise suffit", what the VIN gives (the make, and often the model and
-  year), and a gold "Entrer mon VIN" — then "Ou choisissez vous-même" and the
-  make step. `PickerScreen` takes a `lead`; with one, the step's head and
+  carte grise suffit" and a gold "Entrer mon VIN", no paragraph — then "Ou
+  choisissez vous-même" and the make step. `PickerScreen` takes a `lead`; with one, the step's head and
   search box scroll with the list so the card does not hold the screen.
 - **The engine step helps.** Fuel chips (Tous · Essence · Diesel) when the
   model has more than one fuel, from the engines the shop recorded; "Je ne
@@ -1995,13 +1994,17 @@ The owner's list, after watching customers use the app:
   the maker's mark, under the tagline; without a car, the way to choose one.
 - **The product page.** "Voir les véhicules compatibles" opens the list
   inside the verdict (it used to scroll to a position measured inside the
-  sections block, which sent the page near the top). The purchase bar keeps
-  its shape: a basket button of its own — outlined, "Panier", the count on a
-  gold badge that pops — the quantity, and "Ajouter" ("Ajouter au panier"
-  where there is room, and always to a screen reader). The add is said in a
-  toast with "Voir le panier".
-- **Basket**: "Livraison offerte dès 150,000 DT" — the threshold itself, with
-  the bar under it, instead of what is left to spend.
+  sections block, which sent the page near the top). The basket is up top: the
+  camera, sharing and the basket (its count on a gold badge) in one navy
+  capsule, an island that opens to "✓ Ajouté" beside the basket for two
+  seconds when a part goes in. The purchase bar keeps its shape — the
+  quantity and "Ajouter au panier" ("Ajouter" on the narrowest phones; the
+  whole phrase always for a screen reader).
+- **Basket**: what is left to spend ("Plus que 129,100 DT pour la livraison
+  offerte"), the bar, and under its end the threshold ("Offerte dès 150,000
+  DT").
 - **An order's page**: the in-app question only ("Demander à la boutique"),
   no WhatsApp or call beside it; no "Commander à nouveau".
-- **Garage**: no "Besoin d'un conseil ?" card at the foot.
+- **Garage**: back to the design before the three tiles (Mes véhicules and
+  Ajouter un véhicule as two rows), without the "Besoin d'un conseil ?" card
+  at the foot.

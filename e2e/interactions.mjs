@@ -71,20 +71,23 @@ try {
   });
   check(Boolean(fitsInVerdict?.text.includes('BMW Série 1')) && fitsInVerdict.inView, 'product: "Voir les véhicules compatibles" opens the list in the verdict, in view', fitsInVerdict && { top: fitsInVerdict.top });
   await page.getByTestId('fit-vehicles-toggle').click();
-  // The basket is a button of its own; "Ajouter au panier" never turns into
-  // something else (the owner, October 2026).
+  // The basket is up top, in the island beside the camera; "Ajouter au
+  // panier" never turns into something else (the owner, October 2026).
   const cartButton = page.getByTestId('product-cart-button');
-  check((await cartButton.count()) === 1 && !(await cartButton.getAttribute('aria-label'))?.includes('('), 'product: a basket button of its own, empty at first');
+  const island = await page.evaluate(() => {
+    const cart = document.querySelector('[data-testid="product-cart-button"]')?.getBoundingClientRect();
+    const camera = document.querySelector('[aria-label="Envoyer une photo de la pièce"]')?.getBoundingClientRect();
+    return cart && camera ? { cartTop: cart.top, cameraTop: camera.top, sameRow: Math.abs(cart.top - camera.top) < 8, upTop: cart.top < 120 } : null;
+  });
+  check(Boolean(island?.sameRow && island.upTop), 'product: the basket is up top, beside the camera', island);
+  check(!(await cartButton.getAttribute('aria-label'))?.includes('('), 'product: the basket shows no count while empty');
   await page.getByRole('button', { name: /Ajouter au panier/ }).first().click();
   await page.waitForTimeout(500);
-  check((await cartButton.getAttribute('aria-label'))?.includes('Voir le panier (1)'), 'product: the basket button counts the part', await cartButton.getAttribute('aria-label'));
+  check((await cartButton.getAttribute('aria-label'))?.includes('Voir le panier (1)'), 'product: the basket counts the part', await cartButton.getAttribute('aria-label'));
+  check((await page.getByTestId('product-island').textContent())?.includes('Ajouté'), 'product: the island opens to say "Ajouté"');
   check((await page.getByRole('button', { name: /Ajouter au panier/ }).count()) > 0, 'product: "Ajouter au panier" stays itself after the add');
-  const toast = await page.evaluate(() => {
-    const t = [...document.querySelectorAll('[aria-live]')].find((e) => e.textContent?.includes('Voir le panier'));
-    const bar = document.querySelector('[data-testid="product-cart-button"]');
-    return t && bar ? { toastBottom: t.getBoundingClientRect().bottom, barTop: bar.getBoundingClientRect().top } : null;
-  });
-  check(Boolean(toast) && toast.toastBottom <= toast.barTop, 'product: the add is said in a toast above the bar, with the way to the basket', toast);
+  await page.waitForTimeout(2600);
+  check(!(await page.getByTestId('product-island').textContent())?.includes('Ajouté'), 'product: and closes again');
   await page.getByRole('button', { name: 'Un de plus' }).last().click();
   await page.waitForTimeout(300);
   await page.getByRole('button', { name: /Ajouter au panier/ }).first().click();

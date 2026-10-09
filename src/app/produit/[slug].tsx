@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Modal, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, { ReduceMotion, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, LinearTransition, ReduceMotion, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { productApi, type ProductDetail } from '@/api/product';
@@ -88,13 +88,7 @@ export default function ProductScreen() {
       <Stack.Screen
         options={{
           title: '',
-          headerRight: () =>
-            product.status === 'loaded' ? (
-              <View style={styles.headerActions}>
-                <PhotoButton sku={product.data.sku} />
-                <ShareButton product={product.data} />
-              </View>
-            ) : null,
+          headerRight: () => (product.status === 'loaded' ? <HeaderIsland product={product.data} /> : null),
         }}
       />
       {product.status === 'loading' ? (
@@ -145,22 +139,21 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   const insets = useSafeAreaInsets();
 
   // The purchase bar is pinned to the foot of the screen, always within
-  // reach, and it does not change shape: the basket is its own button at
-  // the leading end — outlined, with the count on it — and "Ajouter au
-  // panier" stays "Ajouter au panier". The owner, October 2026: when the add
-  // button turned into "Voir le panier", customers lost the way to the
-  // basket. An add says so in a toast, with "Voir le panier" on it.
-  const cartCount = useCart((s) => s.items.reduce((n, i) => n + i.qty, 0));
+  // reach, and it does not change shape: "Ajouter au panier" stays "Ajouter
+  // au panier". The basket is up top, in the island beside the camera (the
+  // owner, October 2026: when the add button turned into "Voir le panier",
+  // customers lost the way to the basket); the island says the add itself.
   const commit = () => {
-    if (!addToCart(product, qty)) return;
+    if (!addToCart(product, qty, { silent: true })) return;
     setQty(1);
   };
 
   const buyable = product.availability !== 'UNAVAILABLE';
-  // Three things side by side: on a phone the add button says "Ajouter"
-  // (beside "Panier" it can mean nothing else) so it stays one line; the
-  // whole phrase where there is room, and always for a screen reader.
-  const wideBar = useWindowDimensions().width >= 420;
+  // The quantity and the button side by side, the button on one line: the
+  // whole phrase where it fits (with its icon where there is room for it),
+  // "Ajouter" on the narrowest phones — the whole phrase always for a
+  // screen reader.
+  const barWidth = useWindowDimensions().width;
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   const add = () => {
@@ -509,13 +502,18 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
 
       <View style={[styles.bar, { paddingBottom: insets.bottom + Spacing.three }]}>
         <View style={[styles.barInner, row]}>
-          <CartButton count={cartCount} onPress={() => router.navigate('/panier')} />
           {!buyable ? (
             <Button label={t('stock.unavailable')} onPress={() => undefined} disabled style={styles.flex} />
           ) : (
             <>
               <QuantityStepper value={qty} onChange={setQty} size="compact" />
-              <Button label={wideBar ? t('product.add') : t('product.addShort')} accessibilityLabel={t('product.add')} icon="plus" onPress={add} style={styles.flex} />
+              <Button
+                label={barWidth >= 370 ? t('product.add') : t('product.addShort')}
+                accessibilityLabel={t('product.add')}
+                icon={barWidth >= 420 || barWidth < 370 ? 'shopping-cart' : undefined}
+                onPress={add}
+                style={styles.flex}
+              />
             </>
           )}
         </View>
@@ -669,29 +667,73 @@ function FitsToggle({ open, onPress }: { open: boolean; onPress: () => void }) {
 }
 
 /**
- * The basket, as a button of its own: outlined navy, the cart and the word,
- * and the number of parts in it on a gold badge that pops when it changes.
+ * The top right of the page as an island: one navy capsule holding the
+ * camera (a photo of the old part to the shop), sharing, and the basket
+ * with its count on a gold badge. Dynamic, as the name says: when a part
+ * goes in, the capsule opens to "Ajouté" beside the basket for two seconds
+ * and closes again — the add is said where the basket is, and the basket
+ * is one tap away from every part (the owner, October 2026).
  */
-function CartButton({ count, onPress }: { count: number; onPress: () => void }) {
+function HeaderIsland({ product }: { product: ProductDetail }) {
   const { t, rtl } = useI18n();
+  const router = useRouter();
+  const count = useCart((s) => s.items.reduce((n, i) => n + i.qty, 0));
+  const [added, setAdded] = useState(false);
+  const last = useRef(count);
+  useEffect(() => {
+    if (count > last.current) {
+      setAdded(true);
+      const timer = setTimeout(() => setAdded(false), 2200);
+      last.current = count;
+      return () => clearTimeout(timer);
+    }
+    last.current = count;
+  }, [count]);
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={count > 0 ? `${t('look.cartButton')}, ${t('look.viewCartN', { n: count })}` : t('look.cartButton')}
-      onPress={onPress}
-      style={({ pressed }) => [styles.cartBtn, pressed && styles.cartBtnPressed]}
-      testID="product-cart-button"
-    >
-      <Feather name="shopping-cart" size={20} color={Brand.navy900} />
-      <Text style={[styles.cartBtnText, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={1}>
-        {t('look.cartButton')}
-      </Text>
-      {count > 0 ? (
-        <Animated.View key={count} entering={ZoomIn.duration(220).reduceMotion(ReduceMotion.System)} style={[styles.cartBadge, rtl ? { left: -6 } : { right: -6 }]}>
-          <Text style={[styles.cartBadgeText, { fontFamily: familyFor('headingStrong', false) }]}>{count > 99 ? '99+' : String(count)}</Text>
-        </Animated.View>
-      ) : null}
-    </Pressable>
+    <Animated.View layout={LinearTransition.duration(220).reduceMotion(ReduceMotion.System)} style={[styles.island, row]} testID="product-island">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('search.sendPhoto')}
+        onPress={() => router.push({ pathname: '/demande', params: { photo: '1', sku: product.sku } })}
+        style={({ pressed }) => [styles.islandBtn, pressed && styles.islandPressed]}
+      >
+        <Feather name="camera" size={19} color={Brand.white} />
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('product.share')}
+        onPress={() => Share.share({ message: `${product.name} — ${API_BASE_URL}/produit/${product.slug}` }).catch(() => undefined)}
+        style={({ pressed }) => [styles.islandBtn, pressed && styles.islandPressed]}
+      >
+        <Feather name="share" size={19} color={Brand.white} />
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={count > 0 ? `${t('look.cartButton')}, ${t('look.viewCartN', { n: count })}` : t('look.cartButton')}
+        onPress={() => router.navigate('/panier')}
+        style={({ pressed }) => [styles.islandCart, row, pressed && styles.islandPressed]}
+        testID="product-cart-button"
+      >
+        {added ? (
+          <Animated.View entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)} exiting={FadeOut.duration(160).reduceMotion(ReduceMotion.System)} style={[styles.islandAdded, row]}>
+            <Feather name="check" size={15} color={Brand.gold400} />
+            <Text accessibilityLiveRegion="polite" style={[styles.islandAddedText, { fontFamily: familyFor('bodySemi', rtl) }]}>
+              {t('look.islandAdded')}
+            </Text>
+          </Animated.View>
+        ) : null}
+        <View>
+          <Feather name="shopping-cart" size={19} color={Brand.white} />
+          {count > 0 ? (
+            <Animated.View key={count} entering={ZoomIn.duration(220).reduceMotion(ReduceMotion.System)} style={[styles.islandBadge, rtl ? { left: -10 } : { right: -10 }]}>
+              <Text style={[styles.islandBadgeText, { fontFamily: familyFor('headingStrong', false) }]}>{count > 99 ? '99+' : String(count)}</Text>
+            </Animated.View>
+          ) : null}
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -720,27 +762,6 @@ function KeyValue({ label, value, mono = false }: { label: string; value: string
         {value}
       </Text>
     </View>
-  );
-}
-
-/**
- * "Envoyer une photo": the camera, one tap from any part — a photo of the
- * old part goes to the shop with this part's reference and the car, and a
- * seller answers (app/demande, photo first).
- */
-function PhotoButton({ sku }: { sku: string }) {
-  const { t } = useI18n();
-  const router = useRouter();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t('search.sendPhoto')}
-      hitSlop={8}
-      onPress={() => router.push({ pathname: '/demande', params: { photo: '1', sku } })}
-      style={styles.share}
-    >
-      <Feather name="camera" size={IconSize.large} color={C.text} />
-    </Pressable>
   );
 }
 
@@ -833,26 +854,6 @@ function ShoppingFor() {
         </ScrollView>
       </BottomSheet>
     </>
-  );
-}
-
-/**
- * Send the part's page on the website — to a mechanic, to a brother-in-law
- * who knows cars. The link is the shop's public page, which opens in any
- * browser, not an app link that only works on a phone with the app.
- */
-function ShareButton({ product }: { product: ProductDetail }) {
-  const { t } = useI18n();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={t('product.share')}
-      hitSlop={8}
-      onPress={() => Share.share({ message: `${product.name} — ${API_BASE_URL}/produit/${product.slug}` }).catch(() => undefined)}
-      style={styles.share}
-    >
-      <Feather name="share" size={IconSize.large} color={C.text} />
-    </Pressable>
   );
 }
 
@@ -1024,33 +1025,31 @@ const styles = StyleSheet.create({
     borderTopColor: C.border,
   },
   barInner: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', alignItems: 'center', gap: Spacing.two, minHeight: Tap.primary },
-  cartBtn: {
-    width: 64,
-    height: Tap.primary,
+  island: {
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 1,
-    borderRadius: Radius.card,
-    borderWidth: 1.5,
-    borderColor: Brand.navy900,
-    backgroundColor: Brand.white,
+    height: Tap.min,
+    paddingHorizontal: 4,
+    marginHorizontal: Spacing.two,
+    borderRadius: Tap.min / 2,
+    backgroundColor: Brand.navy950,
   },
-  cartBtnPressed: { backgroundColor: C.surface },
-  cartBtnText: { fontSize: 11, lineHeight: 14, color: Brand.navy900 },
-  cartBadge: {
+  islandBtn: { width: 40, height: Tap.min, alignItems: 'center', justifyContent: 'center', borderRadius: Tap.min / 2 },
+  islandCart: { alignItems: 'center', gap: Spacing.two, height: Tap.min, minWidth: 44, paddingHorizontal: 12, justifyContent: 'center', borderRadius: Tap.min / 2 },
+  islandPressed: { backgroundColor: 'rgba(255,255,255,0.14)' },
+  islandAdded: { alignItems: 'center', gap: 4 },
+  islandAddedText: { fontSize: 13, lineHeight: 16, color: Brand.white },
+  islandBadge: {
     position: 'absolute',
-    top: -7,
-    minWidth: 22,
-    height: 22,
-    paddingHorizontal: 5,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: Brand.white,
+    top: -9,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
     backgroundColor: Brand.gold500,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cartBadgeText: { fontSize: 11, lineHeight: 14, color: Brand.navy950 },
+  islandBadgeText: { fontSize: 10, lineHeight: 13, color: Brand.navy950 },
   fitList: { paddingTop: Spacing.one, paddingBottom: Spacing.two },
   noShrink: { flexShrink: 0 },
   shrink: { flexShrink: 1 },
@@ -1080,7 +1079,6 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingBottom: Spacing.two,
   },
-  headerActions: { flexDirection: 'row', alignItems: 'center' },
   forCar: { alignItems: 'center', gap: Spacing.three, minHeight: 52, paddingHorizontal: Spacing.three, marginTop: Spacing.two, marginBottom: Spacing.two, borderRadius: Radius.tile, backgroundColor: C.surface },
   forCarText: { flex: 1, minWidth: 0 },
   forCarName: { fontSize: 15, lineHeight: 20, color: C.text },
@@ -1089,12 +1087,6 @@ const styles = StyleSheet.create({
   carRowOn: { backgroundColor: C.surface },
   carAdd: { width: 36, height: 36, borderRadius: 18, backgroundColor: Brand.gold500, alignItems: 'center', justifyContent: 'center' },
   forCarAction: { fontSize: 14, lineHeight: 20, color: C.text, textDecorationLine: 'underline' },
-  share: {
-    width: Tap.min,
-    height: Tap.min,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   skeleton: {
     gap: Spacing.three,
   },
