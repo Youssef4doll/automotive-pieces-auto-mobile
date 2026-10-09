@@ -2,14 +2,16 @@ import { Feather } from '@expo/vector-icons';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
-import { vehiclesApi } from '@/api/vehicles';
+import { engineDetail, vehiclesApi, type Engine, type Model, type VinAnswer } from '@/api/vehicles';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
+import { MakeLogo } from '@/components/ui/make-logo';
 import { Text } from '@/components/ui/text';
-import { Brand, C, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { Brand, C, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
+import { useSaveVehicle } from '@/hooks/use-save-vehicle';
 import { CarteGrise } from '@/illustrations/carte-grise';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
@@ -22,14 +24,14 @@ const VIN_SHAPE = /^[A-HJ-NPR-Z0-9]{17}$/;
 /**
  * Carte grise / VIN — the second way into the garage.
  *
- * What it does, stated on the screen as well as here: it reads the
- * manufacturer from the first three characters of the VIN and opens the
- * picker on that make, with a line saying so. It does not decode the model
- * or the engine, because that needs a paid VIN-data service the shop does
- * not have, and a screen that implied otherwise would be the app inventing a
- * vehicle specification — exactly what the brief forbids.
- *
- * So it saves one step of three, honestly, and the customer knows which one.
+ * The shop reads the VIN (website `lib/data/vin`) and answers with its own
+ * catalogue: the make always; the model year where the maker writes it;
+ * the model when the VIN carries it (Volkswagen, Škoda, Seat, Audi) or the
+ * public decoder knows the car. With the model known, its engines are listed
+ * here and one tap saves the car — the engine is not in a European VIN, so
+ * that tap stays the customer's. With the make only, the picker opens on it.
+ * Nothing on this screen is a guess: every model and engine shown is one the
+ * shop lists, and "Ce n'est pas ma voiture" is always one tap away.
  *
  * Not "scanner": there is no on-device text recognition in this build, and a
  * camera button that opened a camera and then asked the customer to type the
@@ -41,9 +43,10 @@ export default function VinScreen() {
   const [vin, setVin] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<DictKey | null>(null);
-  // The maker the shop recognised: shown as a result, with the next step
-  // named, instead of jumping to another screen the customer did not expect.
-  const [found, setFound] = useState<{ slug: string; name: string; id: string } | null>(null);
+  // What the shop recognised: shown as a result, with the next step named,
+  // instead of jumping to another screen the customer did not expect.
+  const [found, setFound] = useState<VinAnswer | null>(null);
+  const save = useSaveVehicle();
 
   // A VIN never contains I, O or Q — precisely because they are mistaken for
   // 1 and 0 — so a typed O is a zero the customer read off a worn card, and
@@ -66,14 +69,14 @@ export default function VinScreen() {
     setMessage(null);
     track('vin_started');
     try {
-      const { make } = await vehiclesApi.vinMake(vin);
-      track('vin_completed', { identified: Boolean(make) });
-      if (!make) {
+      const answer = await vehiclesApi.vin(vin);
+      track('vin_completed', { identified: Boolean(answer.make), model: Boolean(answer.models?.length) });
+      if (!answer.make) {
         setMessage('vin.unknown');
         setBusy(false);
         return;
       }
-      setFound(make);
+      setFound(answer);
       setBusy(false);
     } catch (err) {
       const kind = err instanceof ApiError ? err.failure.kind : 'offline';
@@ -124,26 +127,26 @@ export default function VinScreen() {
             </View>
           ) : null}
 
-          {found ? (
-            <Animated.View entering={FadeInDown.duration(220).reduceMotion(ReduceMotion.System)} style={styles.success}>
-              <View style={[styles.successHead, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-                <View style={styles.successTick}>
-                  <Feather name="check" size={18} color={Brand.white} />
-                </View>
-                <View style={styles.infoText}>
-                  <Text variant="rowTitle" accessibilityLiveRegion="polite">
-                    {t('look.vinOk', { make: found.name })}
-                  </Text>
-                  <Text variant="hint">{t('look.vinOkWhy')}</Text>
-                </View>
-              </View>
-              <Button
-                label={t('look.vinNext')}
-                icon={rtl ? 'arrow-left' : 'arrow-right'}
-                onPress={() =>
+          {found?.make ? (
+            <Animated.View entering={FadeInDown.duration(220).reduceMotion(ReduceMotion.System)}>
+              <VinResult
+                answer={found}
+                onEngine={(model, engine) =>
+                  save(
+                    { make: found.make!.slug, makeId: found.make!.id, makeName: found.make!.name, model: model.slug, modelId: model.id, modelName: model.name },
+                    engine,
+                  )
+                }
+                onModel={(model) =>
+                  router.replace({
+                    pathname: '/garage/ajouter/[make]/[model]',
+                    params: { make: found.make!.slug, makeName: found.make!.name, makeId: found.make!.id, model: model.slug, modelName: model.name, modelId: model.id },
+                  })
+                }
+                onMake={() =>
                   router.replace({
                     pathname: '/garage/ajouter/[make]',
-                    params: { make: found.slug, makeName: found.name, makeId: found.id, notice: t('vin.recognised', { make: found.name }) },
+                    params: { make: found.make!.slug, makeName: found.make!.name, makeId: found.make!.id, notice: t('vin.recognised', { make: found.make!.name }) },
                   })
                 }
               />
@@ -169,8 +172,138 @@ export default function VinScreen() {
   );
 }
 
+/**
+ * The answer: the car as far as the VIN names it, then the one choice left.
+ * Three shapes — one model with its engines, several models to choose from,
+ * or the make alone — each with the way out to the picker.
+ */
+function VinResult({
+  answer,
+  onEngine,
+  onModel,
+  onMake,
+}: {
+  answer: VinAnswer;
+  onEngine: (model: Model, engine: Engine) => void;
+  onModel: (model: Model) => void;
+  onMake: () => void;
+}) {
+  const { t, rtl } = useI18n();
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
+  const make = answer.make!;
+  const models = answer.models ?? [];
+  const engines = answer.engines ?? [];
+  const model = models.length === 1 ? models[0]! : null;
+
+  // The make alone: as before, the picker opens on it.
+  if (!models.length) {
+    return (
+      <View style={styles.success}>
+        <View style={[styles.successHead, row]}>
+          <View style={styles.successTick}>
+            <Feather name="check" size={18} color={Brand.white} />
+          </View>
+          <View style={styles.infoText}>
+            <Text variant="rowTitle" accessibilityLiveRegion="polite" style={align}>
+              {t('look.vinOk', { make: make.name })}
+            </Text>
+            <Text variant="hint" style={align}>
+              {answer.year ? `${t('vin.modelYear', { year: answer.year })} · ${t('look.vinOkWhy')}` : t('look.vinOkWhy')}
+            </Text>
+          </View>
+        </View>
+        <Button label={t('look.vinNext')} icon={rtl ? 'arrow-left' : 'arrow-right'} onPress={onMake} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.result}>
+      {/* The car, as far as the VIN names it. */}
+      <View style={[styles.carHead, row]}>
+        <MakeLogo name={make.name} slug={make.slug} size={52} lifted={false} />
+        <View style={styles.infoText}>
+          <View style={[row, styles.foundLine]}>
+            <Feather name="check-circle" size={14} color={C.success} />
+            <Text variant="hint" tone={C.success} style={{ fontFamily: familyFor('bodySemi', rtl) }}>
+              {t('vin.found')}
+            </Text>
+          </View>
+          <Text accessibilityLiveRegion="polite" style={[styles.carName, align, { fontFamily: familyFor('headingStrong', rtl) }]}>
+            {model ? `${make.name} ${model.name}` : make.name}
+          </Text>
+          {answer.year ? (
+            <Text variant="hint" style={align}>
+              {t('vin.modelYear', { year: answer.year })}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+
+      <Text style={[styles.pickTitle, align, { fontFamily: familyFor('heading', rtl) }]}>
+        {model && engines.length ? t('vin.pickEngine') : t('vin.pickModel')}
+      </Text>
+      {model && engines.length ? (
+        <Text variant="hint" style={align}>
+          {t('vin.pickEngineWhy')}
+        </Text>
+      ) : null}
+
+      <View style={styles.choices}>
+        {model && engines.length
+          ? engines.map((e) => (
+              <Choice key={e.id} title={e.name} sub={engineDetail(e)} onPress={() => onEngine(model, e)} />
+            ))
+          : models.map((m) => <Choice key={m.id} title={m.name} sub={null} onPress={() => onModel(m)} />)}
+      </View>
+
+      <Pressable accessibilityRole="button" onPress={onMake} style={({ pressed }) => [styles.notMine, pressed && { opacity: 0.6 }]}>
+        <Text variant="hint" tone={C.text} style={styles.underline}>
+          {t('vin.notMine')}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function Choice({ title, sub, onPress }: { title: string; sub: string | null; onPress: () => void }) {
+  const { rtl } = useI18n();
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={[title, sub].filter(Boolean).join(', ')}
+      onPress={onPress}
+      style={({ pressed }) => [styles.choice, row, pressed && styles.choicePressed]}
+    >
+      <View style={styles.infoText}>
+        <Text variant="rowTitle" style={{ textAlign: rtl ? 'right' : 'left' }}>
+          {title}
+        </Text>
+        {sub ? (
+          <Text variant="hint" style={{ textAlign: rtl ? 'right' : 'left' }}>
+            {sub}
+          </Text>
+        ) : null}
+      </View>
+      <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={20} color={C.text} />
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
+  result: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.card, borderWidth: 1, borderColor: C.border, backgroundColor: C.background },
+  carHead: { alignItems: 'center', gap: Spacing.three },
+  foundLine: { alignItems: 'center', gap: 6 },
+  carName: { fontSize: 22, lineHeight: 28, color: C.text },
+  pickTitle: { fontSize: 17, lineHeight: 22, color: C.text, marginTop: Spacing.one },
+  choices: { gap: Spacing.two },
+  choice: { alignItems: 'center', gap: Spacing.three, minHeight: Tap.primary + 8, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, borderRadius: Radius.tile, backgroundColor: C.surface },
+  choicePressed: { backgroundColor: C.surfacePressed },
+  notMine: { alignSelf: 'center', minHeight: Tap.min, justifyContent: 'center', paddingHorizontal: Spacing.two },
+  underline: { textDecorationLine: 'underline' },
   success: { gap: Spacing.three, padding: Spacing.three, borderRadius: 16, backgroundColor: C.successSurface },
   successHead: { alignItems: 'flex-start', gap: Spacing.three },
   successTick: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.success, alignItems: 'center', justifyContent: 'center' },

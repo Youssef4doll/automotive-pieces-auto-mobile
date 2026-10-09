@@ -50,6 +50,21 @@ export type Engine = {
   partCount: number;
 };
 
+/**
+ * A VIN, answered with the shop's catalogue: the make; the model year where
+ * the maker writes it; the shop's models the VIN points to; and, with one
+ * model, its engines narrowed by what the VIN says. The engine is still the
+ * customer's tap — a European VIN does not carry it.
+ */
+export type VinAnswer = {
+  make: { id: string; name: string; slug: string } | null;
+  year?: number | null;
+  read?: { model: string | null; litres: number | null; fuel: 'diesel' | 'essence' | null };
+  models?: Model[];
+  engines?: Engine[];
+  source?: 'vin' | 'online' | null;
+};
+
 export const vehiclesApi = {
   makes: (signal?: AbortSignal) => get<Make[]>('/api/v1/vehicles/makes', { signal }),
 
@@ -69,11 +84,9 @@ export const vehiclesApi = {
    * it stocks and nothing else; a full VIN decode needs a paid data service
    * it does not have, so the model and engine are still chosen by hand.
    */
-  vinMake: (vin: string, signal?: AbortSignal) =>
-    get<{ make: { id: string; name: string; slug: string } | null }>(
-      `/api/v1/vehicles/vin?vin=${encodeURIComponent(vin)}`,
-      { signal },
-    ),
+  /** What the shop reads from a VIN (an older shop sends `make` alone). */
+  vin: (vin: string, signal?: AbortSignal) =>
+    get<VinAnswer>(`/api/v1/vehicles/vin?vin=${encodeURIComponent(vin)}`, { signal }),
 };
 
 /**

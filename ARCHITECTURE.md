@@ -1935,3 +1935,33 @@ At the owner's request, from screenshots of the app in English:
 as it was — the disc photograph, the search and the car in one white card —
 with only the slogan's words taken out. Their height is kept as an empty
 space, so the disc and the card sit exactly where they were.
+
+## 30. The VIN names the car (October 9, 2026)
+
+"Make the app identify the car from the VIN." Before, the VIN gave the
+make and the picker took over. Now the shop reads more, and still invents
+nothing (website `lib/vin-reading.ts`, `lib/vin-online.ts`,
+`lib/data/vin.ts`; app `app/garage/vin.tsx`):
+
+- **The make** from characters 1–3, now for several plants per make (a
+  Peugeot is VF3 or VR3, an Indian-built i10 is MAL) and more makes.
+- **The model year** from character 10 — only for the makers that write it
+  there on the cars sold here (Volkswagen group, Hyundai, Kia). Peugeot and
+  Renault do not, so their year stays unknown rather than misread.
+- **The model** from characters 7–8 for the Volkswagen group (WVWZZZ**AU**…
+  is a Golf VII; Škoda NJ a Fabia III; Seat 6J an Ibiza IV), from a table of
+  the codes sold in Tunisia — an unknown code gives no model. For other
+  makers the public NHTSA decoder (free, no key) is asked, with a 3.5 s
+  limit; it knows many Kia, Hyundai and Toyota and few European-only cars.
+  `VIN_ONLINE_DECODER=off` turns it off.
+- Whatever was read is **matched to the shop's own models** ("Golf VII" or
+  "Golf 7"; a bare "Ibiza" when its years fit). With one model, its
+  engines are listed, narrowed by the year (and the displacement and fuel
+  when the decoder gave them) — never to none.
+
+The app shows the car ("Volkswagen Golf VII, année modèle 2015") and its
+engines; one tap saves it, through the same `useSaveVehicle` as the
+picker's last step. The engine is never chosen for the customer: a European
+VIN does not carry it. Several models → "Lequel est le vôtre ?"; the make
+alone → the picker on that make, as before; "Ce n'est pas ma voiture" is
+always there.

@@ -1,14 +1,13 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback } from 'react';
-import { Alert } from 'react-native';
 
 import { engineDetail, vehiclesApi, type Engine } from '@/api/vehicles';
 import { PickerScreen, type PickerItem } from '@/components/picker-screen';
 import type { TrailStep } from '@/components/ui/chip';
 import { useResource } from '@/hooks/use-resource';
+import { useSaveVehicle } from '@/hooks/use-save-vehicle';
 import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
-import { useToast } from '@/store/toast';
 
 /**
  * Step 3 — the motorisation, and the end of the flow.
@@ -28,9 +27,7 @@ import { useToast } from '@/store/toast';
 export default function EnginesScreen() {
   const router = useRouter();
   const { t } = useI18n();
-  const add = useGarage((s) => s.add);
   const isSaved = useGarage((s) => s.isSaved);
-  const isFull = useGarage((s) => s.isFull);
   const vehicles = useGarage((s) => s.vehicles);
 
   const { make, model, makeName, makeId, modelName, modelId } = useLocalSearchParams<{
@@ -48,51 +45,10 @@ export default function EnginesScreen() {
   );
   const resource = useResource(load);
 
-  const toast = useToast((st) => st.show);
+  const save = useSaveVehicle();
   const choose = useCallback(
-    (engine: Engine) => {
-      const already = isSaved(engine.id);
-
-      // The ceiling is six. Re-selecting a car already in the garage is
-      // always allowed — it is how somebody switches between two cars — so
-      // the check is only for a genuinely new one.
-      if (!already && isFull()) {
-        Alert.alert(t('garage.title'), t('garage.full'));
-        return;
-      }
-
-      add({
-        makeId: makeId ?? '',
-        makeName: makeName ?? '',
-        makeSlug: make,
-        modelId: modelId ?? '',
-        modelName: modelName ?? '',
-        modelSlug: model,
-        engineId: engine.id,
-        engineName: engine.name,
-        yearFrom: engine.yearFrom ?? null,
-        yearTo: engine.yearTo ?? null,
-      });
-
-      // A new car opens straight on its parts: the customer just told the
-      // app their car, and the payback is the list judged against it —
-      // confirmed, then the ones to confirm. The garage sits under it, so
-      // "back" lands there. `dismissTo` collapses the three picker screens
-      // first so the back gesture does not walk them through the flow again.
-      // Re-selecting a car already saved is a switch, and goes to the garage.
-      router.dismissTo('/garage');
-      // On the next frame: pushed in the same tick as the dismiss, the parts
-      // landed on top of the picker and "back" walked into it again.
-      if (!already) requestAnimationFrame(() => router.push({ pathname: '/pieces-compatibles', params: { engine: engine.id } }));
-      toast({
-        message: t('look.saved', { car: `${makeName ?? ''} ${modelName ?? ''}`.trim() }),
-        tone: 'success',
-        ...(already
-          ? { action: { label: t('home.seeCompatible'), onPress: () => router.push({ pathname: '/pieces-compatibles', params: { engine: engine.id } }) } }
-          : {}),
-      });
-    },
-    [add, isFull, isSaved, make, makeId, makeName, model, modelId, modelName, router, t, toast],
+    (engine: Engine) => save({ make, makeId, makeName, model, modelId, modelName }, engine),
+    [save, make, makeId, makeName, model, modelId, modelName],
   );
 
   const toItems = useCallback(
