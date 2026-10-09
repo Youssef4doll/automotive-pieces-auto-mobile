@@ -37,10 +37,11 @@ const DISC = { x: 0.53, y: 0.55 };
 /**
  * Accueil — the reference's home, top to bottom, on the shop's data.
  *
- * On the night road, kept short so the families are on the first screen:
- * the shop's own logo and the search, the slogan with the disc beside it, a
- * search box, and "Votre véhicule" — the car in the garage, or the
- * invitation to choose one — then "Comment trouver votre pièce ?".
+ * On the night road, kept short so the families are on the first screen,
+ * and in three weights rather than a stack of boxes: the shop's logo; the
+ * car beside the disc as a few lines of type (or the invitation to choose
+ * one); the search, the one white thing; and, quietest, "Comment trouver
+ * votre pièce ?".
  *
  * On the white sheet: every family, most parts first, the shop's own
  * campaigns when it runs one, the parts makers the shop carries, and
@@ -60,7 +61,7 @@ export default function HomeScreen() {
   const { t, rtl } = useI18n();
   const active = useGarage((s) => s.active);
   const vehicleLine = useVehicleLine();
-  // The hero photograph (3:4) sits beside the slogan, its disc near the
+  // The hero photograph (3:4) sits beside the car, its disc near the
   // column's far edge, rather than in a band of its own: the families are
   // on the first screen. Mirrored for Arabic.
   const column = Math.min(width, MaxContentWidth);
@@ -68,10 +69,8 @@ export default function HomeScreen() {
   const artWidth = Math.round(artHeight * 0.75);
   const artSide = Math.round((width - column) / 2 + column * 0.885 - artWidth * DISC.x);
   const artTop = Math.round(insets.top + 118 - artHeight * DISC.y);
-  // A narrow phone: the second line ends clear of the disc, and the hero's
-  // lines keep their words.
+  // A narrow phone: the car's name a size down, clear of the disc.
   const narrow = column < 360;
-  const sloganSize = narrow ? 22 : 26;
 
   // Light clock and battery over the night road; dark again on the white
   // screens. The tabs stay mounted, so this follows focus rather than mount.
@@ -134,85 +133,76 @@ export default function HomeScreen() {
           </View>
 
           <View style={[styles.column, { paddingTop: insets.top + Spacing.three }]}>
+            {/* The shop's logo alone on top: the search is the field below,
+                not a second button beside it. */}
             <View style={[styles.topRow, row]}>
               <Image source={LOGO} style={styles.logo} contentFit="contain" accessibilityLabel={t('app.name')} />
-              <Pressable
-                accessibilityRole="search"
-                accessibilityLabel={t('home.searchA11y')}
-                onPress={() => router.push('/recherche')}
-                style={({ pressed }) => [styles.roundBtn, pressed && styles.roundBtnPressed]}
-              >
-                <Feather name="search" size={20} color={Brand.white} />
-              </Pressable>
             </View>
 
-            {/* Where the slogan was (the owner, October 2026: no text), its
-                height kept so the disc and the card stay where they were. */}
-            <View style={{ height: Spacing.three + (sloganSize + 6) * 2 + Spacing.one + 21 + Spacing.four }} />
-
-            {/* The main action, and the car it answers for, as one white
-                card: the search, and under a rule the car every result will
-                be judged against. One card on the road, not three boxes. */}
-            <View style={styles.finder}>
-              <View style={styles.finderClip}>
-                <Pressable
-                  accessibilityRole="search"
-                  accessibilityLabel={t('home.searchA11y')}
-                  onPress={() => router.push('/recherche')}
-                  style={({ pressed }) => [styles.searchRow, row, pressed && styles.finderPressed]}
-                >
-                  <Feather name="search" size={20} color={C.text} />
-                  <Text numberOfLines={1} style={[styles.flex, styles.searchText, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>
-                    {t('look.searchBig')}
-                  </Text>
-                  <View style={styles.searchGo}>
-                    <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={18} color={C.onAccent} />
+            {/* Beside the disc, where the slogan was: the car, as a few
+                lines on the navy rather than a box — what it is in white,
+                what to do with it in gold, the rest quieter. */}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={active ? `${t('look.forVehicle', { car: `${active.makeName} ${active.modelName}` })}, ${t('home.change')}` : t('look.noVehicleLine')}
+              onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
+              style={({ pressed }) => [styles.car, { alignItems: rtl ? 'flex-end' : 'flex-start' }, pressed && { opacity: 0.75 }]}
+            >
+              <View style={[styles.carKicker, row]}>
+                {active ? (
+                  <MakeLogo name={active.makeName} slug={active.makeSlug} size={28} lifted={false} />
+                ) : (
+                  <View style={styles.carIcon}>
+                    <NavCar size={15} color={Brand.gold400} />
                   </View>
-                </Pressable>
-                <View style={styles.finderRule} />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={active ? `${t('look.forVehicle', { car: `${active.makeName} ${active.modelName}` })}, ${t('home.change')}` : t('look.noVehicleLine')}
-                  onPress={() => (active ? router.navigate('/garage') : router.push('/garage/ajouter'))}
-                  style={({ pressed }) => [styles.carRow, row, pressed && styles.finderPressed]}
-                >
-                  {active ? (
-                    <MakeLogo name={active.makeName} slug={active.makeSlug} size={36} lifted={false} />
-                  ) : (
-                    <View style={styles.vehicleIcon}>
-                      <NavCar size={18} color={Brand.navy900} />
-                    </View>
-                  )}
-                  <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
-                    <Text numberOfLines={1} style={[styles.vehicleName, { fontFamily: familyFor('bodySemi', rtl) }]}>
-                      {active ? `${active.makeName} ${active.modelName}` : t('look.noVehicleLine')}
-                    </Text>
-                    <Text numberOfLines={1} style={[styles.vehicleSub, { fontFamily: familyFor('body', rtl) }]}>
-                      {active ? vehicleLine(active) : t('look.chooseWhy')}
-                    </Text>
-                  </View>
-                  {/* The whole row is the action; its word only where the
-                      name keeps room beside it (no car: the line says it). */}
-                  <View style={[styles.vehicleAction, row]}>
-                    {active && !narrow ? (
-                      <Text style={[styles.vehicleActionText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('home.change')}</Text>
-                    ) : null}
-                    <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={18} color={C.text} />
-                  </View>
-                </Pressable>
+                )}
+                <Text style={[styles.kicker, { fontFamily: familyFor('display', rtl) }]}>{t('account.myVehicle')}</Text>
               </View>
-            </View>
+              <Text
+                numberOfLines={2}
+                style={[styles.carName, narrow && styles.carNameNarrow, { fontFamily: familyFor('headingStrong', rtl), textAlign: rtl ? 'right' : 'left' }]}
+              >
+                {active ? `${active.makeName} ${active.modelName}` : t('look.noVehicleLine')}
+              </Text>
+              <View style={[styles.carSub, row]}>
+                <Text numberOfLines={1} style={[styles.carSubText, { fontFamily: familyFor('body', rtl) }]}>
+                  {active ? vehicleLine(active) : t('look.chooseWhy')}
+                </Text>
+                {active ? (
+                  <Text style={[styles.carAction, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('home.change')}</Text>
+                ) : null}
+                <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={16} color={Brand.gold400} />
+              </View>
+            </Pressable>
 
-            {/* Every other way in (/trouver): a line to follow, not a fourth box. */}
+            {/* The one white thing on the navy: the search. */}
+            <PressScale
+              accessibilityRole="search"
+              accessibilityLabel={t('home.searchA11y')}
+              onPress={() => router.push('/recherche')}
+              style={[styles.searchPill, row]}
+              pressedStyle={styles.searchPillPressed}
+              scaleTo={0.985}
+            >
+              <Feather name="search" size={20} color={C.text} />
+              <Text numberOfLines={1} style={[styles.flex, styles.searchText, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>
+                {t('look.searchBig')}
+              </Text>
+              <View style={styles.searchGo}>
+                <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={18} color={C.onAccent} />
+              </View>
+            </PressScale>
+
+            {/* Every other way in (/trouver): the quietest line of the three. */}
             <Pressable
               accessibilityRole="button"
               onPress={() => router.push('/trouver')}
               style={({ pressed }) => [styles.allWays, row, pressed && { opacity: 0.7 }]}
             >
-              <Text numberOfLines={1} style={[styles.allWaysText, narrow && styles.allWaysNarrow, { fontFamily: familyFor('bodySemi', rtl) }]}>
+              <Text numberOfLines={1} style={[styles.allWaysText, { fontFamily: familyFor('body', rtl) }]}>
                 {t('look.find')}
               </Text>
-              <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={16} color={Brand.white} />
+              <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={C.heroTextMuted} />
             </Pressable>
           </View>
         </View>
@@ -289,32 +279,31 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: Spacing.four,
   },
-  topRow: { alignItems: 'center', justifyContent: 'space-between' },
+  topRow: { alignItems: 'center', minHeight: Tap.min },
   logo: { width: 176, height: 32 },
-  roundBtn: {
-    width: Tap.min,
-    height: Tap.min,
-    borderRadius: Tap.min / 2,
+  // The car beside the disc: kept to the text side of the photograph.
+  car: { maxWidth: '68%', gap: 6, paddingTop: Spacing.four, paddingBottom: Spacing.four },
+  carKicker: { alignItems: 'center', gap: Spacing.two },
+  carIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(251,192,0,0.14)', alignItems: 'center', justifyContent: 'center' },
+  kicker: { fontSize: 12, lineHeight: 16, letterSpacing: 1.6, color: C.heroTextMuted, textTransform: 'uppercase' },
+  carName: { fontSize: 23, lineHeight: 28, letterSpacing: -0.3, color: Brand.white },
+  carNameNarrow: { fontSize: 20, lineHeight: 25 },
+  carSub: { alignItems: 'center', gap: 6, minHeight: 24 },
+  carSubText: { fontSize: 15, lineHeight: 20, color: C.heroTextMuted, flexShrink: 1 },
+  carAction: { fontSize: 15, lineHeight: 20, color: Brand.gold400 },
+  searchPill: {
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    gap: Spacing.two,
+    minHeight: 58,
+    paddingLeft: Spacing.three,
+    paddingRight: 7,
+    borderRadius: Radius.pill,
+    backgroundColor: Brand.white,
+    ...Elevation.resting,
   },
-  roundBtnPressed: { backgroundColor: 'rgba(255,255,255,0.24)' },
-  // The search and the car in one white card; the clip keeps the pressed
-  // rows inside its corners while the outer view keeps the shadow.
-  finder: { borderRadius: Radius.card, backgroundColor: Brand.white, ...Elevation.resting },
-  finderClip: { borderRadius: Radius.card, overflow: 'hidden' },
-  finderPressed: { backgroundColor: C.surface },
-  finderRule: { height: StyleSheet.hairlineWidth, backgroundColor: C.border, marginHorizontal: Spacing.three },
-  searchRow: { alignItems: 'center', gap: Spacing.two, minHeight: 60, paddingLeft: Spacing.three, paddingRight: Spacing.two },
+  searchPillPressed: { backgroundColor: C.surface },
   searchText: { fontSize: 16, lineHeight: 22, color: C.textMuted },
   searchGo: { width: 44, height: 44, borderRadius: 22, backgroundColor: Brand.gold500, alignItems: 'center', justifyContent: 'center' },
-  carRow: { alignItems: 'center', gap: Spacing.three, minHeight: 64, paddingHorizontal: Spacing.three },
-  vehicleIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center' },
-  vehicleName: { fontSize: 15, lineHeight: 20, color: C.text },
-  vehicleSub: { fontSize: 13, lineHeight: 17, color: C.textMuted },
-  vehicleAction: { alignItems: 'center', gap: 2 },
-  vehicleActionText: { fontSize: 14, lineHeight: 18, color: C.text },
   allWays: {
     alignSelf: 'center',
     alignItems: 'center',
@@ -323,8 +312,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
     marginBottom: Spacing.three,
   },
-  allWaysText: { fontSize: 14, lineHeight: 18, color: Brand.white, flexShrink: 1 },
-  allWaysNarrow: { fontSize: 13, lineHeight: 17 },
+  allWaysText: { fontSize: 14, lineHeight: 18, color: C.heroTextMuted, flexShrink: 1 },
   // The white sheet runs to the bottom of the content, so a short page never
   // shows the navy root beneath it.
   scroll: { flexGrow: 1 },
