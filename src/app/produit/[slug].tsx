@@ -2,8 +2,8 @@ import { Feather, FontAwesome } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, Modal, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition, ReduceMotion, ZoomIn } from 'react-native-reanimated';
+import { AccessibilityInfo, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { FadeIn, FadeOut, LinearTransition, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { productApi, type ProductDetail } from '@/api/product';
@@ -30,13 +30,17 @@ import { track } from '@/services/analytics';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { useCheckout } from '@/store/checkout';
 import { delaySpan, deliveryDelay } from '@/lib/checkout';
-import { useCart } from '@/store/cart';
+import { useCartCount } from '@/store/cart';
 import { ProductTile } from '@/components/ui/product-tile';
 import { Rail } from '@/components/ui/rail';
 import { whatsappUrl } from '@/components/ui/shop-contact';
 import { MakeLogo } from '@/components/ui/make-logo';
 import { useVehicleLine } from '@/components/ui/vehicle-card';
 import { StockAlert } from '@/components/ui/stock-alert';
+import { SYSTEM_TAB_BAR } from '@/components/tab-bar';
+
+/** iOS 26 and later: the header's buttons are the system's own, in liquid glass (SystemIsland). */
+const SYSTEM_GLASS = SYSTEM_TAB_BAR;
 
 /**
  * Fiche produit.
@@ -88,9 +92,10 @@ export default function ProductScreen() {
       <Stack.Screen
         options={{
           title: '',
-          headerRight: () => (product.status === 'loaded' ? <HeaderIsland product={product.data} /> : null),
+          headerRight: SYSTEM_GLASS ? undefined : () => (product.status === 'loaded' ? <DrawnIsland product={product.data} /> : null),
         }}
       />
+      {SYSTEM_GLASS && product.status === 'loaded' ? <SystemIsland product={product.data} /> : null}
       {product.status === 'loading' ? (
         <ProductSkeleton />
       ) : product.status === 'failed' ? (
@@ -667,17 +672,11 @@ function FitsToggle({ open, onPress }: { open: boolean; onPress: () => void }) {
 }
 
 /**
- * The top right of the page as an island: one navy capsule holding the
- * camera (a photo of the old part to the shop), sharing, and the basket
- * with its count on a gold badge. Dynamic, as the name says: when a part
- * goes in, the capsule opens to "Ajouté" beside the basket for two seconds
- * and closes again — the add is said where the basket is, and the basket
- * is one tap away from every part (the owner, October 2026).
+ * The basket's count, and whether a part went in a moment ago: the island
+ * says "Ajouté" for two seconds after each add, then closes again.
  */
-function HeaderIsland({ product }: { product: ProductDetail }) {
-  const { t, rtl } = useI18n();
-  const router = useRouter();
-  const count = useCart((s) => s.items.reduce((n, i) => n + i.qty, 0));
+function useJustAdded() {
+  const count = useCartCount();
   const [added, setAdded] = useState(false);
   const last = useRef(count);
   useEffect(() => {
@@ -689,52 +688,145 @@ function HeaderIsland({ product }: { product: ProductDetail }) {
     }
     last.current = count;
   }, [count]);
+  return { count, added };
+}
+
+/**
+ * The top right of the page: the camera (a photo of the old part to the
+ * shop), sharing, and the basket with its count — one capsule of glass, the
+ * basket one tap from every part (the owner, October 2026).
+ *
+ * On iOS 26 and later the three are the navigation bar's own buttons
+ * (`Stack.Toolbar`): UIKit sets them in one shared capsule of liquid glass,
+ * the material of the system's tab bar, with SF Symbols, the bar's own
+ * badge, and the press, the light and the motion iOS gives every app. After
+ * an add the basket turns to a tick for two seconds, VoiceOver says
+ * "Ajouté", and the badge counts on.
+ */
+function SystemIsland({ product }: { product: ProductDetail }) {
+  const { t } = useI18n();
+  const router = useRouter();
+  const { count, added } = useJustAdded();
+  useEffect(() => {
+    if (added) AccessibilityInfo.announceForAccessibility(t('look.islandAdded'));
+  }, [added, t]);
+  // Listed left to right; in Arabic UIKit mirrors the bar itself.
+  return (
+    <Stack.Toolbar placement="right">
+      <Stack.Toolbar.Button
+        icon="camera"
+        accessibilityLabel={t('search.sendPhoto')}
+        onPress={() => router.push({ pathname: '/demande', params: { photo: '1', sku: product.sku } })}
+      />
+      <Stack.Toolbar.Button icon="square.and.arrow.up" accessibilityLabel={t('product.share')} onPress={() => shareProduct(product)} />
+      <Stack.Toolbar.Button
+        accessibilityLabel={count > 0 ? `${t('look.cartButton')}, ${t('look.viewCartN', { n: count })}` : t('look.cartButton')}
+        onPress={() => router.navigate('/panier')}
+      >
+        <Stack.Toolbar.Icon sf={added ? 'checkmark' : 'cart'} />
+        {count > 0 ? (
+          // The shop's red with white figures, as the system's tab bar draws its badge.
+          <Stack.Toolbar.Badge style={{ backgroundColor: Brand.red600, color: Brand.white }}>{count > 99 ? '99+' : String(count)}</Stack.Toolbar.Badge>
+        ) : null}
+      </Stack.Toolbar.Button>
+    </Stack.Toolbar>
+  );
+}
+
+/**
+ * The same capsule where the phone has no liquid glass — Android, the web,
+ * iOS before 26 — drawn as the drawn tab bar is (components/tab-bar): frosted
+ * glass, a hairline of light round its edge, navy icons, and under the
+ * finger a lens of white glass that swells in and settles out. Dynamic, as
+ * an island is: after an add it opens to "✓ Ajouté" beside the basket for
+ * two seconds and closes again.
+ */
+function DrawnIsland({ product }: { product: ProductDetail }) {
+  const { t, rtl } = useI18n();
+  const router = useRouter();
+  const { count, added } = useJustAdded();
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   return (
     <Animated.View layout={LinearTransition.duration(220).reduceMotion(ReduceMotion.System)} style={[styles.island, row]} testID="product-island">
-      <Pressable
-        accessibilityRole="button"
+      <IslandButton
         accessibilityLabel={t('search.sendPhoto')}
         onPress={() => router.push({ pathname: '/demande', params: { photo: '1', sku: product.sku } })}
-        style={({ pressed }) => [styles.islandBtn, pressed && styles.islandPressed]}
+        style={styles.islandBtn}
       >
-        <Feather name="camera" size={19} color={Brand.white} />
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('product.share')}
-        onPress={() => Share.share({ message: `${product.name} — ${API_BASE_URL}/produit/${product.slug}` }).catch(() => undefined)}
-        style={({ pressed }) => [styles.islandBtn, pressed && styles.islandPressed]}
-      >
-        <Feather name="share" size={19} color={Brand.white} />
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
+        <Feather name="camera" size={19} color={C.text} />
+      </IslandButton>
+      <IslandButton accessibilityLabel={t('product.share')} onPress={() => shareProduct(product)} style={styles.islandBtn}>
+        <Feather name="share" size={19} color={C.text} />
+      </IslandButton>
+      <IslandButton
         accessibilityLabel={count > 0 ? `${t('look.cartButton')}, ${t('look.viewCartN', { n: count })}` : t('look.cartButton')}
         onPress={() => router.navigate('/panier')}
-        style={({ pressed }) => [styles.islandCart, row, pressed && styles.islandPressed]}
+        style={[styles.islandCart, row]}
         testID="product-cart-button"
       >
         {added ? (
           <Animated.View entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)} exiting={FadeOut.duration(160).reduceMotion(ReduceMotion.System)} style={[styles.islandAdded, row]}>
-            <Feather name="check" size={15} color={Brand.gold400} />
+            <Feather name="check" size={15} color={C.success} />
             <Text accessibilityLiveRegion="polite" style={[styles.islandAddedText, { fontFamily: familyFor('bodySemi', rtl) }]}>
               {t('look.islandAdded')}
             </Text>
           </Animated.View>
         ) : null}
         <View>
-          <Feather name="shopping-cart" size={19} color={Brand.white} />
+          <Feather name="shopping-cart" size={19} color={C.text} />
           {count > 0 ? (
             <Animated.View key={count} entering={ZoomIn.duration(220).reduceMotion(ReduceMotion.System)} style={[styles.islandBadge, rtl ? { left: -10 } : { right: -10 }]}>
               <Text style={[styles.islandBadgeText, { fontFamily: familyFor('headingStrong', false) }]}>{count > 99 ? '99+' : String(count)}</Text>
             </Animated.View>
           ) : null}
         </View>
-      </Pressable>
+      </IslandButton>
     </Animated.View>
   );
+}
+
+const LENS_IN = { duration: 110, reduceMotion: ReduceMotion.System };
+const LENS_OUT = { duration: 320, reduceMotion: ReduceMotion.System };
+
+/** One of the island's buttons: the lens of glass swells under the finger and settles when it lifts. */
+function IslandButton({
+  accessibilityLabel,
+  onPress,
+  style,
+  testID,
+  children,
+}: {
+  accessibilityLabel: string;
+  onPress: () => void;
+  style: StyleProp<ViewStyle>;
+  testID?: string;
+  children: React.ReactNode;
+}) {
+  const press = useSharedValue(0);
+  const lens = useAnimatedStyle(() => ({ opacity: press.get(), transform: [{ scale: 0.82 + 0.18 * press.get() }] }));
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      onPressIn={() => {
+        press.set(withTiming(1, LENS_IN));
+      }}
+      onPressOut={() => {
+        press.set(withTiming(0, LENS_OUT));
+      }}
+      style={style}
+      testID={testID}
+    >
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.islandLens, lens]} />
+      {children}
+    </Pressable>
+  );
+}
+
+function shareProduct(product: ProductDetail) {
+  Share.share({ message: `${product.name} — ${API_BASE_URL}/produit/${product.slug}` }).catch(() => undefined);
 }
 
 function Fact({ icon, title, value }: { icon: React.ComponentProps<typeof Feather>['name']; title: string; value: string }) {
@@ -1025,19 +1117,49 @@ const styles = StyleSheet.create({
     borderTopColor: C.border,
   },
   barInner: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', alignItems: 'center', gap: Spacing.two, minHeight: Tap.primary },
+  // The drawn tab bar's frost (components/tab-bar), so the two read as one material.
   island: {
     alignItems: 'center',
     height: Tap.min,
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
     marginHorizontal: Spacing.two,
     borderRadius: Tap.min / 2,
-    backgroundColor: Brand.navy950,
+    borderWidth: StyleSheet.hairlineWidth,
+    ...(Platform.OS === 'web'
+      ? ({
+          borderColor: 'rgba(255,255,255,0.9)',
+          backgroundColor: 'rgba(244,246,250,0.74)',
+          backdropFilter: 'blur(22px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(22px) saturate(180%)',
+          boxShadow: '0 4px 16px rgba(8,22,51,0.12), 0 1px 2px rgba(8,22,51,0.06), inset 0 1px 0 rgba(255,255,255,0.85)',
+        } as object)
+      : {
+          borderColor: 'rgba(15,35,82,0.08)',
+          backgroundColor: 'rgba(244,246,250,0.97)',
+          shadowColor: Brand.navy950,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.12,
+          shadowRadius: 12,
+          elevation: 4,
+        }),
   },
   islandBtn: { width: Tap.min, height: Tap.min, alignItems: 'center', justifyContent: 'center', borderRadius: Tap.min / 2 },
   islandCart: { alignItems: 'center', gap: Spacing.two, height: Tap.min, minWidth: 44, paddingHorizontal: 12, justifyContent: 'center', borderRadius: Tap.min / 2 },
-  islandPressed: { backgroundColor: 'rgba(255,255,255,0.14)' },
+  // The lens under the finger: white glass, as the tab bar's lens in flight.
+  islandLens: {
+    borderRadius: Tap.min / 2,
+    ...(Platform.OS === 'web'
+      ? ({
+          backgroundColor: 'rgba(255,255,255,0.78)',
+          backdropFilter: 'blur(3px) saturate(170%) brightness(1.05)',
+          WebkitBackdropFilter: 'blur(3px) saturate(170%) brightness(1.05)',
+          boxShadow: '0 4px 12px rgba(8,22,51,0.14), 0 1px 2px rgba(8,22,51,0.08)',
+        } as object)
+      : { backgroundColor: '#FFFFFF' }),
+  },
   islandAdded: { alignItems: 'center', gap: 4 },
-  islandAddedText: { fontSize: 13, lineHeight: 16, color: Brand.white },
+  islandAddedText: { fontSize: 13, lineHeight: 16, color: C.text },
+  // The shop's red with white figures, as both tab bars draw their badge.
   islandBadge: {
     position: 'absolute',
     top: -9,
@@ -1045,11 +1167,11 @@ const styles = StyleSheet.create({
     height: 18,
     paddingHorizontal: 4,
     borderRadius: 9,
-    backgroundColor: Brand.gold500,
+    backgroundColor: Brand.red600,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  islandBadgeText: { fontSize: 10, lineHeight: 13, color: Brand.navy950 },
+  islandBadgeText: { fontSize: 10, lineHeight: 13, color: Brand.white },
   fitList: { paddingTop: Spacing.one, paddingBottom: Spacing.two },
   noShrink: { flexShrink: 0 },
   shrink: { flexShrink: 1 },

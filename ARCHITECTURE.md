@@ -2031,3 +2031,24 @@ The owner's list, after watching customers use the app:
   `PATCH /api/v1/account`); a new e-mail asks for the password, or a code for
   an account without one. The phone row goes to "Connexion et sécurité",
   where a number is changed with a code.
+
+## 33. The product page's island in liquid glass (October 9, 2026)
+
+The camera, sharing and the basket at the top right of a product page were
+a navy capsule drawn by the app. The owner asked for Apple's liquid glass,
+the material of the tab bar.
+
+- **iOS 26 and later** (`SYSTEM_TAB_BAR`, the same test as the tab bar):
+  the three are the navigation bar's own buttons, through `Stack.Toolbar
+  placement="right"` (expo-router 57, `unstable_headerRightItems` under it).
+  UIKit sets them in one shared capsule of glass, with SF Symbols
+  (`camera`, `square.and.arrow.up`, `cart`), the bar's own badge in the
+  shop's red with white figures (as the system tab bar draws it), and the
+  press, light and motion iOS gives every app. After an add the basket is a
+  tick (`checkmark`) for two seconds, and VoiceOver says "Ajouté". Listed
+  left to right; in Arabic UIKit mirrors the bar itself.
+- **Everywhere else** (Android, the web, iOS before 26) the capsule is drawn
+  in the drawn tab bar's frost: translucent white with a backdrop blur on
+  the web, a hairline of light round the edge, navy icons, the same red
+  badge, and under a finger a lens of white glass that swells in and
+  settles out. It still opens to "✓ Ajouté" for two seconds after an add.
