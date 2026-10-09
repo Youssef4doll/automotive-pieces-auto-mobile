@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Border, Brand, C, Elevation, familyFor, Radius, Spacing } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
+import { useSvgId } from '@/hooks/use-svg-id';
 import { CarteGrise } from '@/illustrations/carte-grise';
 import { MakeLogo } from '@/components/ui/make-logo';
 import { VehicleCard } from '@/components/ui/vehicle-card';
@@ -178,17 +179,18 @@ function VinFirst() {
   const router = useRouter();
   const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  const gradient = useSvgId('vinFirst');
   return (
     <View style={styles.vinWrap}>
       <View style={styles.vinCard} testID="vin-first">
         <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 340 240" preserveAspectRatio="none">
           <Defs>
-            <LinearGradient id="vinFirst" x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="1">
+            <LinearGradient id={gradient} x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="1">
               <Stop offset="0" stopColor={Brand.navy700} />
               <Stop offset="1" stopColor={Brand.navy950} />
             </LinearGradient>
           </Defs>
-          <Rect x={0} y={0} width={340} height={240} fill="url(#vinFirst)" />
+          <Rect x={0} y={0} width={340} height={240} fill={`url(#${gradient})`} />
         </Svg>
         <View style={[row, styles.vinTop]}>
           <View style={[styles.flex, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
@@ -217,7 +219,8 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   section: { fontSize: 17, lineHeight: 23, color: C.text },
   vinWrap: { gap: Spacing.three },
-  vinCard: { gap: Spacing.three, padding: Spacing.four, borderRadius: Radius.card, overflow: 'hidden', ...Elevation.resting },
+  // Navy under the gradient too: the card is never white, whatever the SVG does.
+  vinCard: { gap: Spacing.three, padding: Spacing.four, borderRadius: Radius.card, overflow: 'hidden', backgroundColor: Brand.navy900, ...Elevation.resting },
   vinTop: { alignItems: 'center', gap: Spacing.three },
   vinKicker: { fontSize: 12, lineHeight: 16, letterSpacing: 1, textTransform: 'uppercase', color: Brand.gold400 },
   vinTitle: { fontSize: 22, lineHeight: 28, color: Brand.white },

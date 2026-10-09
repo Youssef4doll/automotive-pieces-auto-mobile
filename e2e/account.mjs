@@ -36,7 +36,7 @@ const api = async (path, init = {}) => {
   return { status: res.status, body: await res.json().catch(() => null) };
 };
 
-const email = `e2e.${Date.now()}@example.com`;
+let email = `e2e.${Date.now()}@example.com`;
 let password = 'Piston-bleu-42';
 const products = (await (await fetch(`${SHOP}/api/v1/catalogue/products?family=filtres`)).json()).data.products;
 const part = products.find((p) => p.availability === 'IN_STOCK') ?? products[0];
@@ -195,6 +195,30 @@ try {
   const stillIn = await api('/auth/session', { method: 'POST', body: JSON.stringify({ email, password }) });
   check(stillIn.status === 200, 'security: the new password signs in', stillIn.status);
   if (stillIn.body?.data?.token) await api('/auth/session', { method: 'DELETE', headers: { authorization: `Bearer ${stillIn.body.data.token}` } });
+
+  // ---- Mes informations: the name, then the e-mail — proved with the password
+  await go(page, '/compte');
+  await page.getByTestId('account-profile').click();
+  check(await shows(page, 'Coordonnées'), 'profile: the name on Compte opens "Mes informations"');
+  await page.getByTestId('profile-name').click();
+  await page.getByTestId('profile-name-input').fill('Compte Renommé');
+  await page.getByTestId('profile-save').click();
+  check(await shows(page, 'Informations enregistrées'), 'profile: a new name is saved');
+  await page.waitForTimeout(4500);
+  const newEmail = `e2e.renamed.${Date.now()}@example.com`;
+  await page.getByTestId('profile-email').click();
+  await page.getByTestId('profile-email-input').fill(newEmail);
+  await page.getByTestId('profile-password-input').fill('pas-le-bon-1');
+  await page.getByTestId('profile-save').click();
+  check(await shows(page, 'Mot de passe incorrect'), 'profile: a new e-mail asks for the right password');
+  await page.getByTestId('profile-password-input').fill(password);
+  await page.getByTestId('profile-save').click();
+  check(await shows(page, newEmail), 'profile: the new e-mail is saved and shown');
+  await page.screenshot({ path: `${SHOTS}-profile.png` });
+  const moved = await api('/auth/session', { method: 'POST', body: JSON.stringify({ email: newEmail, password }) });
+  check(moved.status === 200 && moved.body?.data?.account?.name === 'Compte Renommé', 'profile: the shop has the new name and signs in with the new e-mail', moved.body?.data?.account);
+  if (moved.body?.data?.token) await api('/auth/session', { method: 'DELETE', headers: { authorization: `Bearer ${moved.body.data.token}` } });
+  email = newEmail;
 
   // ---- forgotten password: the same answer for any address
   const reset = await api('/auth/password-reset', { method: 'POST', body: JSON.stringify({ email: 'personne@example.com' }) });

@@ -99,6 +99,14 @@ export const accountApi = {
 
   me: (token: string, signal?: AbortSignal) => send<{ account: Account }>('/api/v1/account', { token, signal }),
 
+  /**
+   * A new name and/or e-mail ("Mon compte"). A new e-mail is proved with the
+   * password — or, for an account without one, the code from
+   * `sendConfirmCode`; the shop checks both, and that the address is free.
+   */
+  updateProfile: (token: string, change: { name?: string; email?: string; password?: string; code?: string }) =>
+    send<{ account: Account }>('/api/v1/account', { method: 'PATCH', token, body: change }),
+
   /** The phones signed in to this account, this one marked `current`. */
   devices: (token: string, signal?: AbortSignal) =>
     send<{ sessions: SignedInDevice[] }>('/api/v1/account/sessions', { token, signal }).then((r) => r.sessions),

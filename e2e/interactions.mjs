@@ -290,6 +290,26 @@ try {
   await page.waitForTimeout(2000);
   check(page.url().includes('/garage/ajouter/bmw') && (await says(page, 'Étape 2 sur 3')), 'vin: continues at the model step', page.url());
 
+  // The picker, then the VIN, an unknown maker, "Toutes les marques": back to
+  // that same picker — not a second one over it, whose card went white (the
+  // two cards' gradients shared an id, and the hidden one's was painted).
+  await go('/garage/ajouter');
+  await page.getByRole('button', { name: /Entrer mon VIN/ }).click();
+  await page.waitForTimeout(1500);
+  await page.getByLabel('N° de série (VIN)', { exact: true }).fill('ZZZ12345678901234');
+  await page.getByRole('button', { name: /Identifier mon véhicule/ }).click();
+  await page.waitForTimeout(2000);
+  await page.getByRole('button', { name: 'Toutes les marques' }).click();
+  await page.waitForTimeout(2000);
+  const pickers = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('[data-testid="vin-first"]')];
+    const shown = cards.find((c) => c.getBoundingClientRect().height > 0);
+    const fill = shown?.querySelector('rect')?.getAttribute('fill') ?? '';
+    const id = fill.match(/url\(#(.+)\)/)?.[1];
+    return { count: cards.length, ownGradient: Boolean(id && shown?.querySelector(`[id="${id}"]`)), background: shown ? getComputedStyle(shown).backgroundColor : null };
+  });
+  check(pickers.count === 1 && pickers.ownGradient && pickers.background === 'rgb(15, 35, 82)', 'vin: "Toutes les marques" goes back to the one picker, its card navy', pickers);
+
   // ---- basket: remove everything → empty state
   await go('/panier');
   for (let i = 0; i < 6; i++) {

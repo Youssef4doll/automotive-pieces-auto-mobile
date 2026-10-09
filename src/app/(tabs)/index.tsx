@@ -28,6 +28,7 @@ import { useI18n } from '@/i18n/provider';
 import { useGarage } from '@/store/garage';
 import { useOnboarding } from '@/store/onboarding';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { useSvgId } from '@/hooks/use-svg-id';
 import { Rail } from '@/components/ui/rail';
 
 const LOGO = require('../../../assets/images/logo-lockup.png');
@@ -87,6 +88,8 @@ export default function HomeScreen() {
   const load = useCallback((signal: AbortSignal) => catalogueApi.families(signal), []);
   const families = useResource(load);
   const refreshControl = usePullRefresh();
+  const fadeX = useSvgId('fadeX');
+  const fadeY = useSvgId('fadeY');
 
   // Every family, most parts first — a rail to browse, not four fixed tiles.
   const rail = useMemo<Family[]>(
@@ -117,20 +120,20 @@ export default function HomeScreen() {
             {/* Into the navy on every side the text is: the photograph has no edge. */}
             <Svg style={StyleSheet.absoluteFill} width={artWidth} height={artHeight}>
               <Defs>
-                <LinearGradient id="fadeX" x1="0" y1="0" x2="1" y2="0">
+                <LinearGradient id={fadeX} x1="0" y1="0" x2="1" y2="0">
                   <Stop offset="0" stopColor={Brand.navy950} stopOpacity="1" />
                   <Stop offset="0.12" stopColor={Brand.navy950} stopOpacity="1" />
                   <Stop offset="0.42" stopColor={Brand.navy950} stopOpacity="0" />
                 </LinearGradient>
-                <LinearGradient id="fadeY" x1="0" y1="0" x2="0" y2="1">
+                <LinearGradient id={fadeY} x1="0" y1="0" x2="0" y2="1">
                   <Stop offset="0.18" stopColor={Brand.navy950} stopOpacity="0.9" />
                   <Stop offset="0.36" stopColor={Brand.navy950} stopOpacity="0" />
                   <Stop offset="0.6" stopColor={Brand.navy950} stopOpacity="0" />
                   <Stop offset="0.74" stopColor={Brand.navy950} stopOpacity="1" />
                 </LinearGradient>
               </Defs>
-              <Rect x="0" y="0" width={artWidth} height={artHeight} fill="url(#fadeX)" />
-              <Rect x="0" y="0" width={artWidth} height={artHeight} fill="url(#fadeY)" />
+              <Rect x="0" y="0" width={artWidth} height={artHeight} fill={`url(#${fadeX})`} />
+              <Rect x="0" y="0" width={artWidth} height={artHeight} fill={`url(#${fadeY})`} />
             </Svg>
           </View>
 

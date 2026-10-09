@@ -2008,3 +2008,26 @@ The owner's list, after watching customers use the app:
 - **Garage**: back to the design before the three tiles (Mes véhicules and
   Ajouter un véhicule as two rows), without the "Besoin d'un conseil ?" card
   at the foot.
+
+## 32. A glitch, the help page, "Mes informations" (October 9, 2026)
+
+- **The white VIN card.** Picker → "Entrer mon VIN" → an unknown maker →
+  "Toutes les marques" opened a *second* picker over the first. On the web
+  every SVG gradient id lives in one document: both cards pointed at
+  `url(#vinFirst)`, the first copy's — on a hidden screen — and the visible
+  card painted nothing, its white title on white. Two fixes: SVG gradients
+  take an id of their own (`hooks/use-svg-id`, used by the VIN card, the
+  garage pass, the Home fade and the help band) with the navy as the card's
+  background underneath; and "Toutes les marques" from the VIN screen goes
+  back to the picker already open (`dismissTo`), not a new one.
+- **Aide & contact** is a navy band — "Comment pouvons-nous vous aider ?",
+  "Un vendeur vous répond ici", the gold "Poser une question" — then grouped
+  rows: in the app (a photo of the part, my questions), the shop's channels
+  with the number or address each one dials (only those the shop filled in),
+  and its hours and address.
+- **Mes informations** (`/compte/profil`), from the name on Compte or its
+  own row: the avatar, "Client depuis…", then the name, the e-mail and the
+  phone as rows. The name and e-mail change in a sheet (website
+  `PATCH /api/v1/account`); a new e-mail asks for the password, or a code for
+  an account without one. The phone row goes to "Connexion et sécurité",
+  where a number is changed with a code.

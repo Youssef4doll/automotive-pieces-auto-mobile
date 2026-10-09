@@ -122,7 +122,7 @@ export default function VinScreen() {
                 {t(message)}
               </Text>
               {message === 'vin.unknown' ? (
-                <Button label={t('picker.allMakes')} variant="secondary" onPress={() => router.replace('/garage/ajouter')} />
+                <Button label={t('picker.allMakes')} variant="secondary" onPress={() => router.dismissTo('/garage/ajouter')} />
               ) : null}
             </View>
           ) : null}

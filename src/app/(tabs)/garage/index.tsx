@@ -15,6 +15,7 @@ import { MAKE_MARKS, markKey } from '@/illustrations/marques';
 import { CareDueStrip } from '@/components/ui/care-due';
 import { CarKey } from '@/illustrations/car-key';
 import { useI18n } from '@/i18n/provider';
+import { useSvgId } from '@/hooks/use-svg-id';
 import { ltr, yearSpan } from '@/lib/format';
 import { useGarage, type SavedVehicle } from '@/store/garage';
 
@@ -168,17 +169,18 @@ function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehic
   const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
   const years = yearSpan(vehicle.yearFrom ?? null, vehicle.yearTo ?? null, t);
   const mark = MAKE_MARKS[markKey(vehicle.makeSlug)] ?? MAKE_MARKS[markKey(vehicle.makeName)];
+  const gradient = useSvgId('pass');
   return (
     <View style={styles.passWrap}>
       <View style={styles.pass}>
         <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 340 210" preserveAspectRatio="none">
           <Defs>
-            <LinearGradient id="pass" x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="1">
+            <LinearGradient id={gradient} x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="1">
               <Stop offset="0" stopColor={Brand.navy700} />
               <Stop offset="1" stopColor={Brand.navy950} />
             </LinearGradient>
           </Defs>
-          <Rect x={0} y={0} width={340} height={210} fill="url(#pass)" />
+          <Rect x={0} y={0} width={340} height={210} fill={`url(#${gradient})`} />
           <Path d={rtl ? 'M140 0 L0 0 L0 210 L220 210 Z' : 'M200 0 L340 0 L340 210 L120 210 Z'} fill={Brand.white} opacity={0.035} />
           <Path d={rtl ? 'M90 0 L0 0 L0 210 L150 210 Z' : 'M250 0 L340 0 L340 210 L190 210 Z'} fill={Brand.white} opacity={0.03} />
         </Svg>

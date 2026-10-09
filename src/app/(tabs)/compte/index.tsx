@@ -110,12 +110,23 @@ export default function AccountScreen() {
               <Feather name="camera" size={12} color={Brand.navy950} />
             </View>
           </Pressable>
-          <View style={styles.flex}>
-            <Text style={[styles.name, { fontFamily: familyFor('heading', rtl) }]}>{name || t('account.guestName')}</Text>
-            <Text variant="hint" numberOfLines={2}>
-              {contactLine || t('account.guestWhy')}
-            </Text>
-          </View>
+          {/* Signed in, the name is the door to "Mon compte", as the
+              reference's profile card is. */}
+          <Pressable
+            accessibilityRole={signedIn ? 'button' : undefined}
+            disabled={!signedIn}
+            onPress={() => router.push('/compte/profil')}
+            style={({ pressed }) => [styles.flex, row, styles.profileText, pressed && { opacity: 0.7 }]}
+            testID="account-profile"
+          >
+            <View style={styles.flex}>
+              <Text style={[styles.name, { fontFamily: familyFor('heading', rtl) }]}>{name || t('account.guestName')}</Text>
+              <Text variant="hint" numberOfLines={2}>
+                {contactLine || t('account.guestWhy')}
+              </Text>
+            </View>
+            {signedIn ? <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={C.textMuted} /> : null}
+          </Pressable>
         </View>
 
         {accountStatus === 'guest' ? (
@@ -135,6 +146,8 @@ export default function AccountScreen() {
         ) : null}
 
         <View style={styles.list}>
+          {/* The account's own details first, as the reference lists them. */}
+          {signedIn ? <Row icon="user" label={t('profile.title')} onPress={() => router.push('/compte/profil')} /> : null}
           {/* Orders and addresses are the account's: a guest has neither. */}
           {signedIn ? (
             <Row
@@ -351,6 +364,7 @@ const styles = StyleSheet.create({
   },
   flex: { flex: 1 },
   profile: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.three },
+  profileText: { alignItems: 'center', gap: Spacing.two, minHeight: Tap.min },
   avatar: {
     width: 64,
     height: 64,
