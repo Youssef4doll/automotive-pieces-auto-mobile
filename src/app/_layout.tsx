@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ToastHost } from '@/components/ui/toast';
+import { AddFlightHost } from '@/components/add-flight';
 import { useAppFonts } from '@/hooks/use-app-fonts';
 import { I18nProvider } from '@/i18n/provider';
 import { catalogueApi } from '@/api/catalogue';
@@ -118,6 +119,8 @@ function Shell({ launching }: { launching: boolean }) {
       {/* Above every screen, so "Ajouté au panier" survives the navigation
           that follows it. */}
       <ToastHost />
+      {/* A part flying into the basket, over the headers it lands in. */}
+      <AddFlightHost />
       {/* Over everything, toasts included: signing in or out is the moment. */}
       <AuthMoment />
       {/* Orders that moved and answers that came, said while the app is open. */}

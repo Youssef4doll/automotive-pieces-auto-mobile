@@ -38,6 +38,7 @@ import { whatsappUrl } from '@/components/ui/shop-contact';
 import { MakeLogo } from '@/components/ui/make-logo';
 import { useVehicleLine } from '@/components/ui/vehicle-card';
 import { StockAlert } from '@/components/ui/stock-alert';
+import { useFlight } from '@/components/add-flight';
 import { SYSTEM_TAB_BAR, tabBarFootprint } from '@/components/tab-bar';
 
 /** iOS 26 and later: the header's buttons are the system's own, in liquid glass (SystemIsland). */
@@ -158,9 +159,27 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   // au panier". The basket is up top, in the island beside the camera (the
   // owner, October 2026: when the add button turned into "Voir le panier",
   // customers lost the way to the basket); the island says the add itself.
+  const launch = useFlight((s) => s.launch);
+  const addButton = useRef<View>(null);
+  const { width: screenWidth } = useWindowDimensions();
   const commit = () => {
     if (!addToCart(product, qty, { silent: true })) return;
     setQty(1);
+    // The part flies from the button to the basket up in the header (components/add-flight).
+    const fallback = { x: rtl && SYSTEM_GLASS ? 38 : screenWidth - 38, y: insets.top + (Platform.OS === 'ios' ? 22 : 28) };
+    const fly = (to: { x: number; y: number }) =>
+      addButton.current?.measureInWindow((x, y, w, h) =>
+        launch({
+          from: { x: x + w / 2, y: y + h / 2 },
+          to,
+          slug: product.familySlug,
+          imageUrl: product.gallery[0] ? `${API_BASE_URL}${product.gallery[0]}` : null,
+          confirm: SYSTEM_GLASS,
+        }),
+      );
+    const cart = SYSTEM_GLASS ? null : cartSpot.current;
+    if (cart) cart.measureInWindow((x, y, w, h) => fly(w ? { x: x + w / 2, y: y + h / 2 } : fallback));
+    else fly(fallback);
   };
 
   const buyable = product.availability !== 'UNAVAILABLE';
@@ -522,13 +541,14 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
           ) : (
             <>
               <QuantityStepper value={qty} onChange={setQty} size="compact" />
-              <Button
-                label={barWidth >= 370 ? t('product.add') : t('product.addShort')}
-                accessibilityLabel={t('product.add')}
-                icon={barWidth >= 420 || barWidth < 370 ? 'shopping-cart' : undefined}
-                onPress={add}
-                style={styles.flex}
-              />
+              <View ref={addButton} collapsable={false} style={styles.flex}>
+                <Button
+                  label={barWidth >= 370 ? t('product.add') : t('product.addShort')}
+                  accessibilityLabel={t('product.add')}
+                  icon={barWidth >= 420 || barWidth < 370 ? 'shopping-cart' : undefined}
+                  onPress={add}
+                />
+              </View>
             </>
           )}
         </View>
@@ -682,6 +702,13 @@ function FitsToggle({ open, onPress }: { open: boolean; onPress: () => void }) {
 }
 
 /**
+ * The drawn island's basket, where a part added on this page flies to
+ * (components/add-flight). One product page is in front at a time; a page
+ * leaving clears it only if it is still its own.
+ */
+const cartSpot: { current: View | null } = { current: null };
+
+/**
  * The basket's count, and whether a part went in a moment ago: the island
  * says "Ajouté" for two seconds after each add, then closes again.
  */
@@ -783,7 +810,15 @@ function DrawnIsland({ product }: { product: ProductDetail }) {
             </Text>
           </Animated.View>
         ) : null}
-        <View>
+        <View
+          collapsable={false}
+          ref={(node) => {
+            cartSpot.current = node;
+            return () => {
+              if (cartSpot.current === node) cartSpot.current = null;
+            };
+          }}
+        >
           <Feather name="shopping-cart" size={19} color={C.text} />
           {count > 0 ? (
             <Animated.View key={count} entering={ZoomIn.duration(220).reduceMotion(ReduceMotion.System)} style={[styles.islandBadge, rtl ? { left: -10 } : { right: -10 }]}>
