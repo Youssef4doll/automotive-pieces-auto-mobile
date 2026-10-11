@@ -155,7 +155,7 @@ try {
   await page.goto(`${APP_URL}/gestion/boutique`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(2500);
   check(await says(page, 'À compléter : non affiché aux clients'), 'settings: placeholder contact fields are flagged, not shown as real');
-  const hours = page.getByLabel('Horaires');
+  const hours = page.getByLabel('Horaires', { exact: true });
   const oldHours = await hours.inputValue();
   await hours.fill(`${oldHours} (test)`);
   await scrollTo(page, 'bottom');
