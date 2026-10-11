@@ -57,7 +57,7 @@ export default function ProfileScreen() {
   return (
     <>
       <Stack.Screen options={{ title: t('profile.title') }} />
-      <ScrollView style={styles.root} contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" style={styles.root} contentContainerStyle={styles.scroll}>
         <View style={styles.column}>
           <View style={styles.head}>
             <View style={styles.avatar}>

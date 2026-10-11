@@ -88,7 +88,7 @@ function Form({ settings, onSaved }: { settings: Setting[]; onSaved: (s: Setting
 
   return (
     <KeyboardAvoidingView style={staffStyles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={staffStyles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={staffStyles.scroll} keyboardShouldPersistTaps="handled">
         <Text variant="body" tone={C.textMuted}>
           {t('staff.set.why')}
         </Text>

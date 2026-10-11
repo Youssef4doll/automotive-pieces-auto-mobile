@@ -1,9 +1,11 @@
 import { Feather } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
 
-import { Brand, C, IconSize, Radius, Spacing } from '@/constants/theme';
+import { Brand, C, familyFor, IconSize, Radius, Spacing } from '@/constants/theme';
+import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
-import { formatDate } from '@/lib/format';
+import { LogoMark } from '@/illustrations/logo';
+import { when } from '@/lib/when';
 import { Text } from './text';
 
 export type ThreadQuestion = {
@@ -15,27 +17,37 @@ export type ThreadQuestion = {
   handled: boolean;
 };
 
+/** "Aujourd’hui à 16:00", "Hier à 9:12", "8 oct." */
+export function useWhen() {
+  const { t, locale } = useI18n();
+  return (iso: string) => {
+    const w = when(iso, locale);
+    return w.day ? t(`when.${w.day}` as DictKey, { time: w.time }) : w.date;
+  };
+}
+
 /**
- * One question to the shop and what became of it: the customer's words on
- * the trailing side, the shop's written answer on the leading side with the
- * gold edge the shop's own voice carries elsewhere — or, with no written
- * answer, the plain state: waiting, or dealt with by phone. Nothing here
- * guesses when an answer will come.
+ * One question to the shop and what became of it: the customer's words,
+ * then the shop's written answer in a tinted block under the shop's mark —
+ * or, with no written answer, the plain state: waiting, or dealt with by
+ * phone. Nothing here guesses when an answer will come. `dated={false}`
+ * leaves out "Vous · <date>" where the card around it already says when.
  */
-export function QuestionThread({ q, fresh = false }: { q: ThreadQuestion; fresh?: boolean }) {
-  const { t, rtl, locale } = useI18n();
+export function QuestionThread({ q, fresh = false, dated = true }: { q: ThreadQuestion; fresh?: boolean; dated?: boolean }) {
+  const { t, rtl } = useI18n();
+  const said = useWhen();
   const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   return (
     <View style={styles.thread}>
-      <View style={[styles.mine, rtl ? styles.mineRtl : null]}>
-        <Text variant="label" tone={C.textMuted} style={align}>
-          {`${t('questions.you')} · ${formatDate(q.createdAt, locale, true)}`}
-        </Text>
-        <Text variant="body" tone={C.text} style={align}>
-          {q.body}
-        </Text>
+      <View style={styles.asked}>
+        {dated ? (
+          <Text variant="hint" style={align}>
+            {`${t('questions.you')} · ${said(q.createdAt)}`}
+          </Text>
+        ) : null}
+        <Text style={[styles.words, { fontFamily: familyFor('body', rtl) }, align]}>{q.body}</Text>
         {q.photoCount ? (
           <View style={[row, styles.meta]}>
             <Feather name="image" size={IconSize.small} color={C.textMuted} />
@@ -45,27 +57,29 @@ export function QuestionThread({ q, fresh = false }: { q: ThreadQuestion; fresh?
       </View>
 
       {q.reply ? (
-        <View style={[styles.theirs, rtl ? styles.theirsRtl : null]}>
+        <View style={styles.answer} testID="question-reply">
           <View style={[row, styles.meta]}>
-            <Text variant="label" tone={C.text} style={[styles.flex, align]}>
-              {`${t('questions.reply')}${q.repliedAt ? ` · ${formatDate(q.repliedAt, locale, true)}` : ''}`}
-            </Text>
+            <View style={styles.mark}>
+              <LogoMark size={16} />
+            </View>
+            <Text style={[styles.flex, styles.from, { fontFamily: familyFor('bodySemi', rtl) }, align]}>{t('questions.reply')}</Text>
             {fresh ? (
               <View style={styles.newPill}>
-                <Text variant="label" tone={Brand.navy950}>
-                  {t('questions.new')}
-                </Text>
+                <Text style={[styles.newText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('questions.newShort')}</Text>
               </View>
             ) : null}
           </View>
-          <Text variant="body" tone={C.text} style={align}>
-            {q.reply}
-          </Text>
+          <Text style={[styles.words, { fontFamily: familyFor('body', rtl) }, align]}>{q.reply}</Text>
+          {q.repliedAt ? (
+            <Text variant="hint" style={align}>
+              {said(q.repliedAt)}
+            </Text>
+          ) : null}
         </View>
       ) : (
-        <View style={[row, styles.state]}>
+        <View style={[row, styles.state, q.handled ? styles.stateDone : null, rtl ? styles.stateRtl : null]}>
           <Feather name={q.handled ? 'check-circle' : 'clock'} size={IconSize.small} color={q.handled ? C.success : C.textMuted} />
-          <Text variant="hint" tone={q.handled ? C.success : C.textMuted} style={align}>
+          <Text variant="hint" tone={q.handled ? C.success : C.textMuted} style={[styles.shrink, align]}>
             {q.handled ? t('questions.handled') : t('questions.waiting')}
           </Text>
         </View>
@@ -75,41 +89,31 @@ export function QuestionThread({ q, fresh = false }: { q: ThreadQuestion; fresh?
 }
 
 const styles = StyleSheet.create({
-  thread: { gap: Spacing.two },
+  thread: { gap: Spacing.three },
   flex: { flex: 1, minWidth: 0 },
-  mine: {
-    alignSelf: 'flex-end',
-    maxWidth: '92%',
-    gap: 4,
+  shrink: { flexShrink: 1 },
+  asked: { gap: Spacing.one },
+  words: { fontSize: 15, lineHeight: 22, color: C.text },
+  meta: { alignItems: 'center', gap: Spacing.two },
+  answer: {
+    gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: Radius.tile,
-    borderBottomRightRadius: 4,
     backgroundColor: C.surface,
   },
-  mineRtl: { alignSelf: 'flex-start', borderBottomRightRadius: Radius.tile, borderBottomLeftRadius: 4 },
-  theirs: {
+  mark: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: Brand.navy900 },
+  from: { fontSize: 13, lineHeight: 18, color: C.text },
+  newPill: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill, backgroundColor: Brand.gold500 },
+  newText: { fontSize: 11, lineHeight: 15, color: Brand.navy950 },
+  state: {
     alignSelf: 'flex-start',
-    maxWidth: '92%',
-    gap: 4,
-    padding: Spacing.three,
-    borderRadius: Radius.tile,
-    borderBottomLeftRadius: 4,
-    backgroundColor: Brand.white,
-    borderWidth: 1,
-    borderColor: C.border,
-    borderLeftWidth: 4,
-    borderLeftColor: Brand.gold500,
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: Radius.pill,
+    backgroundColor: C.surface,
   },
-  theirsRtl: {
-    alignSelf: 'flex-end',
-    borderBottomLeftRadius: Radius.tile,
-    borderBottomRightRadius: 4,
-    borderLeftWidth: 1,
-    borderLeftColor: C.border,
-    borderRightWidth: 4,
-    borderRightColor: Brand.gold500,
-  },
-  meta: { alignItems: 'center', gap: Spacing.one },
-  state: { alignItems: 'center', gap: Spacing.one, paddingHorizontal: Spacing.one },
-  newPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.pill, backgroundColor: Brand.gold500 },
+  stateRtl: { alignSelf: 'flex-end' },
+  stateDone: { backgroundColor: C.successSurface },
 });

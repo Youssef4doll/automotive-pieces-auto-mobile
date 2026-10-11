@@ -2,6 +2,9 @@ import { Platform } from 'react-native';
 
 import type { LatLng } from './map-tiles';
 
+/** What the phone's geocoder says is at a point: its governorate, and the street with its number. */
+export type Place = { region: string | null; street: string | null };
+
 export type Located = { ok: true; point: LatLng; region: string | null } | { ok: false; reason: 'denied' | 'unavailable' };
 
 /**
@@ -27,18 +30,28 @@ export async function locate(): Promise<Located> {
     if (permission.status !== 'granted') return { ok: false, reason: 'denied' };
     const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
     const point = { lat: position.coords.latitude, lng: position.coords.longitude };
-    let region: string | null = null;
-    // The web has no reverse geocoder without a paid key; the customer picks the governorate there.
-    if (Platform.OS !== 'web') {
-      try {
-        const [place] = await Location.reverseGeocodeAsync({ latitude: point.lat, longitude: point.lng });
-        region = place?.region ?? place?.subregion ?? null;
-      } catch {
-        region = null;
-      }
-    }
-    return { ok: true, point, region };
+    return { ok: true, point, region: (await describe(point))?.region ?? null };
   } catch {
     return { ok: false, reason: 'unavailable' };
+  }
+}
+
+/**
+ * The phone's own reverse geocoder on the pin the customer settled on
+ * (iOS and Android; the web has none without a paid key), so an empty
+ * address can start from the street the map says is there. Null when the
+ * phone cannot say — Android asks for the location permission first, and
+ * this never asks for it.
+ */
+export async function describe(point: LatLng): Promise<Place | null> {
+  if (Platform.OS === 'web') return null;
+  try {
+    const Location = await import('expo-location');
+    const [place] = await Location.reverseGeocodeAsync({ latitude: point.lat, longitude: point.lng });
+    if (!place) return null;
+    const street = place.street ? [place.streetNumber, place.street].filter(Boolean).join(' ') : null;
+    return { region: place.region ?? place.subregion ?? null, street };
+  } catch {
+    return null;
   }
 }

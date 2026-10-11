@@ -87,6 +87,7 @@ export default function CatalogueScreen() {
 
   return (
     <ScrollView
+      keyboardDismissMode="on-drag"
       style={styles.root}
       contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]}
       keyboardShouldPersistTaps="handled"

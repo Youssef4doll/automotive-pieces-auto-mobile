@@ -72,7 +72,7 @@ function Detail({ m, onChange }: { m: MessageDetail; onChange: (d: MessageDetail
   };
 
   return (
-    <ScrollView style={staffStyles.root} contentContainerStyle={staffStyles.scroll} keyboardShouldPersistTaps="handled">
+    <ScrollView keyboardDismissMode="on-drag" style={staffStyles.root} contentContainerStyle={staffStyles.scroll} keyboardShouldPersistTaps="handled">
       <View style={styles.head}>
         <Text variant="sectionTitle" style={align}>
           {m.subject}

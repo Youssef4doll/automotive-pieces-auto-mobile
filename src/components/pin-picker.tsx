@@ -7,7 +7,7 @@ import { Text } from '@/components/ui/text';
 import { C, Spacing, Tap } from '@/constants/theme';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
-import { locate } from '@/lib/locate';
+import { describe, locate, type Place } from '@/lib/locate';
 import { GOVERNORATE_CENTRES, inTunisia, type LatLng } from '@/lib/map-tiles';
 
 /**
@@ -19,7 +19,8 @@ import { GOVERNORATE_CENTRES, inTunisia, type LatLng } from '@/lib/map-tiles';
  * governorate chosen, else on Tunis. "Utiliser ma position" moves it to the
  * phone's position — only inside Tunisia, where the shop delivers — and
  * hands back the region the phone names, so an empty governorate can be
- * filled in.
+ * filled in. On keeping the point, the phone's geocoder says what is there
+ * — the governorate and the street — so an empty form can start from it.
  */
 export function PinPicker({
   initial,
@@ -29,13 +30,14 @@ export function PinPicker({
 }: {
   initial: LatLng | null;
   governorate?: string;
-  onConfirm: (pin: LatLng, region: string | null) => void;
+  onConfirm: (pin: LatLng, place: Place | null) => void;
   onRemove?: () => void;
 }) {
   const { t, rtl } = useI18n();
   const [center, setCenter] = useState<LatLng>(initial ?? (governorate ? GOVERNORATE_CENTRES[governorate] : undefined) ?? GOVERNORATE_CENTRES.Tunis);
   const [region, setRegion] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [keeping, setKeeping] = useState(false);
   const [note, setNote] = useState<DictKey | null>(null);
   const start = { textAlign: rtl ? ('right' as const) : ('left' as const) };
 
@@ -64,7 +66,18 @@ export function PinPicker({
           {t(note)}
         </Text>
       ) : null}
-      <Button label={t('addr.pinConfirm')} icon="check" onPress={() => onConfirm(center, region)} testID="pin-confirm" />
+      <Button
+        label={t('addr.pinConfirm')}
+        icon="check"
+        loading={keeping}
+        onPress={async () => {
+          setKeeping(true);
+          const place = (await describe(center)) ?? (region ? { region, street: null } : null);
+          setKeeping(false);
+          onConfirm(center, place);
+        }}
+        testID="pin-confirm"
+      />
       {initial && onRemove ? (
         <Pressable accessibilityRole="button" onPress={onRemove} style={styles.remove}>
           <Text variant="hint" tone={C.danger} style={styles.underline}>

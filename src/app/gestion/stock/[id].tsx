@@ -168,7 +168,7 @@ function Editor({ product, onChange }: { product: ProductDetail; onChange: (p: P
 
   return (
     <KeyboardAvoidingView style={staffStyles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={staffStyles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={staffStyles.scroll} keyboardShouldPersistTaps="handled">
         <View style={[start, { gap: 4 }]}>
           <Text variant="screenTitle">{product.name}</Text>
           <Text variant="hint" style={styles.ltr}>

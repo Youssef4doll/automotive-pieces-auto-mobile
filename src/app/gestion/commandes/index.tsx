@@ -53,6 +53,8 @@ export default function StaffOrders() {
         <Empty title={t('staff.orders.none')} body={t('staff.orders.noneWhy')} />
       ) : (
         <FlatList
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           data={items}
           keyExtractor={(o) => o.id}
           contentContainerStyle={styles.list}

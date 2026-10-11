@@ -4,11 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { accountApi } from '@/api/account';
+import { accountApi, type SavedAddress } from '@/api/account';
 import { ApiError, newIdempotencyKey, type ApiFailure } from '@/api/client';
 import { justPlaced, ordersApi, type OrderInput } from '@/api/orders';
 import type { ShopSettings } from '@/api/shop';
 import { PhoneSignIn } from '@/components/phone-sign-in';
+import { PinCard } from '@/components/pin-card';
 import { PinPicker } from '@/components/pin-picker';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
+import { MapPin } from '@/illustrations/address-art';
 import { checkoutProblems, deliveryDelay, estimateFor, type CheckoutField } from '@/lib/checkout';
 import { estimateLine } from '@/lib/estimate-text';
 import { governorateFromRegion } from '@/lib/map-tiles';
@@ -112,7 +114,8 @@ function Checkout({ settings }: { settings: ShopSettings }) {
   // Inside the address sheet: the form, or one of its two lists. One sheet
   // whose content changes — iOS cannot present a modal while another is
   // still closing, and the lists as sheets of their own never appeared.
-  const [pick, setPick] = useState<'governorate' | 'delegation' | 'map' | null>(null);
+  // `list`: the account's addresses, the first thing the address row opens on.
+  const [pick, setPick] = useState<'governorate' | 'delegation' | 'map' | 'list' | null>(null);
   // The account's own addresses (api/v1/account/addresses), the last used first:
   // one tap fills the address, its landmark and its pin.
   const loadAddresses = useCallback(async (signal: AbortSignal) => {
@@ -124,8 +127,8 @@ function Checkout({ settings }: { settings: ShopSettings }) {
   // A new address typed here goes into the account too, under a name, unless unticked.
   const [saveIt, setSaveIt] = useState(true);
   const [saveLabel, setSaveLabel] = useState<SaveLabel>('addr.labelHome');
-  const openSheet = (next: Sheet) => {
-    setPick(null);
+  const openSheet = (next: Sheet, inside: typeof pick = null) => {
+    setPick(inside);
     setSheet(next);
   };
   const [open, setOpen] = useState(false);
@@ -260,9 +263,20 @@ function Checkout({ settings }: { settings: ShopSettings }) {
   const count = items.reduce((n, i) => n + i.qty, 0);
   const toCheck = active && quote ? quote.lines.filter((l) => l.product && fitState(l.product) !== 'FITS').length : 0;
   const canPlace = state.status === 'loaded' && !state.data.blocked && !placing;
-  const where = [[details.delegation, details.governorate].filter(Boolean).join(', '), details.landmark?.trim(), details.pin ? t('addr.pinSet') : null]
-    .filter(Boolean)
-    .join(' · ');
+  const where = [[details.delegation, details.governorate].filter(Boolean).join(', '), details.landmark?.trim()].filter(Boolean).join(' · ');
+  // A saved address fills the form in one tap and closes the sheet.
+  const pickSaved = (a: SavedAddress) => {
+    update({
+      governorate: a.governorate,
+      delegation: a.delegation ?? '',
+      address: a.address,
+      landmark: a.landmark ?? '',
+      pin: a.pin,
+      savedAddressId: a.id,
+    });
+    setErrors((e) => ({ ...e, governorate: undefined, delegation: undefined, address: undefined }));
+    setSheet(null);
+  };
   const addressSet = Boolean(details.governorate && details.address.trim());
   const contactSet = Boolean(details.customerName.trim() && details.phone.trim());
   const addressError = errors.governorate ?? errors.delegation ?? errors.address;
@@ -279,7 +293,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
 
   return (
     <View style={styles.root}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <View style={styles.column}>
           {/* What is being bought, folded to one line. */}
           <Pressable
@@ -390,68 +404,20 @@ function Checkout({ settings }: { settings: ShopSettings }) {
           {method === 'PICKUP' && settings.pickup ? (
             <Row icon="home" title={settings.pickup.address} sub={settings.pickup.hours} />
           ) : null}
-          {method === 'DELIVERY' && addresses.length ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.savedRow, row]} testID="saved-addresses">
-              {addresses.map((a) => {
-                const on = a.id === details.savedAddressId;
-                return (
-                  <Pressable
-                    key={a.id}
-                    accessibilityRole="radio"
-                    accessibilityState={{ checked: on }}
-                    accessibilityLabel={`${a.label}, ${a.address}, ${a.governorate}`}
-                    onPress={() => {
-                      update({
-                        governorate: a.governorate,
-                        delegation: a.delegation ?? '',
-                        address: a.address,
-                        landmark: a.landmark ?? '',
-                        pin: a.pin,
-                        savedAddressId: a.id,
-                      });
-                      setErrors((e) => ({ ...e, governorate: undefined, delegation: undefined, address: undefined }));
-                    }}
-                    style={({ pressed }) => [styles.savedChip, on && styles.savedChipOn, pressed && !on && styles.pressed]}
-                  >
-                    <View style={[row, styles.savedHead]}>
-                      <Feather name={on ? 'check-circle' : 'map-pin'} size={15} color={on ? C.success : C.text} />
-                      <Text numberOfLines={1} style={[styles.savedLabel, { fontFamily: familyFor('bodySemi', rtl) }]}>
-                        {a.label}
-                      </Text>
-                    </View>
-                    <Text variant="hint" numberOfLines={1} style={start}>
-                      {[a.delegation, a.governorate].filter(Boolean).join(', ')}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => {
-                  update({ address: '', landmark: '', pin: null, delegation: '', savedAddressId: undefined });
-                  openSheet('address');
-                }}
-                style={({ pressed }) => [styles.savedChip, styles.savedNew, pressed && styles.pressed]}
-              >
-                <View style={[row, styles.savedHead]}>
-                  <Feather name="plus" size={15} color={C.text} />
-                  <Text numberOfLines={1} style={[styles.savedLabel, { fontFamily: familyFor('bodySemi', rtl) }]}>
-                    {t('addr.new')}
-                  </Text>
-                </View>
-              </Pressable>
-            </ScrollView>
-          ) : null}
+          {/* Glovo's checkout: the door on the map, the address under it. */}
           {method === 'DELIVERY' ? (
-            <Row
-              icon="map-pin"
-              title={addressSet ? details.address.trim() : t('checkout.addAddress')}
-              sub={addressSet ? where : null}
-              strong={!addressSet}
-              error={addressError}
-              testID="checkout-address"
-              onPress={() => openSheet('address')}
-            />
+            <View style={styles.where}>
+              <PinCard pin={details.pin ?? null} onPress={() => openSheet('address', 'map')} testID="checkout-map" />
+              <Row
+                lead={<MapPin size={26} shadow={false} />}
+                title={addressSet ? details.address.trim() : details.pin ? t('addr.addStreet') : t('checkout.addAddress')}
+                sub={addressSet ? where : null}
+                strong={!addressSet}
+                error={addressError}
+                testID="checkout-address"
+                onPress={() => openSheet('address', addresses.length ? 'list' : null)}
+              />
+            </View>
           ) : null}
           <Row
             icon="user"
@@ -535,19 +501,28 @@ function Checkout({ settings }: { settings: ShopSettings }) {
           the same sheet, so a sheet never opens over (or after) a sheet. */}
       <BottomSheet
         visible={sheet === 'address'}
-        onClose={() => (pick ? setPick(null) : setSheet(null))}
+        onClose={() => (pick && pick !== 'list' ? setPick(null) : setSheet(null))}
         title={t(
-          pick === 'governorate' ? 'checkout.chooseGovernorate' : pick === 'delegation' ? 'checkout.chooseDelegation' : pick === 'map' ? 'addr.pinTitle' : 'checkout.addressTitle',
+          pick === 'governorate'
+            ? 'checkout.chooseGovernorate'
+            : pick === 'delegation'
+              ? 'checkout.chooseDelegation'
+              : pick === 'map'
+                ? 'addr.pinTitle'
+                : pick === 'list'
+                  ? 'addr.mine'
+                  : 'checkout.addressTitle',
         )}
       >
         {pick === 'map' ? (
           <PinPicker
             initial={details.pin ?? null}
             governorate={details.governorate}
-            onConfirm={(pin, region) => {
-              // The phone named the governorate and none is chosen yet: fill it in, in view.
-              const named = details.governorate ? null : governorateFromRegion(region, settings.governorates);
-              update({ pin, savedAddressId: undefined, ...(named ? { governorate: named, delegation: '' } : {}) });
+            onConfirm={(pin, place) => {
+              // What the phone says is there fills what is still empty, in view, to be checked.
+              const named = details.governorate ? null : governorateFromRegion(place?.region ?? null, settings.governorates);
+              const street = details.address.trim() ? null : place?.street;
+              update({ pin, savedAddressId: undefined, ...(named ? { governorate: named, delegation: '' } : {}), ...(street ? { address: street } : {}) });
               setPick(null);
             }}
             onRemove={() => {
@@ -555,8 +530,41 @@ function Checkout({ settings }: { settings: ShopSettings }) {
               setPick(null);
             }}
           />
+        ) : pick === 'list' ? (
+          <View style={styles.fields}>
+            <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" style={styles.sheetList} testID="saved-addresses">
+              {addresses.map((a) => (
+                <SavedRow
+                  key={a.id}
+                  icon={a.label === t('addr.labelWork') ? 'briefcase' : a.label === t('addr.labelHome') ? 'home' : 'map-pin'}
+                  label={a.label}
+                  line={[a.address, a.delegation, a.governorate].filter(Boolean).join(', ')}
+                  selected={a.id === details.savedAddressId}
+                  onPress={() => pickSaved(a)}
+                />
+              ))}
+              {addressSet && !details.savedAddressId ? (
+                <SavedRow
+                  icon="edit-3"
+                  label={t('addr.typed')}
+                  line={[details.address.trim(), details.delegation, details.governorate].filter(Boolean).join(', ')}
+                  selected
+                  onPress={() => setSheet(null)}
+                />
+              ) : null}
+              <SavedRow
+                icon="plus"
+                label={t('addr.new')}
+                onPress={() => {
+                  update({ address: '', landmark: '', pin: null, delegation: '', savedAddressId: undefined });
+                  setPick(null);
+                }}
+              />
+            </ScrollView>
+            {addressSet ? <Button label={t('addr.editThis')} variant="secondary" icon="edit-2" onPress={() => setPick(null)} /> : null}
+          </View>
         ) : pick === 'governorate' ? (
-          <ScrollView style={styles.sheetList}>
+          <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" style={styles.sheetList}>
             {settings.governorates.map((g) => (
               <Choice
                 key={g}
@@ -572,7 +580,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
             ))}
           </ScrollView>
         ) : pick === 'delegation' ? (
-          <ScrollView style={styles.sheetList}>
+          <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" style={styles.sheetList}>
             {(delegations ?? []).map((d) => (
               <Choice
                 key={d}
@@ -587,8 +595,10 @@ function Checkout({ settings }: { settings: ShopSettings }) {
             ))}
           </ScrollView>
         ) : (
-          <ScrollView style={styles.sheetBody} keyboardShouldPersistTaps="handled">
+          <ScrollView keyboardDismissMode="on-drag" style={styles.sheetBody} keyboardShouldPersistTaps="handled">
             <View style={styles.fields}>
+              {/* The door first, on the map; the words for the courier under it. */}
+              <PinCard pin={details.pin ?? null} height={120} onPress={() => setPick('map')} testID="checkout-pin" />
               <Select
                 label={t('checkout.governorate')}
                 value={details.governorate}
@@ -623,18 +633,6 @@ function Checkout({ settings }: { settings: ShopSettings }) {
                 onChangeText={(v) => update({ landmark: v, savedAddressId: undefined })}
                 maxLength={200}
               />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setPick('map')}
-                testID="checkout-pin"
-                style={({ pressed }) => [styles.pinRow, row, details.pin && styles.pinRowOn, pressed && styles.pressed]}
-              >
-                <Feather name={details.pin ? 'check-circle' : 'map'} size={IconSize.large} color={details.pin ? C.success : C.text} />
-                <Text style={[styles.flex, styles.rowTitle, start, { fontFamily: familyFor('bodySemi', rtl) }]}>
-                  {t(details.pin ? 'addr.pinSet' : 'addr.pinNone')}
-                </Text>
-                <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={C.textMuted} />
-              </Pressable>
               {!guest && saved.status === 'loaded' && !details.savedAddressId && addresses.length < 10 ? (
                 <View style={styles.saveBox}>
                   <Pressable
@@ -721,7 +719,7 @@ function ContactFields({
   const phone = useRef<TextInput>(null);
   const email = useRef<TextInput>(null);
   return (
-    <ScrollView style={styles.sheetBody} keyboardShouldPersistTaps="handled">
+    <ScrollView keyboardDismissMode="on-drag" style={styles.sheetBody} keyboardShouldPersistTaps="handled">
       <View style={styles.fields}>
         <FormField
           label={t('checkout.name')}
@@ -772,9 +770,10 @@ function ContactFields({
   );
 }
 
-/** A line of the page: an icon, what is set (or what to add), a chevron. */
+/** A line of the page: an icon (or a drawing in its place), what is set (or what to add), a chevron. */
 function Row({
   icon,
+  lead,
   title,
   sub,
   strong = false,
@@ -782,7 +781,8 @@ function Row({
   onPress,
   testID,
 }: {
-  icon: React.ComponentProps<typeof Feather>['name'];
+  icon?: React.ComponentProps<typeof Feather>['name'];
+  lead?: React.ReactNode;
   title: string;
   sub?: string | null;
   strong?: boolean;
@@ -800,7 +800,7 @@ function Row({
       testID={testID}
       style={({ pressed }) => [styles.row, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.pressed]}
     >
-      <Feather name={icon} size={IconSize.large} color={error ? C.danger : C.text} />
+      {lead ? <View style={styles.lead}>{lead}</View> : <Feather name={icon} size={IconSize.large} color={error ? C.danger : C.text} />}
       <View style={styles.flex}>
         <Text
           numberOfLines={2}
@@ -820,6 +820,48 @@ function Row({
         ) : null}
       </View>
       {onPress ? <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={C.textMuted} /> : null}
+    </Pressable>
+  );
+}
+
+/** One of the account's addresses in the address sheet: tap it and the order goes there. */
+function SavedRow({
+  icon,
+  label,
+  line,
+  selected = false,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  label: string;
+  line?: string;
+  selected?: boolean;
+  onPress: () => void;
+}) {
+  const { rtl } = useI18n();
+  const start = { textAlign: rtl ? ('right' as const) : ('left' as const) };
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      accessibilityLabel={line ? `${label}, ${line}` : label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.saved, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.pressed]}
+    >
+      <View style={styles.savedIcon}>
+        <Feather name={icon} size={IconSize.medium} color={C.text} />
+      </View>
+      <View style={styles.flex}>
+        <Text numberOfLines={1} style={[styles.rowTitle, start, { fontFamily: familyFor('bodySemi', rtl) }]}>
+          {label}
+        </Text>
+        {line ? (
+          <Text variant="hint" numberOfLines={2} style={start}>
+            {line}
+          </Text>
+        ) : null}
+      </View>
+      {selected ? <Feather name="check-circle" size={IconSize.large} color={C.success} /> : null}
     </Pressable>
   );
 }
@@ -968,34 +1010,10 @@ const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0, gap: 2 },
   pressed: { backgroundColor: C.surface },
   underline: { textDecorationLine: 'underline' },
-  savedRow: { gap: Spacing.two, paddingBottom: Spacing.two },
-  savedChip: {
-    minWidth: 132,
-    maxWidth: 200,
-    minHeight: Tap.min + 12,
-    justifyContent: 'center',
-    gap: 2,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Radius.tile,
-    borderWidth: Border.thin,
-    borderColor: C.border,
-    backgroundColor: C.background,
-  },
-  savedChipOn: { borderColor: C.text, borderWidth: Border.selected, backgroundColor: C.surface },
-  savedNew: { minWidth: 0, borderStyle: 'dashed' },
-  savedHead: { alignItems: 'center', gap: 6 },
-  savedLabel: { fontSize: 15, lineHeight: 20, color: C.text, flexShrink: 1 },
-  pinRow: {
-    alignItems: 'center',
-    gap: Spacing.three,
-    minHeight: Tap.min + 8,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.tile,
-    borderWidth: Border.thin,
-    borderColor: C.border,
-  },
-  pinRowOn: { borderColor: C.success, backgroundColor: C.successSurface },
+  where: { gap: Spacing.two },
+  lead: { width: IconSize.large, alignItems: 'center' },
+  saved: { alignItems: 'center', gap: Spacing.three, minHeight: Tap.primary + 12, paddingVertical: Spacing.two, borderRadius: Radius.tile },
+  savedIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface },
   saveBox: { gap: Spacing.two },
   saveCheck: { alignItems: 'center', gap: Spacing.two, minHeight: Tap.min },
   box: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: C.text, alignItems: 'center', justifyContent: 'center' },

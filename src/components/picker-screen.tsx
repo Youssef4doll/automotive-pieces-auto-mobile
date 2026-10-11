@@ -189,6 +189,7 @@ export function PickerScreen<T>({
             )
           }
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -261,6 +262,7 @@ export function PickerScreen<T>({
                 ItemSeparatorComponent={Gap}
                 ListHeaderComponent={header && !needle ? <View style={styles.header}>{header}</View> : null}
                 keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 contentContainerStyle={styles.list}
                 showsVerticalScrollIndicator={false}
               />

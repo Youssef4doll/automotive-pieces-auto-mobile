@@ -48,6 +48,8 @@ export default function StaffStock() {
         <Empty title={t('staff.stock.none')} body={t('staff.stock.noneWhy')} />
       ) : (
         <FlatList
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           data={items}
           keyExtractor={(p) => p.id}
           contentContainerStyle={styles.list}

@@ -91,7 +91,7 @@ export default function DeleteAccountScreen() {
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ title: t('auth.delete') }} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <View style={styles.column}>
           <Text variant="body">{t('auth.deleteWhat')}</Text>
           <Text variant="body">{t('auth.deleteKept')}</Text>

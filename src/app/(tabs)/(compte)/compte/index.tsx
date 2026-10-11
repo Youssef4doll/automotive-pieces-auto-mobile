@@ -171,7 +171,12 @@ export default function AccountScreen() {
           />
           {signedIn ? <Row icon="pin" label={t('account.addresses')} onPress={() => router.push('/compte/adresses')} /> : null}
           {signedIn ? (
-            <Row icon="lock" label={t('security.row')} onPress={() => router.push('/compte/securite')} />
+            <Row
+              icon="lock"
+              label={t('security.row')}
+              value={t('security.rowHint')}
+              onPress={() => router.push('/compte/securite')}
+            />
           ) : null}
           <Row icon="return" label={t('returns.title')} onPress={() => router.push('/garanties')} />
           {questions.length ? (
@@ -328,7 +333,9 @@ function Row({
       ]}
     >
       <AccountIcon name={icon} color={C.text} />
-      <Text style={[styles.flex, styles.rowLabel, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{label}</Text>
+      <Text variant="body" tone={C.text} style={styles.flex}>
+        {label}
+      </Text>
       {value ? (
         <Text variant="hint" numberOfLines={1} style={styles.value}>
           {value}
@@ -376,9 +383,7 @@ const styles = StyleSheet.create({
   name: { fontSize: 19, lineHeight: 25, color: C.text },
   list: { marginTop: Spacing.two },
   staff: { marginTop: Spacing.four, borderTopWidth: Border.hairline, borderTopColor: C.border },
-  // Glovo's list: a bold icon, the label at 17, a tall row.
-  row: { alignItems: 'center', gap: Spacing.three + 2, minHeight: 60 },
-  rowLabel: { fontSize: 17, lineHeight: 22, color: C.text },
+  row: { alignItems: 'center', gap: Spacing.three, minHeight: Tap.primary + Spacing.two },
   rowRule: { borderBottomWidth: Border.hairline, borderBottomColor: C.border },
   pressed: { backgroundColor: C.surface },
   value: { maxWidth: '40%' },

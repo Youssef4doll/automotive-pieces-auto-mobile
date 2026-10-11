@@ -87,7 +87,7 @@ function Detail({ r, onChange, onStale }: { r: ReturnDetail; onChange: (d: Retur
   };
 
   return (
-    <ScrollView style={staffStyles.root} contentContainerStyle={staffStyles.scroll}>
+    <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" style={staffStyles.root} contentContainerStyle={staffStyles.scroll}>
       <View style={[row, styles.head]}>
         <View style={styles.flex}>
           <Text variant="sectionTitle" style={align}>

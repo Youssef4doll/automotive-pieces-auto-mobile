@@ -88,7 +88,7 @@ export default function VinScreen() {
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ title: t('vin.title') }} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <View style={styles.column}>
           <View style={styles.art} accessible accessibilityRole="image" accessibilityLabel={t('vin.cardAlt')}>
             <CarteGrise width={264} />

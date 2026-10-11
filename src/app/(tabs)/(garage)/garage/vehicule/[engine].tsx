@@ -131,7 +131,7 @@ export default function VehicleScreen() {
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ title: t('car.title') }} />
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView keyboardDismissMode="on-drag" contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.column}>
           <View style={[row, styles.hero]}>
             <MakeLogo name={vehicle.makeName} slug={vehicle.makeSlug} size={72} />

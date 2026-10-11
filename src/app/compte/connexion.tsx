@@ -134,7 +134,7 @@ export default function SignInScreen() {
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ title }} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
+      <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scroll}>
         <View style={styles.column}>
           {/* Whichever way they sign in: what an account is for, and that it is optional. */}
           <Text variant="body" style={{ textAlign: rtl ? 'right' : 'left' }}>

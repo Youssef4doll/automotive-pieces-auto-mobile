@@ -484,7 +484,7 @@ export default function SearchScreen() {
       ) : state.status === 'failed' ? (
         <Failed failure={state.failure} onRetry={() => setAttempt((n) => n + 1)} />
       ) : nothing ? (
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.column, styles.idle]}>
+        <ScrollView keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.column, styles.idle]}>
           {header}
           <EmptyState
             art={<Image source={RENDERS.magnifier} style={{ width: 112, height: 112 }} contentFit="contain" />}

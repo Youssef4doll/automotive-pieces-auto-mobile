@@ -5,6 +5,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View
 
 import { accountApi, type SavedAddress } from '@/api/account';
 import { ApiError } from '@/api/client';
+import { PinCard } from '@/components/pin-card';
 import { PinPicker } from '@/components/pin-picker';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
@@ -145,7 +146,7 @@ export default function AddressesScreen() {
       ) : list.status === 'failed' ? (
         <Failed failure={list.failure} onRetry={list.retry} />
       ) : (
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.scroll}>
           <View style={styles.column}>
             {addresses.length === 0 ? (
               <Text variant="body" style={start}>
@@ -195,9 +196,11 @@ export default function AddressesScreen() {
           <PinPicker
             initial={draft.pin}
             governorate={draft.governorate}
-            onConfirm={(pin, region) => {
-              const named = draft.governorate ? null : governorateFromRegion(region, governorates);
-              setDraft({ ...draft, pin, ...(named ? { governorate: named, delegation: '' } : {}) });
+            onConfirm={(pin, place) => {
+              // What the phone says is there fills what is still empty, in view, to be checked.
+              const named = draft.governorate ? null : governorateFromRegion(place?.region ?? null, governorates);
+              const street = draft.address.trim() ? null : place?.street;
+              setDraft({ ...draft, pin, ...(named ? { governorate: named, delegation: '' } : {}), ...(street ? { address: street } : {}) });
               setPick(null);
             }}
             onRemove={() => {
@@ -206,7 +209,7 @@ export default function AddressesScreen() {
             }}
           />
         ) : draft && pick ? (
-          <ScrollView style={styles.sheetList}>
+          <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" style={styles.sheetList}>
             {(pick === 'governorate' ? governorates : (DELEGATIONS[draft.governorate] ?? [])).map((g) => (
               <Pressable
                 key={g}
@@ -226,8 +229,10 @@ export default function AddressesScreen() {
             ))}
           </ScrollView>
         ) : draft ? (
-          <ScrollView style={styles.sheetBody} keyboardShouldPersistTaps="handled">
+          <ScrollView keyboardDismissMode="on-drag" style={styles.sheetBody} keyboardShouldPersistTaps="handled">
             <View style={styles.fields}>
+              {/* The door first, on the map, as at checkout. */}
+              <PinCard pin={draft.pin} height={130} onPress={() => setPick('map')} testID="address-pin" />
               <View style={[row, styles.presets]}>
                 {PRESETS.map((key) => {
                   const on = draft.label === t(key);
@@ -253,15 +258,6 @@ export default function AddressesScreen() {
               ) : null}
               <FormField label={t('addr.street')} value={draft.address} onChangeText={(v) => setDraft({ ...draft, address: v })} multiline maxLength={300} />
               <FormField label={t('addr.landmark')} placeholder={t('addr.landmarkHint')} value={draft.landmark} onChangeText={(v) => setDraft({ ...draft, landmark: v })} maxLength={200} />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setPick('map')}
-                style={({ pressed }) => [styles.pinRow, row, draft.pin && styles.pinRowOn, pressed && styles.pressed]}
-              >
-                <Feather name={draft.pin ? 'check-circle' : 'map'} size={IconSize.large} color={draft.pin ? C.success : C.text} />
-                <Text style={[styles.flex, styles.label, start, { fontFamily: familyFor('bodySemi', rtl) }]}>{t(draft.pin ? 'addr.pinSet' : 'addr.pinNone')}</Text>
-                <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={C.textMuted} />
-              </Pressable>
               {error ? (
                 <Text variant="hint" tone={C.danger} accessibilityLiveRegion="assertive">
                   {t(error)}
@@ -332,15 +328,5 @@ const styles = StyleSheet.create({
   presets: { gap: Spacing.two, flexWrap: 'wrap' },
   preset: { minHeight: Tap.min - 8, paddingHorizontal: Spacing.three, borderRadius: Radius.pill, borderWidth: Border.thin, borderColor: C.border, justifyContent: 'center' },
   presetOn: { backgroundColor: C.text, borderColor: C.text },
-  pinRow: {
-    alignItems: 'center',
-    gap: Spacing.three,
-    minHeight: Tap.min + 8,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.tile,
-    borderWidth: Border.thin,
-    borderColor: C.border,
-  },
-  pinRowOn: { borderColor: C.success, backgroundColor: C.successSurface },
   delete: { minHeight: Tap.min, alignItems: 'center', justifyContent: 'center' },
 });

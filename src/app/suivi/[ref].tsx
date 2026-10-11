@@ -167,6 +167,8 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
 
   return (
     <ScrollView
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       contentContainerStyle={styles.scroll}
       refreshControl={<RefreshControl refreshing={false} onRefresh={onRefresh} />}
     >
