@@ -247,6 +247,8 @@ export async function fillCheckout(page, { name, phone, address }) {
   await tap(page, 'Valider');
   await page.getByTestId('checkout-address').click();
   await page.waitForTimeout(700);
+  // An account with addresses opens on them first; this one is typed afresh.
+  if (await page.getByTestId('saved-addresses').isVisible().catch(() => false)) await tap(page, 'Nouvelle adresse');
   await tapLabel(page, 'Gouvernorat');
   await tap(page, 'Ariana');
   // Greater Tunis and Nabeul ask for the delegation (lib/delegations).

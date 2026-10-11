@@ -104,7 +104,7 @@ try {
   await page.getByRole('button', { name: 'Demander à la boutique' }).click();
   await page.waitForTimeout(2000);
   check(await says(page, `Au sujet de la commande ${ref}`), 'ask: the order is attached on its own');
-  check((await page.getByLabel('Votre nom', { exact: true }).inputValue()) === 'Question Essai', 'ask: the name from the checkout is filled in');
+  check((await page.getByTestId('ask-who').isVisible()) && (await says(page, 'Question Essai')), 'ask: the account’s name and number, said once rather than asked again');
   await page.getByTestId('ask-send').click();
   await page.waitForTimeout(500);
   check(await says(page, 'Écrivez votre question ou ajoutez une photo'), 'ask: nothing to send is said, not sent');

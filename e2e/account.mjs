@@ -103,6 +103,8 @@ try {
   check(await shows(page, 'Bienvenue, Compte'), 'sign-up: welcomed by name');
   await page.waitForTimeout(1500);
   check(new URL(page.url()).pathname === '/commande/livraison', 'sign-up from the cart: straight on to the checkout', page.url());
+  // Glovo's checkout: the map card first (the artist's map until a pin), the address under it.
+  check((await page.getByTestId('checkout-map').isVisible()) && (await says(page, 'Placez votre porte sur la carte')), 'checkout: the map card invites the door onto the map');
   await fillCheckout(page, { name: 'Compte Essai', phone: '20 333 444', address: '5 rue du Compte, Ariana' });
   await page.waitForTimeout(3000);
   await page.getByRole('button', { name: /^Commander · / }).click();
@@ -177,7 +179,8 @@ try {
   await page.getByTestId('address-0').click();
   await page.waitForTimeout(900);
   await page.getByLabel('Repère pour le livreur').fill('En face de la pharmacie');
-  await page.getByRole('button', { name: 'Ajouter la position sur la carte' }).click();
+  // The map card at the head of the editor, as at checkout: the artist's map until there is a pin.
+  await page.getByTestId('address-pin').click();
   await page.waitForTimeout(1200);
   check(await page.getByTestId('pin-map').isVisible(), 'addresses: the map opens with its pin');
   await page.getByTestId('pin-confirm').click();

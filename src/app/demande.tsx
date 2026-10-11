@@ -16,6 +16,7 @@ import { useShopSettings } from '@/hooks/use-shop-settings';
 import { useI18n } from '@/i18n/provider';
 import { PhotoAdviceArt } from '@/illustrations/ways-art';
 import { tunisianDigits } from '@/lib/checkout';
+import { ltr } from '@/lib/format';
 import { appendPhoto, pickPhoto, type PickedPhoto } from '@/lib/photo';
 import { track } from '@/services/analytics';
 import { pushAvailable, pushToken } from '@/services/notifications';
@@ -65,6 +66,8 @@ export default function AskScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
+  // Signed in with a name and a number: said in one line, not asked again.
+  const [editWho, setEditWho] = useState(false);
   const [sent, setSent] = useState<{ order: string | null } | null>(null);
 
   const car = vehicleLabel(active);
@@ -273,23 +276,46 @@ export default function AskScreen() {
             <FormField label={t('expert.note')} value={body} onChangeText={setBody} multiline placeholder={t('expert.notePlaceholder')} maxLength={1500} />
           ) : null}
 
-          <FormField
-            label={t('expert.name')}
-            value={name}
-            onChangeText={setName}
-            autoComplete="name"
-            error={touched && nameBad ? t('checkout.err.customerName') : null}
-          />
-          <FormField
-            label={t('expert.phone')}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            prefix="+216"
-            ltr
-            placeholder="22 334 455"
-            error={touched && phoneBad ? t('checkout.err.phone') : null}
-          />
+          {account && !editWho && !nameBad && !phoneBad ? (
+            <View style={[row, styles.who]} testID="ask-who">
+              <View style={styles.whoIcon}>
+                <Feather name="user" size={IconSize.medium} color={C.text} />
+              </View>
+              <View style={styles.flex}>
+                <Text style={[styles.whoName, { fontFamily: familyFor('bodySemi', rtl) }, align]} numberOfLines={1}>
+                  {name.trim()}
+                </Text>
+                <Text variant="hint" style={align}>
+                  {ltr(`+216 ${phone.trim()}`)}
+                </Text>
+              </View>
+              <Pressable accessibilityRole="button" accessibilityLabel={`${t('common.edit')} ${t('expert.name')}`} onPress={() => setEditWho(true)} style={styles.inlineLink}>
+                <Text variant="body" tone={C.text} style={styles.link}>
+                  {t('common.edit')}
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              <FormField
+                label={t('expert.name')}
+                value={name}
+                onChangeText={setName}
+                autoComplete="name"
+                error={touched && nameBad ? t('checkout.err.customerName') : null}
+              />
+              <FormField
+                label={t('expert.phone')}
+                value={phone}
+                onChangeText={setPhone}
+                keyboardType="phone-pad"
+                prefix="+216"
+                ltr
+                placeholder="22 334 455"
+                error={touched && phoneBad ? t('checkout.err.phone') : null}
+              />
+            </>
+          )}
 
           {pushAvailable ? (
             <Pressable
@@ -328,6 +354,9 @@ const styles = StyleSheet.create({
   context: { borderRadius: Radius.tile, backgroundColor: C.surface, paddingHorizontal: Spacing.three, paddingVertical: Spacing.one },
   contextRow: { alignItems: 'center', gap: Spacing.three, minHeight: 52, paddingVertical: Spacing.one },
   inlineLink: { minHeight: Tap.min, justifyContent: 'center' },
+  who: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.one },
+  whoIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface },
+  whoName: { fontSize: 15, lineHeight: 20, color: C.text },
   slots: { gap: Spacing.two, flexWrap: 'wrap' },
   slot: { width: 96, height: 96, borderRadius: Radius.tile, overflow: 'hidden', backgroundColor: C.surface },
   removeBtn: {

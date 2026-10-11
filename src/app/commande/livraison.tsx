@@ -142,6 +142,15 @@ function Checkout({ settings }: { settings: ShopSettings }) {
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
   const start = { textAlign: rtl ? ('right' as const) : ('left' as const) };
 
+  // Signed in, nothing typed yet: the account's name and number, so "Commander" is one tap.
+  useEffect(() => {
+    const me = useAccount.getState().account;
+    const now = useCheckout.getState().details;
+    if (me && !now.customerName.trim() && !now.phone.trim()) {
+      useCheckout.getState().update({ customerName: me.name, phone: me.phone ?? '', email: now.email || me.email || '' });
+    }
+  }, []);
+
   // Reached with an empty basket — a back gesture after an order, a stale
   // deep link. There is nothing to deliver.
   if (items.length === 0 && !placing) return <Redirect href="/panier" />;
