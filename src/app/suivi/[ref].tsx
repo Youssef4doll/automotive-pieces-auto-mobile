@@ -156,7 +156,7 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
   // it is what the shop said, and what a delay is measured against.
   const promised = order.estimate && order.deliveryMethod === 'DELIVERY' && (order.status === 'PENDING' || order.status === 'CONFIRMED' || order.status === 'PREPARED' || order.status === 'SHIPPED') ? order.estimate : null;
   const arrivalLine = promised
-    ? t('eta.line', { when: estimateLine(promised, locale) })
+    ? t(order.late ? 'eta.promised' : 'eta.line', { when: estimateLine(promised, locale) })
     : window
     ? sameDay(window.from, window.to)
       ? t('track.arrivesOn', { date: formatDate(window.from.toISOString(), locale) })

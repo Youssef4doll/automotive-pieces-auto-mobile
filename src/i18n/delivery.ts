@@ -11,6 +11,7 @@ export const delivery = {
   fr: {
     'eta.label': 'Livraison estimée',
     'eta.line': 'Livraison estimée : {when}',
+    'eta.promised': 'Date annoncée : {when}',
     'eta.cutoff': 'Commandée avant {time}, elle part aujourd’hui',
     'eta.late': 'Désolés, votre commande a pris du retard. Nous vous prévenons dès qu’elle part.',
     'eta.lateShipped': 'Désolés, votre commande a pris du retard. Elle est chez le livreur, qui vous appelle avant de passer.',
@@ -68,6 +69,7 @@ export const delivery = {
   en: {
     'eta.label': 'Estimated delivery',
     'eta.line': 'Estimated delivery: {when}',
+    'eta.promised': 'Date given: {when}',
     'eta.cutoff': 'Ordered before {time}, it leaves today',
     'eta.late': 'Sorry, your order is running late. We will tell you as soon as it leaves.',
     'eta.lateShipped': 'Sorry, your order is running late. The courier has it and will call before coming.',
@@ -125,6 +127,7 @@ export const delivery = {
   ar: {
     'eta.label': 'التوصيل المتوقع',
     'eta.line': 'التوصيل المتوقع: {when}',
+    'eta.promised': 'الموعد المعلن: {when}',
     'eta.cutoff': 'إذا طلبت قبل {time} يخرج طلبك اليوم',
     'eta.late': 'نعتذر، طلبك متأخر. سنخبرك فور خروجه.',
     'eta.lateShipped': 'نعتذر، طلبك متأخر. هو عند عامل التوصيل الذي سيتصل بك قبل المرور.',

@@ -2052,3 +2052,57 @@ the material of the tab bar.
   the web, a hairline of light round the edge, navy icons, the same red
   badge, and under a finger a lens of white glass that swells in and
   settles out. It still opens to "✓ Ajouté" for two seconds after an add.
+
+## 34. Glass search, tabs that keep their place, an order that makes the customer happy (October 11, 2026)
+
+- **Search in liquid glass** (`components/ui/glass`): the search boxes on
+  Home, Catalogue and the search screen are capsules of Apple's GlassView on
+  iOS 26 (interactive, light; bright over the navy hero), the drawn tab bar's
+  frost elsewhere.
+- **Compte's icons** are drawn bold (`illustrations/account-icons`: Feather's
+  shapes at 24pt with a 2.3 stroke), labels at 17, as Glovo's profile.
+- **Each tab is a stack** (`components/tab-header` → `TabStack`). The tabs
+  are the groups `(home)`, `(catalogue)`, `(garage)`, `(panier)`, `(compte)`;
+  the pages a customer browses — `produit/[slug]`, `famille/[family]`,
+  `marque/[brand]`, `recherche`, `pieces-compatibles` — live in the shared
+  group `(tabs)/(home,catalogue,garage,panier,compte)/` and open in the tab
+  the customer is in, with the tab bar under them (product's buy bar sits
+  above it, `tabBarFootprint`). Switching tab and back returns to the page
+  left open; tapping the open tab goes back to its first screen. URLs did not
+  change. `screens/product` is the product page; `/piece/[slug]` opens it over
+  a root screen (an order's lines) so "back" returns there. Root screens
+  linking into a tab name the group (`/(tabs)/(home)/recherche`). The garage's
+  own pages (`garage/vehicules`, `garage/vehicule/[engine]`) moved into the
+  garage tab; the picker flows stay on the root stack.
+- **Estimated delivery** (`lib/delivery-estimate`, a copy of the website's
+  with the same tests): from the shop's delay for the governorate, its cut-off,
+  working days and courier hours (settings `delivery_cutoff`,
+  `delivery_window`, `delivery_days`, Espace boutique → Paramètres). Without a
+  cut-off no date anywhere. Shown on the product page (once the governorate is
+  known), on the checkout's delivery option, large on the confirmation, on the
+  order page. The order stores the date it was promised (website).
+- **Delays said first**: the website tells the customer once (push + text)
+  when the promised date will be missed; the order page then shows "Désolés,
+  votre commande a pris du retard…" and the date as "Date annoncée".
+- **Confirmation** (`commande/confirmation/[ref]`): "Merci {prénom}, c'est
+  commandé", the estimated date on navy with the hours and the place, and "Et
+  maintenant ?" — the shop confirms (a text at each step where the shop can
+  send them), the courier calls before coming, the amount to pay.
+- **Addresses** (`compte/adresses`, website `api/v1/account/addresses`): saved
+  on the account with a name, the governorate and delegation, the street, a
+  landmark for the driver and a pin. At checkout they are chips (one tap fills
+  everything); a new address typed there is kept as "Maison"/"Travail"/"Autre"
+  unless unticked. The order carries the landmark and the pin; the shop opens
+  the pin in Maps (staff order screen, website admin).
+- **The pin** (`components/pin-picker`, `components/ui/pin-map`,
+  `lib/map-tiles`): the map drags under a fixed pin; "Utiliser ma position"
+  asks expo-location at the tap (`lib/locate`, loaded lazily so an update on a
+  binary without the module does not crash — it says the position is
+  unavailable) and fills an empty governorate from what the phone names.
+  Tiles: OpenStreetMap, credited in the corner; `EXPO_PUBLIC_MAP_TILES` points
+  at a paid provider for real volume. **expo-location is a new native module:
+  the next store/dev build includes it; until then the GPS button says the
+  position is unavailable and the map still works.**
+- **Returns in 3 taps** (`retour/[ref]`): "Retourner une pièce", the reason
+  (the part is picked when there is one), "Envoyer" — pinned at the bottom;
+  the "never fitted" declaration is the sentence above the button.

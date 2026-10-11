@@ -310,6 +310,24 @@ try {
   });
   check(pickers.count === 1 && pickers.ownGradient && pickers.background === 'rgb(15, 35, 82)', 'vin: "Toutes les marques" goes back to the one picker, its card navy', pickers);
 
+  // ---- each tab keeps its place (the owner, October 2026): a part page
+  // opened in Catalogue is still there after a look at Compte; tapping the
+  // tab it is on goes back to its first screen.
+  await go('/catalogue');
+  await page.getByRole('button', { name: /^Freinage/ }).first().click();
+  await page.waitForTimeout(2500);
+  const familyPath = new URL(page.url()).pathname;
+  await page.getByRole('tab', { name: /^Compte/ }).click();
+  await page.waitForTimeout(1500);
+  const onAccount = new URL(page.url()).pathname;
+  await page.getByRole('tab', { name: /^Catalogue/ }).click();
+  await page.waitForTimeout(1500);
+  const back = new URL(page.url()).pathname;
+  check(familyPath.startsWith('/famille/') && onAccount === '/compte' && back === familyPath, 'tabs: Catalogue comes back to the page left open in it', { familyPath, onAccount, back });
+  await page.getByRole('tab', { name: /^Catalogue/ }).click();
+  await page.waitForTimeout(1500);
+  check(new URL(page.url()).pathname === '/catalogue', 'tabs: tapping the open tab goes back to its first screen', page.url());
+
   // ---- basket: remove everything → empty state
   await go('/panier');
   for (let i = 0; i < 6; i++) {

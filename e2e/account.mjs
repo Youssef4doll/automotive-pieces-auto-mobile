@@ -42,7 +42,9 @@ const products = (await (await fetch(`${SHOP}/api/v1/catalogue/products?family=f
 const part = products.find((p) => p.availability === 'IN_STOCK') ?? products[0];
 
 /** A refused request is the point of several checks here; the browser logs each one. */
-const realErrors = (errors) => errors.filter((e) => !/Failed to load resource: the server responded with a status of (401|422)/.test(e));
+// Map tiles come from the internet (lib/map-tiles); a sandbox without it fails them through its proxy.
+const realErrors = (errors) =>
+  errors.filter((e) => !/Failed to load resource: the server responded with a status of (401|422)/.test(e) && !/net::ERR_TUNNEL_CONNECTION_FAILED/.test(e));
 
 const go = async (page, path, wait = 2600) => {
   await page.goto(`${APP_URL}${path}`, { waitUntil: 'networkidle', timeout: 60000 });
@@ -107,6 +109,11 @@ try {
   await page.waitForTimeout(4500);
   ref = (await text(page)).match(/CMD-\d+/)?.[0] ?? null;
   check(Boolean(ref), 'signed in: the order is placed', ref);
+  // The confirmation is the good moment: the next steps, and the date when the shop promises one.
+  check(await says(page, 'Et maintenant ?') && (await says(page, 'Le livreur vous appelle avant de passer')), 'confirmation: what happens next');
+  const promise = (await (await fetch(`${SHOP}/api/v1/settings/public`)).json()).data.delivery;
+  if (promise.cutoff) check(await says(page, 'Livraison estimée'), 'confirmation: the estimated delivery date, the shop having a cut-off');
+  else check(!(await says(page, 'Livraison estimée')), 'confirmation: no date without the shop’s cut-off');
   await go(page, '/compte');
   check((await says(page, 'Compte Essai')) && (await says(page, email)), 'compte: shows the account', await text(page).then((t) => t.slice(0, 120)));
   check(await says(page, 'Supprimer mon compte'), 'compte: deletion is one tap away');
@@ -114,6 +121,9 @@ try {
   // ---- the order is the account's
   const signIn = await api('/auth/session', { method: 'POST', body: JSON.stringify({ email, password }) });
   const token = signIn.body?.data?.token;
+  // The address typed at checkout went into the account, as « Maison » (the box is ticked by default).
+  const kept = await api('/account/addresses', { headers: { authorization: `Bearer ${token}` } });
+  check(kept.body?.data?.addresses?.some((a) => a.label === 'Maison' && a.address.includes('5 rue du Compte')), 'addresses: the checkout kept the address in the account', kept.body);
   const listed = await api('/account/orders', { headers: { authorization: `Bearer ${token}` } });
   check(listed.body?.data?.some((o) => o.ref === ref), 'account: the order placed signed in belongs to it', listed.body);
   await api('/auth/session', { method: 'DELETE', headers: { authorization: `Bearer ${token}` } });
@@ -160,6 +170,25 @@ try {
     await go(page, `/suivi/${ref}`, 3500);
     check(await says(page, 'Compte Essai'), 'phone B: the order opens through the account session');
   }
+
+  // ---- Mes adresses: the one kept at checkout; a landmark and a pin added to it
+  await go(page, '/compte/adresses', 3000);
+  check(await says(page, 'Maison') && (await says(page, '5 rue du Compte')), 'addresses: the account’s address is listed');
+  await page.getByTestId('address-0').click();
+  await page.waitForTimeout(900);
+  await page.getByLabel('Repère pour le livreur').fill('En face de la pharmacie');
+  await page.getByRole('button', { name: 'Ajouter la position sur la carte' }).click();
+  await page.waitForTimeout(1200);
+  check(await page.getByTestId('pin-map').isVisible(), 'addresses: the map opens with its pin');
+  await page.getByTestId('pin-confirm').click();
+  await page.waitForTimeout(600);
+  await page.getByTestId('address-save').click();
+  await page.waitForTimeout(2000);
+  const reSignIn = await api('/auth/session', { method: 'POST', body: JSON.stringify({ email, password }) });
+  const listedAddr = await api('/account/addresses', { headers: { authorization: `Bearer ${reSignIn.body?.data?.token}` } });
+  const maison = listedAddr.body?.data?.addresses?.find((a) => a.label === 'Maison');
+  check(maison?.landmark === 'En face de la pharmacie' && maison?.pin?.lat > 30, 'addresses: the landmark and the pin are kept', maison);
+  await api('/auth/session', { method: 'DELETE', headers: { authorization: `Bearer ${reSignIn.body?.data?.token}` } });
 
   // ---- Connexion et sécurité: this phone, another one, signed out; the password changed
   await go(page, '/compte');

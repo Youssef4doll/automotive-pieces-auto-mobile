@@ -23,11 +23,11 @@ function day(iso: string, locale: Locale, withMonth = true): string {
   }
 }
 
-/** "10:00" → "10 h" in French, "10:00" in English and Arabic. */
+/** "10:00" → "10 h" in French (a no-break space: "10" never ends a line), "10:00" in English and Arabic. */
 export function clockText(hhmm: string, locale: Locale): string {
   if (locale !== 'fr') return hhmm;
   const [h, m] = hhmm.split(':');
-  return m && m !== '00' ? `${Number(h)} h ${m}` : `${Number(h)} h`;
+  return m && m !== '00' ? `${Number(h)}\u00a0h\u00a0${m}` : `${Number(h)}\u00a0h`;
 }
 
 /** The days alone: "mardi 13 octobre" or "entre jeudi 8 et samedi 10 octobre". */
