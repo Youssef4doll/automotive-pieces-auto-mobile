@@ -13,6 +13,7 @@ import { PartImage } from '@/components/ui/part-image';
 import { ProductCard } from '@/components/ui/product-card';
 import { ProductListSkeleton } from '@/components/ui/skeleton';
 import { Failed } from '@/components/ui/states';
+import { Glass } from '@/components/ui/glass';
 import { Text } from '@/components/ui/text';
 import { VehicleBar } from '@/components/ui/vehicle-bar';
 import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap, Type } from '@/constants/theme';
@@ -341,8 +342,8 @@ export default function SearchScreen() {
             <Feather name={rtl ? 'arrow-right' : 'arrow-left'} size={IconSize.large} color={C.text} />
           </Pressable>
 
-          <View style={[styles.field, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
-            <Feather name="search" size={IconSize.medium} color={C.textMuted} />
+          <Glass tone="light" style={[styles.field, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
+            <Feather name="search" size={IconSize.medium} color={C.text} />
             <TextInput
               ref={input}
               value={query}
@@ -377,7 +378,7 @@ export default function SearchScreen() {
                 <Feather name="x-circle" size={IconSize.medium} color={C.textMuted} />
               </Pressable>
             ) : null}
-          </View>
+          </Glass>
         </View>
 
         <View style={styles.vehicle}>
@@ -582,6 +583,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: Radius.pill,
   },
+  // A capsule of liquid glass (components/ui/glass), as the tab bar is.
   field: {
     flex: 1,
     alignItems: 'center',
@@ -589,9 +591,6 @@ const styles = StyleSheet.create({
     minHeight: Tap.primary,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
-    borderWidth: Border.selected,
-    borderColor: C.text,
-    backgroundColor: C.background,
   },
   input: {
     flex: 1,
@@ -601,8 +600,8 @@ const styles = StyleSheet.create({
     minHeight: Tap.primary - 4,
     fontSize: 16,
     color: C.text,
-    // The pill's own navy border is the focus signal. The browser's outline
-    // drew a second, gold rectangle inside it in the web build.
+    // The field is always the one in focus on this screen, with its caret.
+    // The browser's outline drew a second, gold rectangle inside the pill.
     ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : {}),
   },
   // A full 44pt target, not 32 plus hitSlop: hitSlop does not exist for a

@@ -194,11 +194,14 @@ export function NavCar({
   // can be a platform colour object rather than a hex string, and narrowing
   // it here would make every call site cast.
   color = Brand.navy900,
+  /** Feather's 2.0 by default; the Compte list draws its glyphs heavier. */
+  weight = 2,
 }: {
   size?: number;
   color?: ColorValue;
+  weight?: number;
 }) {
-  const line = { stroke: color, strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' };
+  const line = { stroke: color, strokeWidth: weight, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' };
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       {/* Head-on: the windscreen and roof, the body below it, two headlamps

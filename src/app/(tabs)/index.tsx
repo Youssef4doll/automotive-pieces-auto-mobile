@@ -15,6 +15,7 @@ import { PartImage } from '@/components/ui/part-image';
 import { PressScale } from '@/components/ui/press-scale';
 import { PromoBanner } from '@/components/ui/promo-banner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Glass } from '@/components/ui/glass';
 import { Text } from '@/components/ui/text';
 import { MakeLogo } from '@/components/ui/make-logo';
 import { MakeRail } from '@/components/ui/make-rail';
@@ -140,14 +141,16 @@ export default function HomeScreen() {
           <View style={[styles.column, { paddingTop: insets.top + Spacing.three }]}>
             <View style={[styles.topRow, row]}>
               <Image source={LOGO} style={styles.logo} contentFit="contain" accessibilityLabel={t('app.name')} />
-              <Pressable
-                accessibilityRole="search"
-                accessibilityLabel={t('home.searchA11y')}
-                onPress={() => router.push('/recherche')}
-                style={({ pressed }) => [styles.roundBtn, pressed && styles.roundBtnPressed]}
-              >
-                <Feather name="search" size={20} color={Brand.white} />
-              </Pressable>
+              <Glass tone="dark" interactive style={styles.roundGlass}>
+                <Pressable
+                  accessibilityRole="search"
+                  accessibilityLabel={t('home.searchA11y')}
+                  onPress={() => router.push('/recherche')}
+                  style={({ pressed }) => [styles.roundBtn, pressed && styles.roundBtnPressed]}
+                >
+                  <Feather name="search" size={20} color={Brand.white} />
+                </Pressable>
+              </Glass>
             </View>
 
             {/* Where the slogan was (the owner, October 2026: no text), its
@@ -157,7 +160,7 @@ export default function HomeScreen() {
             {/* The main action, and the car it answers for, as one white
                 card: the search, and under a rule the car every result will
                 be judged against. One card on the road, not three boxes. */}
-            <View style={styles.finder}>
+            <Glass tone="bright" style={styles.finder}>
               <View style={styles.finderClip}>
                 <Pressable
                   accessibilityRole="search"
@@ -205,7 +208,7 @@ export default function HomeScreen() {
                   </View>
                 </Pressable>
               </View>
-            </View>
+            </Glass>
 
             {/* Every other way in (/trouver): a line to follow, not a fourth box. */}
             <Pressable
@@ -298,18 +301,19 @@ const styles = StyleSheet.create({
   },
   topRow: { alignItems: 'center', justifyContent: 'space-between' },
   logo: { width: 176, height: 32 },
+  // Smoked liquid glass over the navy (components/ui/glass).
+  roundGlass: { width: Tap.min, height: Tap.min, borderRadius: Tap.min / 2 },
   roundBtn: {
     width: Tap.min,
     height: Tap.min,
     borderRadius: Tap.min / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
   },
-  roundBtnPressed: { backgroundColor: 'rgba(255,255,255,0.24)' },
-  // The search and the car in one white card; the clip keeps the pressed
-  // rows inside its corners while the outer view keeps the shadow.
-  finder: { borderRadius: Radius.card, backgroundColor: Brand.white, ...Elevation.resting },
+  roundBtnPressed: { backgroundColor: 'rgba(255,255,255,0.14)' },
+  // The search and the car in one card of bright liquid glass over the navy;
+  // the clip keeps the pressed rows inside its corners.
+  finder: { borderRadius: Radius.card },
   finderClip: { borderRadius: Radius.card, overflow: 'hidden' },
   finderPressed: { backgroundColor: C.surface },
   finderRule: { height: StyleSheet.hairlineWidth, backgroundColor: C.border, marginHorizontal: Spacing.three },

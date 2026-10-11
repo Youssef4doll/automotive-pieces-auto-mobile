@@ -1,4 +1,4 @@
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { useShopSettings } from '@/hooks/use-shop-settings';
-import { NavCar } from '@/illustrations/vehicle';
+import { AccountIcon, type AccountIconName } from '@/illustrations/account-icons';
 import { localeMeta, locales } from '@/i18n/locales';
 import { useI18n } from '@/i18n/provider';
 import { pickAvatar } from '@/lib/photo';
@@ -151,7 +151,7 @@ export default function AccountScreen() {
           {/* Orders and addresses are the account's: a guest has neither. */}
           {signedIn ? (
             <Row
-              icon="file-text"
+              icon="bag"
               label={t('account.orders')}
               value={orders.length ? String(orders.length) : null}
               onPress={() => router.push('/compte/commandes')}
@@ -169,27 +169,22 @@ export default function AccountScreen() {
             }
             onPress={() => router.navigate('/garage')}
           />
-          {signedIn ? <Row icon="map-pin" label={t('account.addresses')} onPress={() => router.push('/compte/adresses')} /> : null}
+          {signedIn ? <Row icon="pin" label={t('account.addresses')} onPress={() => router.push('/compte/adresses')} /> : null}
           {signedIn ? (
-            <Row
-              icon="lock"
-              label={t('security.row')}
-              value={t('security.rowHint')}
-              onPress={() => router.push('/compte/securite')}
-            />
+            <Row icon="lock" label={t('security.row')} onPress={() => router.push('/compte/securite')} />
           ) : null}
-          <Row icon="rotate-ccw" label={t('returns.title')} onPress={() => router.push('/garanties')} />
+          <Row icon="return" label={t('returns.title')} onPress={() => router.push('/garanties')} />
           {questions.length ? (
             <Row
-              icon="message-square"
+              icon="message"
               label={t('account.questions')}
               value={unread ? t('account.questionsNew', { n: unread }) : String(questions.length)}
               onPress={() => router.push('/compte/questions')}
             />
           ) : null}
-          <Row icon="help-circle" label={t('account.helpContact')} onPress={() => router.push('/aide')} />
+          <Row icon="help" label={t('account.helpContact')} onPress={() => router.push('/aide')} />
           <Row
-            icon="translate"
+            icon="language"
             label={t('lang.title')}
             value={localeMeta[locale].label}
             onPress={() => setLanguageSheet(true)}
@@ -313,7 +308,7 @@ function Row({
   onPress,
   last = false,
 }: {
-  icon: React.ComponentProps<typeof Feather>['name'] | 'car' | 'translate';
+  icon: AccountIconName;
   label: string;
   value?: string | null;
   onPress: () => void;
@@ -332,17 +327,8 @@ function Row({
         pressed && styles.pressed,
       ]}
     >
-      {icon === 'car' ? (
-        <NavCar size={IconSize.large} color={C.text} />
-      ) : icon === 'translate' ? (
-        // 文A, the sign every app uses for language.
-        <MaterialCommunityIcons name="translate" size={IconSize.large} color={C.text} />
-      ) : (
-        <Feather name={icon} size={IconSize.large} color={C.text} />
-      )}
-      <Text variant="body" tone={C.text} style={styles.flex}>
-        {label}
-      </Text>
+      <AccountIcon name={icon} color={C.text} />
+      <Text style={[styles.flex, styles.rowLabel, { fontFamily: familyFor('body', rtl), textAlign: rtl ? 'right' : 'left' }]}>{label}</Text>
       {value ? (
         <Text variant="hint" numberOfLines={1} style={styles.value}>
           {value}
@@ -390,7 +376,9 @@ const styles = StyleSheet.create({
   name: { fontSize: 19, lineHeight: 25, color: C.text },
   list: { marginTop: Spacing.two },
   staff: { marginTop: Spacing.four, borderTopWidth: Border.hairline, borderTopColor: C.border },
-  row: { alignItems: 'center', gap: Spacing.three, minHeight: Tap.primary + Spacing.two },
+  // Glovo's list: a bold icon, the label at 17, a tall row.
+  row: { alignItems: 'center', gap: Spacing.three + 2, minHeight: 60 },
+  rowLabel: { fontSize: 17, lineHeight: 22, color: C.text },
   rowRule: { borderBottomWidth: Border.hairline, borderBottomColor: C.border },
   pressed: { backgroundColor: C.surface },
   value: { maxWidth: '40%' },

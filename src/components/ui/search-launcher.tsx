@@ -2,8 +2,9 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 
-import { Border, Brand, C, IconSize, Radius, Spacing, Tap } from '@/constants/theme';
+import { C, IconSize, Radius, Spacing, Tap } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
+import { Glass } from './glass';
 import { Text } from './text';
 
 /**
@@ -15,8 +16,9 @@ import { Text } from './text';
  * input here would have to share the home screen with the keyboard, and on
  * a 320pt phone the keyboard would cover everything the customer typed for.
  *
- * `tone="brand"` is the white pill on the navy hero; `tone="light"` is the
- * surface pill on a white screen.
+ * A capsule of liquid glass (components/ui/glass), as the tab bar is:
+ * `tone="brand"` the bright one over the navy hero, `tone="light"` the frost
+ * on a white screen. On iOS 26 the glass itself answers the finger.
  */
 export function SearchLauncher({ tone = 'light' }: { tone?: 'brand' | 'light' }) {
   const { t, rtl } = useI18n();
@@ -24,26 +26,24 @@ export function SearchLauncher({ tone = 'light' }: { tone?: 'brand' | 'light' })
   const brand = tone === 'brand';
 
   return (
-    <Pressable
-      accessibilityRole="search"
-      accessibilityLabel={t('search.placeholder')}
-      onPress={() => router.push('/recherche')}
-      style={({ pressed }) => [
-        styles.box,
-        { flexDirection: rtl ? 'row-reverse' : 'row' },
-        brand ? styles.brand : styles.light,
-        pressed && (brand ? styles.brandPressed : styles.lightPressed),
-      ]}
-    >
-      <Feather name="search" size={IconSize.medium} color={C.textMuted} />
-      <Text variant="body" tone={C.textMuted} numberOfLines={1} style={styles.label}>
-        {t('search.placeholder')}
-      </Text>
-    </Pressable>
+    <Glass tone={brand ? 'bright' : 'light'} interactive style={styles.glass}>
+      <Pressable
+        accessibilityRole="search"
+        accessibilityLabel={t('search.placeholder')}
+        onPress={() => router.push('/recherche')}
+        style={({ pressed }) => [styles.box, { flexDirection: rtl ? 'row-reverse' : 'row' }, pressed && styles.pressed]}
+      >
+        <Feather name="search" size={IconSize.medium} color={C.text} />
+        <Text variant="body" tone={C.textMuted} numberOfLines={1} style={styles.label}>
+          {t('search.placeholder')}
+        </Text>
+      </Pressable>
+    </Glass>
   );
 }
 
 const styles = StyleSheet.create({
+  glass: { borderRadius: Radius.pill },
   box: {
     alignItems: 'center',
     gap: Spacing.two,
@@ -51,20 +51,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
   },
-  brand: {
-    backgroundColor: Brand.white,
-  },
-  brandPressed: {
-    backgroundColor: C.surface,
-  },
-  light: {
-    backgroundColor: C.surface,
-    borderWidth: Border.thin,
-    borderColor: C.border,
-  },
-  lightPressed: {
-    backgroundColor: C.surfacePressed,
-  },
+  pressed: { backgroundColor: 'rgba(15,35,82,0.06)' },
   label: {
     flex: 1,
   },
