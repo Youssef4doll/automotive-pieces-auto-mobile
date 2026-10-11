@@ -2106,3 +2106,40 @@ the material of the tab bar.
 - **Returns in 3 taps** (`retour/[ref]`): "Retourner une pièce", the reason
   (the part is picked when there is one), "Envoyer" — pinned at the bottom;
   the "never fitted" declaration is the sentence above the button.
+
+## 35. Glovo's address, an organised "Mes questions", the part that flies into the basket (October 11, 2026)
+
+- **The address at checkout, as Glovo lays it out** (`components/pin-card`):
+  under "Adresse de livraison", the map with the customer's pin
+  (`MapPreview`, still tiles, a "Modifier" chip) — or, before there is a pin,
+  the artist's map (`assets/illustrations/adresse-gps.svg` →
+  `illustrations/address-art`) inviting "Placez votre porte sur la carte" —
+  and under it the address row, its icon the red pin of that same drawing
+  (`MapPin`, also the pin on every map). The card opens the map picker; the
+  row opens the account's addresses first (`saved-addresses`: one tap and the
+  order goes there; "Nouvelle adresse"; "Modifier cette adresse"), the form
+  otherwise. The form and the address book's editor open on the same card.
+- **Keeping the pin describes it** (`lib/locate` `describe`): the phone's
+  geocoder (iOS and Android; never on the web) names the governorate and the
+  street at the kept point, and an empty form starts from them — in view, to
+  be checked. Nothing is filled where the customer has typed.
+- **Mes questions** (`compte/questions`, `components/ui/question-thread`):
+  grouped "Nouvelles réponses", "En attente de réponse", "Répondues" (newest
+  first in each; grouped as loaded, so a card does not jump while it is being
+  read); each card says what it is about (an order, a part, the shop) with its
+  icon and a short date (`lib/when`: "Aujourd’hui à 16:04", "Hier à …", "8
+  oct."); the shop's answer in a tinted block under the shop's mark; "Voir la
+  commande" for an order's question; "Poser une question" pinned at the foot.
+- **Scrolling closes the keyboard** on every screen with a field
+  (`keyboardDismissMode="on-drag"`, taps still reach buttons with
+  `keyboardShouldPersistTaps="handled"`).
+- **Compte**'s rows are back to the body text and height they had; the bold
+  icons stay.
+- **The part flies into the basket** (`components/add-flight`, mounted at the
+  root over the headers): from "Ajouter au panier", in an arc, to the basket.
+  On iOS 26, where the basket is the system's own toolbar button and cannot
+  open to "✓ Ajouté", the flight lands on "Ajouté au panier" under it (a tap
+  opens the basket). Reduced motion: no flight, the words only.
+- **Polish**: a signed-in customer's name and number are one line on
+  "Demander à la boutique" ("Modifier" opens the fields); the checkout fills
+  them from the account when nothing is typed yet.
