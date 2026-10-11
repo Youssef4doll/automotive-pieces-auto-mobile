@@ -19,7 +19,7 @@ import { Border, C, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/co
 import { useResource } from '@/hooks/use-resource';
 import { PartImage } from '@/components/ui/part-image';
 import { formatDate, formatDT } from '@/lib/format';
-import { DELIVERY_FLOW, PICKUP_FLOW, readyToCollect, statusNext, statusWord } from '@/lib/order-status';
+import { DELIVERY_FLOW, PICKUP_FLOW, readyToCollect, statusWord } from '@/lib/order-status';
 import { useI18n } from '@/i18n/provider';
 import { useOrders } from '@/store/orders';
 import { useQuestions } from '@/store/questions';
@@ -176,7 +176,6 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
         <View style={[styles.statusCard, cancelled && styles.statusCancelled]}>
           <Text variant="label">{t('track.placedOn', { date: formatDate(order.createdAt, locale) })}</Text>
           <Text variant="sectionTitle">{t(statusWord(order.status, order.deliveryMethod))}</Text>
-          <Text variant="body">{t(statusNext(order.status, order.deliveryMethod))}</Text>
           <Text variant="hint">{t('orders.ref', { ref: order.ref })}</Text>
         </View>
 

@@ -332,7 +332,7 @@ function Row({
         pressed && styles.pressed,
       ]}
     >
-      <AccountIcon name={icon} color={C.text} />
+      <AccountIcon name={icon} size={IconSize.large} color={C.text} />
       <Text variant="body" tone={C.text} style={styles.flex}>
         {label}
       </Text>

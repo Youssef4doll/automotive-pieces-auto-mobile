@@ -127,10 +127,6 @@ function Body({ order, refNumber }: { order: Order | null; refNumber?: string })
                 </View>
               ) : null}
             </Animated.View>
-          ) : order ? (
-            <Text variant="hint" style={styles.centred}>
-              {t(`next.${order.status}`)}
-            </Text>
           ) : null}
 
           {/* What happens now, in three lines the customer can hold the shop to. */}

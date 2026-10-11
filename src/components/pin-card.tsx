@@ -40,7 +40,7 @@ export function PinCard({ pin, onPress, height = 150, testID }: { pin: LatLng | 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${t('addr.mapInviteTitle')}. ${t('addr.mapInviteBody')}`}
+      accessibilityLabel={t('addr.mapInviteTitle')}
       onPress={onPress}
       testID={testID}
       style={({ pressed }) => [styles.invite, row, pressed && styles.invitePressed]}
@@ -48,9 +48,6 @@ export function PinCard({ pin, onPress, height = 150, testID }: { pin: LatLng | 
       <AddressArt width={height > 130 ? 96 : 76} />
       <View style={styles.flex}>
         <Text style={[styles.title, start, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('addr.mapInviteTitle')}</Text>
-        <Text variant="hint" style={start}>
-          {t('addr.mapInviteBody')}
-        </Text>
       </View>
       <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={C.textMuted} />
     </Pressable>

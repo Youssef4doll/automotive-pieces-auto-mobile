@@ -440,7 +440,6 @@ function Checkout({ settings }: { settings: ShopSettings }) {
           <Row
             icon="message-square"
             title={details.notes.trim() ? details.notes.trim() : t('checkout.noteRow')}
-            sub={details.notes.trim() ? null : t('checkout.noteRowWhy')}
             onPress={() => openSheet('note')}
           />
 
@@ -451,9 +450,6 @@ function Checkout({ settings }: { settings: ShopSettings }) {
             <View style={styles.flex}>
               <Text variant="body" tone={C.text} style={start}>
                 {t('checkout.cod')}
-              </Text>
-              <Text variant="hint" style={start}>
-                {t('checkout.codWhy')}
               </Text>
             </View>
             <Feather name="check-circle" size={IconSize.large} color={C.success} />

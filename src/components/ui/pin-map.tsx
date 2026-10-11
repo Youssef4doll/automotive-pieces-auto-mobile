@@ -7,7 +7,7 @@ import { Text } from '@/components/ui/text';
 import { Brand, C, Radius, Spacing, Tap } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
 import { MAP_PIN, MapPin } from '@/illustrations/address-art';
-import { project, roundCoord, tilesFor, unproject, type LatLng } from '@/lib/map-tiles';
+import { project, roundCoord, TILE, tilesFor, unproject, type LatLng } from '@/lib/map-tiles';
 
 const MIN_ZOOM = 12;
 const MAX_ZOOM = 19;
@@ -16,6 +16,12 @@ const MAX_ZOOM = 19;
  * A map with the pin held in its middle: the customer drags the map until
  * the pin sits on their door, as the delivery apps do it (the owner, October
  * 2026: "GPS + map pin"). What the courier opens is that point.
+ *
+ * It zooms as Google Maps does (the owner, October 2026): two fingers pinch
+ * it in and out, a double tap goes closer, the mouse wheel on the web, and
+ * the + and − for a thumb. The zoom is continuous — the nearest level of
+ * tiles drawn larger or smaller — and always about the pin, which never
+ * leaves the door.
  *
  * Drawn from map tiles (lib/map-tiles) rather than a native map, so it is
  * the same on the iPhone, on Android and on the web, needs no key and no new
@@ -27,7 +33,17 @@ export function PinMap({ center, onMove, height = 260 }: { center: LatLng; onMov
   const [zoom, setZoom] = useState(17);
   const [live, setLive] = useState(center);
   // The latest values for the gesture handlers, which are made once.
-  const state = useRef({ live: center, zoom: 17, start: { x: 0, y: 0 }, onMove });
+  const state = useRef({
+    live: center,
+    zoom: 17,
+    onMove,
+    start: { x: 0, y: 0 },
+    // Where the finger was when the drag was last anchored (a pinch re-anchors it).
+    from: { dx: 0, dy: 0 },
+    pinch: null as { dist: number; zoom: number } | null,
+    pinched: false,
+    lastTap: 0,
+  });
   useEffect(() => {
     state.current.live = live;
     state.current.zoom = zoom;
@@ -40,36 +56,87 @@ export function PinMap({ center, onMove, height = 260 }: { center: LatLng; onMov
     setLive(center);
   }
 
+  const zoomTo = (z: number) => {
+    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
+    state.current.zoom = next;
+    setZoom(next);
+  };
+
   const responder = useMemo(
-    () =>
+    () => {
+      const s = state.current;
+      const anchor = (dx: number, dy: number) => {
+        s.start = project(s.live, s.zoom);
+        s.from = { dx, dy };
+      };
+      const clamp = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
       // The handlers read the ref when the finger moves, never during render (as components/tab-bar).
       // eslint-disable-next-line react-hooks/refs
-      PanResponder.create({
+      return PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         // The sheet around the map scrolls; on the map, a drag moves the map.
         onMoveShouldSetPanResponderCapture: () => true,
         onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: () => {
-          state.current.start = project(state.current.live, state.current.zoom);
+          s.pinch = null;
+          s.pinched = false;
+          anchor(0, 0);
         },
-        onPanResponderMove: (_, g) => {
-          const s = state.current.start;
-          setLive(unproject({ x: s.x - g.dx, y: s.y - g.dy }, state.current.zoom));
+        onPanResponderMove: (e, g) => {
+          const touches = e.nativeEvent.touches;
+          if (touches && touches.length >= 2) {
+            // Two fingers: the zoom follows their spread, about the pin.
+            const dist = Math.hypot(touches[0].pageX - touches[1].pageX, touches[0].pageY - touches[1].pageY);
+            if (!s.pinch) s.pinch = { dist: Math.max(dist, 1), zoom: s.zoom };
+            const z = clamp(s.pinch.zoom + Math.log2(Math.max(dist, 1) / s.pinch.dist));
+            s.zoom = z;
+            s.pinched = true;
+            setZoom(z);
+            return;
+          }
+          if (s.pinch) {
+            // Back to one finger: the drag goes on from here, at the new zoom.
+            s.pinch = null;
+            anchor(g.dx, g.dy);
+          }
+          const p = unproject({ x: s.start.x - (g.dx - s.from.dx), y: s.start.y - (g.dy - s.from.dy) }, s.zoom);
+          s.live = p;
+          setLive(p);
         },
-        onPanResponderRelease: (_, g) => {
-          const s = state.current.start;
-          const p = unproject({ x: s.x - g.dx, y: s.y - g.dy }, state.current.zoom);
-          const settled = { lat: roundCoord(p.lat), lng: roundCoord(p.lng) };
+        onPanResponderRelease: (e, g) => {
+          const still = Math.abs(g.dx) < 6 && Math.abs(g.dy) < 6;
+          if (still && !s.pinched) {
+            // A double tap goes one level closer.
+            const now = e.nativeEvent.timestamp;
+            if (now - s.lastTap < 300) {
+              const z = clamp(Math.round(s.zoom) + 1);
+              s.zoom = z;
+              setZoom(z);
+              s.lastTap = 0;
+            } else s.lastTap = now;
+            return;
+          }
+          const settled = { lat: roundCoord(s.live.lat), lng: roundCoord(s.live.lng) };
+          s.live = settled;
           setLive(settled);
-          state.current.onMove(settled);
+          s.onMove(settled);
         },
-      }),
+      });
+    },
     [],
   );
 
-  const tiles = width ? tilesFor(live, zoom, width, height) : [];
+  // The nearest level of tiles, drawn at the scale the zoom asks for.
+  const level = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(zoom)));
+  const scale = 2 ** (zoom - level);
+  const tiles = width ? tilesFor(live, level, width / scale, height / scale) : [];
   const headers = Platform.OS === 'web' ? undefined : { 'User-Agent': 'AutomotivePiecesAuto/1.0 (app de la boutique)' };
+  // The mouse wheel, on the web.
+  const wheel =
+    Platform.OS === 'web'
+      ? ({ onWheel: (e: { nativeEvent: { deltaY: number } }) => zoomTo(state.current.zoom - e.nativeEvent.deltaY / 400) } as object)
+      : {};
 
   return (
     <View
@@ -78,12 +145,12 @@ export function PinMap({ center, onMove, height = 260 }: { center: LatLng; onMov
       accessibilityLabel={t('addr.pinHint')}
       testID="pin-map"
     >
-      <View style={[StyleSheet.absoluteFill, styles.drag]} {...responder.panHandlers}>
+      <View style={[StyleSheet.absoluteFill, styles.drag]} {...responder.panHandlers} {...wheel}>
         {tiles.map((tile) => (
           <Image
             key={tile.key}
             source={{ uri: tile.url, headers }}
-            style={[styles.tile, { left: tile.x, top: tile.y }]}
+            style={[styles.tile, { left: tile.x * scale, top: tile.y * scale, width: TILE * scale, height: TILE * scale }]}
             cachePolicy="memory-disk"
             transition={120}
             accessibilityIgnoresInvertColors
@@ -97,7 +164,7 @@ export function PinMap({ center, onMove, height = 260 }: { center: LatLng; onMov
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('addr.zoomIn')}
-          onPress={() => setZoom((z) => Math.min(MAX_ZOOM, z + 1))}
+          onPress={() => zoomTo(Math.round(state.current.zoom) + 1)}
           style={({ pressed }) => [styles.zoomBtn, pressed && styles.pressed]}
         >
           <Feather name="plus" size={20} color={C.text} />
@@ -106,7 +173,7 @@ export function PinMap({ center, onMove, height = 260 }: { center: LatLng; onMov
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('addr.zoomOut')}
-          onPress={() => setZoom((z) => Math.max(MIN_ZOOM, z - 1))}
+          onPress={() => zoomTo(Math.round(state.current.zoom) - 1)}
           style={({ pressed }) => [styles.zoomBtn, pressed && styles.pressed]}
         >
           <Feather name="minus" size={20} color={C.text} />

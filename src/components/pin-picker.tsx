@@ -56,9 +56,6 @@ export function PinPicker({
 
   return (
     <View style={styles.root} testID="pin-picker">
-      <Text variant="hint" tone={C.text} style={start}>
-        {t('addr.pinHint')}
-      </Text>
       <PinMap center={center} onMove={setCenter} />
       <Button label={busy ? t('addr.locating') : t('addr.locate')} icon="navigation" variant="secondary" onPress={useMine} loading={busy} testID="pin-locate" />
       {note ? (
