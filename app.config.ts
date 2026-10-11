@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 /**
@@ -27,6 +29,7 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
 
 const PRODUCTION_API = 'https://automotive-pieces-auto.vercel.app';
 const BASE_ID = 'tn.automotivepiecesauto.app';
+const GOOGLE_SERVICES = './google-services.json';
 
 type AppEnv = 'development' | 'preview' | 'production';
 
@@ -73,6 +76,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       ...config.android,
       package: `${BASE_ID}${suffix}`,
+      // Push on Android goes through Firebase (FCM). The owner downloads
+      // google-services.json from their Firebase project and drops it at the
+      // root; without it the build still works, only push stays off.
+      ...(existsSync(GOOGLE_SERVICES) ? { googleServicesFile: GOOGLE_SERVICES } : {}),
     },
     extra: {
       ...config.extra,

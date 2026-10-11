@@ -19,6 +19,24 @@ npx expo start          # then scan the QR code with Expo Go
 npx expo start --web    # or in a browser
 ```
 
+### On an Android phone, as a real app (push included)
+
+```bash
+npm install -g eas-cli && eas login
+eas init                                   # once: writes the EAS project id
+eas build --platform android --profile development
+```
+
+Open the link EAS gives on the phone to install the APK. Then, each time:
+the website with `npm run dev:lan`, and `npx expo start` here; the app finds
+both on the Wi-Fi. With `expo-dev-client` installed, `npx expo start` serves
+the development build; use `npx expo start --go` for Expo Go.
+
+Push on Android needs Firebase: create a project, add an Android app with the
+package `tn.automotivepiecesauto.app.dev`, put its `google-services.json` at
+the root of this repository, and upload the service-account key with
+`eas credentials` (Android → FCM V1). Rebuild after adding the file.
+
 **The app reads a website; it has no data of its own.** Start the website
 first — see its `HANDOVER.md` for `db:migrate`, `db:seed` and `dev`. The app
 finds it on its own in every normal case:
