@@ -166,7 +166,7 @@ await journey('7/8 order, track, again', async ({ page }) => {
   await page.getByRole('button', { name: 'Suivre ma commande' }).click();
   await page.waitForTimeout(3000);
   const text = await bodyText(page);
-  check(text.includes('En attente') && text.includes('Nous confirmons votre commande'), '8 track: status and next step shown');
+  check(text.includes('En attente') && !text.includes('Nous confirmons votre commande'), '8 track: the status, said in a word');
 
   // The owner, October 2026: no "Commander à nouveau" on the order.
   check(!text.includes('Commander à nouveau'), '8 track: no order-again button');

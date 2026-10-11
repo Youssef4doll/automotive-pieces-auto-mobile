@@ -151,9 +151,11 @@ for (const width of SCREEN_VIEWPORTS) {
     await page.waitForTimeout(1800);
     const gone = await page.evaluate(() => !document.body.innerText.includes('Que recherchez-vous'));
     check(gone, 'home: no arc title');
-    await tap(page, 'Comment trouver votre pièce ?');
+    // The owner's mock-up: the headline over the photograph, the search under it.
+    check(await page.evaluate(() => document.body.innerText.includes('Les bonnes pièces.')), 'home: the headline of the mock-up');
+    await page.getByTestId('home-vehicle').click();
     await page.waitForTimeout(1200);
-    check(page.url().endsWith('/trouver'), 'home: the ways link opens /trouver', page.url());
+    check(page.url().endsWith('/garage'), 'home: the vehicle card opens the garage', page.url());
   } catch (e) {
     fail('ways', { threw: String(e).split('\n')[0] });
   } finally {

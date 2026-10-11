@@ -1,32 +1,41 @@
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { Button } from '@/components/ui/button';
+import { CareDueStrip } from '@/components/ui/care-due';
+import { initials, MakeLogo, MarkGlyph } from '@/components/ui/make-logo';
 import { PressScale } from '@/components/ui/press-scale';
+import { Rail } from '@/components/ui/rail';
 import { Text } from '@/components/ui/text';
 import { Brand, C, Elevation, familyFor, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
-import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
-
-import { initials, MakeLogo, MarkGlyph } from '@/components/ui/make-logo';
-import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
-import { MAKE_MARKS, markKey } from '@/illustrations/marques';
-import { CareDueStrip } from '@/components/ui/care-due';
-import { CarKey } from '@/illustrations/car-key';
-import { useI18n } from '@/i18n/provider';
 import { useSvgId } from '@/hooks/use-svg-id';
+import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
+import { useI18n } from '@/i18n/provider';
+import { CarKey } from '@/illustrations/car-key';
+import { MAKE_MARKS, markKey } from '@/illustrations/marques';
 import { ltr, yearSpan } from '@/lib/format';
 import { useGarage, type SavedVehicle } from '@/store/garage';
+import { useVehicleCare } from '@/store/vehicle-care';
+
+/** The owner's photograph of the evening road; the card shows its mountains, not the car in it. */
+const ROAD = require('@/assets/images/garage-road.webp');
+const ROAD_RATIO = 1672 / 941;
 
 /**
- * Mon garage — the reference's personal space, not a list editor.
+ * Mon garage — the customer's car, the way the owner's references show a
+ * thing worth having (October 2026): a dark card that is the car, its
+ * facts large on the evening road and one gold action; three tiles for what
+ * a customer does next; then the other cars, side by side.
  *
- * The principal car at the top; a small grid of the four things a customer
- * does with a car (its parts, what was ordered, its details and the next
- * car); then every car in the garage, one tap to make another the principal;
- * then the yellow button to add one. Editing, switching and removing live one
- * level down in "Mes véhicules", so this screen stays a place to arrive.
+ * The road is the owner's photograph, framed on its mountains and lake: the
+ * car in it is not the customer's, and the card never shows a car that is
+ * not theirs. The make's own mark stands in for it, large and faded. Only
+ * what the garage knows is written — the engine, the years when the shop
+ * recorded them, the mileage when the owner gave it.
  */
 export default function GarageScreen() {
   const router = useRouter();
@@ -37,8 +46,7 @@ export default function GarageScreen() {
   const hydrated = useGarage((s) => s.hydrated);
   const setActive = useGarage((s) => s.setActive);
   const isFull = useGarage((s) => s.isFull);
-  const [cardWidth, setCardWidth] = useState(0);
-  const [page, setPage] = useState(0);
+  const mileage = useVehicleCare((s) => (active ? s.byEngine[active.engineId]?.mileageKm : undefined));
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
 
   if (!hydrated) return <View style={styles.root} />;
@@ -58,197 +66,163 @@ export default function GarageScreen() {
     );
   }
 
-  // The principal first, then the others as they were added.
-  const ordered = [active, ...vehicles.filter((v) => v.engineId !== active.engineId)];
-  // The rows under the car: every car, the next car. Orders live in Compte.
-  const doors: { icon: React.ComponentProps<typeof Feather>['name']; label: string; hint: string; onPress: () => void; disabled?: boolean; accent?: boolean }[] = [
-    { icon: 'layers', label: t('look.myVehiclesTitle'), hint: t('look.myVehiclesHint'), onPress: () => router.push('/garage/vehicules') },
-    { icon: 'plus', label: t('look.bento.add'), hint: t('look.find.carWhy'), onPress: () => router.push('/garage/ajouter'), disabled: isFull(), accent: true },
-  ];
+  const others = vehicles.filter((v) => v.engineId !== active.engineId);
+  const full = isFull();
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={[styles.scroll, { paddingBottom: tabBarSpace }]} showsVerticalScrollIndicator={false}>
       <View style={styles.column}>
-        <View style={[row, styles.head]}>
-          <Text style={[styles.count, { fontFamily: familyFor('heading', rtl) }]}>{t('look.garageCount', { n: vehicles.length })}</Text>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/garage/vehicules')} style={({ pressed }) => [styles.seeAll, pressed && { opacity: 0.6 }]}>
-            <Text style={[styles.seeAllText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('catalog.seeAll')}</Text>
-          </Pressable>
+        <Hero vehicle={active} mileage={mileage} />
+
+        {/* What a customer does next, as the references' three tiles: the dark one first. */}
+        <View style={[row, styles.tiles]}>
+          <Tile
+            dark
+            icon="tool"
+            label={t('garage.tileInfo')}
+            onPress={() => router.push({ pathname: '/garage/vehicule/[engine]', params: { engine: active.engineId } })}
+            testID="garage-tile-info"
+          />
+          <Tile
+            icon="layers"
+            label={t('look.myVehiclesTitle')}
+            value={t('look.garageCount', { n: vehicles.length })}
+            onPress={() => router.push('/garage/vehicules')}
+            testID="garage-tile-list"
+          />
+          <Tile icon="plus" accent label={t('look.bento.add')} disabled={full} onPress={() => router.push('/garage/ajouter')} testID="garage-tile-add" />
         </View>
-
-        {/* The car, as the space's centrepiece — and with several, a
-            carousel of them, the principal first. */}
-        {ordered.length > 1 ? (
-          <View>
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onLayout={(e) => setCardWidth(Math.round(e.nativeEvent.layout.width))}
-              onMomentumScrollEnd={(e) => cardWidth && setPage(Math.round(e.nativeEvent.contentOffset.x / cardWidth))}
-              onScroll={Platform.OS === 'web' ? (e) => cardWidth && setPage(Math.round(e.nativeEvent.contentOffset.x / cardWidth)) : undefined}
-              scrollEventThrottle={64}
-              style={styles.carousel}
-            >
-              {ordered.map((v) => (
-                <View key={v.engineId} style={{ width: cardWidth || undefined, paddingHorizontal: 2 }}>
-                  <HeroCard vehicle={v} principal={v.engineId === active.engineId} onMakePrincipal={() => setActive(v.engineId)} />
-                </View>
-              ))}
-            </ScrollView>
-            <View style={[row, styles.dots]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              {ordered.map((v, i) => (
-                <View key={v.engineId} style={[styles.dot, i === page && styles.dotOn]} />
-              ))}
-            </View>
-          </View>
-        ) : (
-          <HeroCard vehicle={active} principal onMakePrincipal={() => undefined} />
-        )}
-
-        <Text style={[styles.section, { textAlign: rtl ? 'right' : 'left', fontFamily: familyFor('heading', rtl) }]}>{t('look.garageShortcuts')}</Text>
-        <View style={styles.group}>
-          {doors.map((d, i) => (
-            <PressScale
-              key={d.label}
-              accessibilityRole="button"
-              accessibilityLabel={`${d.label}, ${d.hint}`}
-              accessibilityState={{ disabled: d.disabled }}
-              disabled={d.disabled}
-              onPress={d.onPress}
-              style={[row, styles.door, i > 0 && styles.doorRule, d.disabled && styles.disabled]}
-              pressedStyle={styles.doorPressed}
-              scaleTo={0.99}
-            >
-              <View style={[styles.doorIcon, d.accent && styles.doorIconAccent]}>
-                <Feather name={d.icon} size={18} color={d.accent ? Brand.navy950 : Brand.white} />
-              </View>
-              <View style={[styles.flex, { gap: 2 }]}>
-                <Text style={[styles.doorLabel, { textAlign: rtl ? 'right' : 'left', fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={1}>
-                  {d.label}
-                </Text>
-                <Text variant="hint" style={{ textAlign: rtl ? 'right' : 'left' }} numberOfLines={2}>
-                  {d.hint}
-                </Text>
-              </View>
-              <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={18} color={C.textMuted} />
-            </PressScale>
-          ))}
-        </View>
-
-        {/* What its owner's own dates say is coming up; nothing when nothing is. */}
-        <View style={styles.bleed}>
-          <CareDueStrip />
-        </View>
-
-        {isFull() ? (
-          <Text variant="hint" style={styles.centred}>
-            {t('garage.full')}
-          </Text>
-        ) : null}
       </View>
+
+      {/* What its owner's own dates say is coming up; nothing when nothing is. */}
+      <CareDueStrip />
+
+      {others.length ? (
+        <>
+          <View style={[styles.column, row, styles.sectionHead]}>
+            <Text style={[styles.section, { textAlign: rtl ? 'right' : 'left', fontFamily: familyFor('heading', rtl) }]}>{t('garage.others')}</Text>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/garage/vehicules')} hitSlop={8} style={[styles.seeAll, row]}>
+              <Text variant="hint" tone={C.text}>
+                {t('catalog.seeAll')}
+              </Text>
+              <Feather name={rtl ? 'arrow-left' : 'arrow-right'} size={14} color={C.text} />
+            </Pressable>
+          </View>
+          <Rail contentContainerStyle={[styles.rail, row]}>
+            {others.map((v, i) => (
+              <OtherCard key={v.engineId} vehicle={v} dark={i % 2 === 1} onMakePrincipal={() => setActive(v.engineId)} />
+            ))}
+          </Rail>
+        </>
+      ) : null}
+
+      {full ? (
+        <Text variant="hint" style={[styles.centred, styles.fullNote]}>
+          {t('garage.full')}
+        </Text>
+      ) : null}
     </ScrollView>
   );
 }
 
 /**
- * The car as a wallet pass: the navy of the shop with a soft diagonal sheen,
- * the make's own mark large and faded behind the text, the make's badge and
- * "MON VÉHICULE" across the top, the name, then the two facts the shop holds
- * for it as labelled fields — the engine, and the years when it recorded
- * them (left out, never guessed, when it did not). The
- * action that matters, the parts that fit, is the gold button under it.
- *
- * The whole pass opens "Mes véhicules"; a car that is not the principal one
- * offers to become it.
+ * The car: a dark card on the owner's evening road, the make's badge and
+ * "MON VÉHICULE" across the top, the make's mark large and faded at the
+ * far side, the name large, the facts the garage holds as labelled fields,
+ * and the gold "Pièces compatibles" with the details beside it.
  */
-function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehicle; principal: boolean; onMakePrincipal: () => void }) {
-  const { t, rtl } = useI18n();
+function Hero({ vehicle, mileage }: { vehicle: SavedVehicle; mileage?: number }) {
+  const { t, rtl, locale } = useI18n();
   const router = useRouter();
+  const [width, setWidth] = useState(0);
   const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
   const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
   const years = yearSpan(vehicle.yearFrom ?? null, vehicle.yearTo ?? null, t);
   const mark = MAKE_MARKS[markKey(vehicle.makeSlug)] ?? MAKE_MARKS[markKey(vehicle.makeName)];
-  const gradient = useSvgId('pass');
+  const shade = useSvgId('garageShade');
+  const floor = useSvgId('garageFloor');
+  const km =
+    mileage != null
+      ? `${new Intl.NumberFormat(locale === 'ar' ? 'ar-TN-u-nu-latn' : locale === 'en' ? 'en-GB' : 'fr-FR').format(mileage)} km`
+      : null;
+  // The photograph 2.6 times the card's width, its mountains and lake in
+  // the card, the car just past its far edge.
+  const photoW = width * 2.6;
+  const photoH = photoW / ROAD_RATIO;
+  const height = 318;
+
   return (
-    <View style={styles.passWrap}>
-      <View style={styles.pass}>
-        <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" viewBox="0 0 340 210" preserveAspectRatio="none">
-          <Defs>
-            <LinearGradient id={gradient} x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="1">
-              <Stop offset="0" stopColor={Brand.navy700} />
-              <Stop offset="1" stopColor={Brand.navy950} />
-            </LinearGradient>
-          </Defs>
-          <Rect x={0} y={0} width={340} height={210} fill={`url(#${gradient})`} />
-          <Path d={rtl ? 'M140 0 L0 0 L0 210 L220 210 Z' : 'M200 0 L340 0 L340 210 L120 210 Z'} fill={Brand.white} opacity={0.035} />
-          <Path d={rtl ? 'M90 0 L0 0 L0 210 L150 210 Z' : 'M250 0 L340 0 L340 210 L190 210 Z'} fill={Brand.white} opacity={0.03} />
-        </Svg>
-        {/* The make large and faded behind the words — every car has one:
-            a make the app has no mark for shows its initials there. */}
-        <View style={[styles.watermark, rtl ? { left: -36 } : { right: -36 }]} pointerEvents="none">
+    <View style={styles.heroWrap} testID="garage-hero">
+      <View style={[styles.hero, { minHeight: height }]} onLayout={(e) => setWidth(Math.round(e.nativeEvent.layout.width))}>
+        {width ? (
+          <Image
+            source={ROAD}
+            style={[styles.photo, { width: photoW, height: photoH, top: -photoH * 0.2 }, rtl ? { right: -photoW * 0.17, transform: [{ scaleX: -1 }] } : { left: -photoW * 0.17 }]}
+            contentFit="cover"
+            accessibilityIgnoresInvertColors
+          />
+        ) : null}
+        {width ? (
+          <Svg style={StyleSheet.absoluteFill} width={width} height={height} pointerEvents="none">
+            <Defs>
+              <LinearGradient id={shade} x1={rtl ? '1' : '0'} y1="0" x2={rtl ? '0' : '1'} y2="0">
+                <Stop offset="0" stopColor={Brand.navy950} stopOpacity="0.85" />
+                <Stop offset="0.5" stopColor={Brand.navy950} stopOpacity="0.35" />
+                <Stop offset="1" stopColor={Brand.navy950} stopOpacity="0" />
+              </LinearGradient>
+              <LinearGradient id={floor} x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0.45" stopColor={Brand.navy950} stopOpacity="0" />
+                <Stop offset="1" stopColor={Brand.navy950} stopOpacity="0.9" />
+              </LinearGradient>
+            </Defs>
+            <Rect x={0} y={0} width={width} height={height} fill={`url(#${shade})`} />
+            <Rect x={0} y={0} width={width} height={height} fill={`url(#${floor})`} />
+          </Svg>
+        ) : null}
+
+        {/* The make, large and faded, where the car would stand. */}
+        <View style={[styles.watermark, rtl ? { left: -30 } : { right: -30 }]} pointerEvents="none">
           {mark ? (
-            <MarkGlyph mark={mark} size={184} color={Brand.white} />
+            <MarkGlyph mark={mark} size={176} color={Brand.white} />
           ) : (
             <Text style={[styles.watermarkText, { fontFamily: familyFor('headingStrong', false) }]}>{initials(vehicle.makeName)}</Text>
           )}
         </View>
-        {/* The whole pass opens "Mes véhicules" — a layer behind the words,
-            so the "Rendre principal" button on it is not a button inside a
-            button. */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={[principal ? t('look.principal') : null, `${vehicle.makeName} ${vehicle.modelName}`, vehicle.engineName, years].filter(Boolean).join(', ')}
-          onPress={() => router.push('/garage/vehicules')}
-          style={({ pressed }) => [StyleSheet.absoluteFill, pressed && styles.passPressed]}
-        />
 
-        <View style={[styles.passHead, row]} pointerEvents="box-none">
-          <View pointerEvents="none">
-            <MakeLogo name={vehicle.makeName} slug={vehicle.makeSlug} size={40} lifted={false} />
-          </View>
-          <Text pointerEvents="none" style={[styles.kicker, { fontFamily: familyFor('display', rtl) }]} numberOfLines={1}>
+        <View style={[styles.heroHead, row]}>
+          <MakeLogo name={vehicle.makeName} slug={vehicle.makeSlug} size={44} lifted={false} />
+          <Text style={[styles.kicker, { fontFamily: familyFor('display', rtl) }]} numberOfLines={1}>
             {t('account.myVehicle')}
           </Text>
-          <View style={styles.flex} pointerEvents="none" />
-          {principal ? (
-            <View style={[styles.passTag, row]} pointerEvents="none">
-              <Feather name="star" size={11} color={Brand.navy950} />
-              <Text style={[styles.passTagText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.principalShort')}</Text>
-            </View>
-          ) : (
-            // In the pass rather than under it, so every card in the
-            // carousel is the same height.
-            <Pressable
-              accessibilityRole="button"
-              onPress={onMakePrincipal}
-              hitSlop={8}
-              style={({ pressed }) => [styles.passMake, row, pressed && { opacity: 0.7 }]}
-            >
-              <Feather name="star" size={12} color={Brand.white} />
-              <Text style={[styles.passMakeText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.setPrincipal')}</Text>
-            </Pressable>
-          )}
+          <View style={styles.flex} />
+          <View style={[styles.tag, row]}>
+            <Feather name="star" size={11} color={Brand.navy950} />
+            <Text style={[styles.tagText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.principalShort')}</Text>
+          </View>
         </View>
 
-        <Text pointerEvents="none" style={[styles.passName, align, { fontFamily: familyFor('headingStrong', rtl) }]} numberOfLines={2}>
+        <View style={styles.flex} />
+
+        <Text style={[styles.name, align, { fontFamily: familyFor('headingStrong', rtl) }]} numberOfLines={2}>
           {vehicle.makeName} {vehicle.modelName}
         </Text>
 
-        <View style={[styles.fields, row]} pointerEvents="none">
+        <View style={[styles.fields, row]}>
           <Field label={t('picker.stepEngine')} value={ltr(vehicle.engineName)} />
-          {years ? <Field label={t('look.fieldYears')} value={`\u2066${years}\u2069`} /> : null}
+          {years ? <Field label={t('look.fieldYears')} value={`⁦${years}⁩`} /> : null}
+          {km ? <Field label={t('garage.mileage')} value={ltr(km)} /> : null}
         </View>
 
-        <View style={[styles.passActions, row]}>
+        <View style={[styles.actions, row]}>
           <PressScale
             accessibilityRole="button"
             onPress={() => router.push({ pathname: '/pieces-compatibles', params: { engine: vehicle.engineId } })}
-            style={[styles.heroCta, row]}
+            style={[styles.cta, row]}
             pressedStyle={{ backgroundColor: Brand.gold600 }}
+            testID="garage-parts"
           >
             <Feather name="check-circle" size={18} color={C.onAccent} />
-            <Text style={[styles.heroCtaText, { fontFamily: familyFor('display', rtl) }]} numberOfLines={1}>
+            <Text style={[styles.ctaText, { fontFamily: familyFor('display', rtl) }]} numberOfLines={1}>
               {t('look.bento.parts')}
             </Text>
           </PressScale>
@@ -256,14 +230,13 @@ function HeroCard({ vehicle, principal, onMakePrincipal }: { vehicle: SavedVehic
             accessibilityRole="button"
             accessibilityLabel={t('look.bento.info')}
             onPress={() => router.push({ pathname: '/garage/vehicule/[engine]', params: { engine: vehicle.engineId } })}
-            style={styles.passInfo}
-            pressedStyle={{ backgroundColor: 'rgba(255,255,255,0.28)' }}
+            style={styles.info}
+            pressedStyle={{ backgroundColor: 'rgba(255,255,255,0.3)' }}
           >
             <Feather name="info" size={20} color={Brand.white} />
           </PressScale>
         </View>
       </View>
-
     </View>
   );
 }
@@ -282,77 +255,193 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** One of the three tiles: its icon at the top, its words at the foot. */
+function Tile({
+  icon,
+  label,
+  value,
+  dark = false,
+  accent = false,
+  disabled = false,
+  onPress,
+  testID,
+}: {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  label: string;
+  value?: string;
+  dark?: boolean;
+  accent?: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+  testID?: string;
+}) {
+  const { rtl } = useI18n();
+  const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
+  return (
+    <PressScale
+      accessibilityRole="button"
+      accessibilityLabel={value ? `${label}, ${value}` : label}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={[styles.tile, dark && styles.tileDark, disabled && styles.disabled, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}
+      pressedStyle={dark ? styles.tileDarkPressed : styles.tilePressed}
+      scaleTo={0.96}
+      testID={testID}
+    >
+      <View style={[styles.tileIcon, dark && styles.tileIconDark, accent && styles.tileIconAccent]}>
+        <Feather name={icon} size={18} color={accent ? Brand.navy950 : dark ? Brand.white : C.text} />
+      </View>
+      <View style={styles.tileWords}>
+        <Text style={[styles.tileLabel, dark && styles.onDark, align, { fontFamily: familyFor('bodySemi', rtl) }]} numberOfLines={2}>
+          {label}
+        </Text>
+        {value ? (
+          <Text style={[styles.tileValue, dark && styles.onDarkMuted, align, { fontFamily: familyFor('body', rtl) }]} numberOfLines={1}>
+            {value}
+          </Text>
+        ) : null}
+      </View>
+    </PressScale>
+  );
+}
+
+/** Another car in the garage: its badge and name, its details on a tap, and the way to make it the main one. */
+function OtherCard({ vehicle, dark, onMakePrincipal }: { vehicle: SavedVehicle; dark: boolean; onMakePrincipal: () => void }) {
+  const { t, rtl } = useI18n();
+  const router = useRouter();
+  const row = { flexDirection: rtl ? ('row-reverse' as const) : ('row' as const) };
+  const align = { textAlign: rtl ? ('right' as const) : ('left' as const) };
+  const mark = MAKE_MARKS[markKey(vehicle.makeSlug)] ?? MAKE_MARKS[markKey(vehicle.makeName)];
+  return (
+    <View style={[styles.other, dark && styles.otherDark]} testID="garage-other">
+      <View style={[styles.otherMark, rtl ? { left: -18 } : { right: -18 }]} pointerEvents="none">
+        {mark ? <MarkGlyph mark={mark} size={96} color={dark ? Brand.white : Brand.navy900} /> : null}
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${vehicle.makeName} ${vehicle.modelName}, ${vehicle.engineName}`}
+        onPress={() => router.push({ pathname: '/garage/vehicule/[engine]', params: { engine: vehicle.engineId } })}
+        style={({ pressed }) => [styles.otherBody, pressed && { opacity: 0.8 }]}
+      >
+        <MakeLogo name={vehicle.makeName} slug={vehicle.makeSlug} size={36} lifted={false} />
+        <Text style={[styles.otherName, dark && styles.onDark, align, { fontFamily: familyFor('headingStrong', rtl) }]} numberOfLines={2}>
+          {vehicle.makeName} {vehicle.modelName}
+        </Text>
+        <Text style={[styles.otherEngine, dark && styles.onDarkMuted, align, { fontFamily: familyFor('body', rtl) }]} numberOfLines={1}>
+          {ltr(vehicle.engineName)}
+        </Text>
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onMakePrincipal}
+        style={({ pressed }) => [styles.otherMake, row, dark ? styles.otherMakeDark : null, pressed && { opacity: 0.7 }, { alignSelf: rtl ? 'flex-end' : 'flex-start' }]}
+      >
+        <Feather name="star" size={13} color={dark ? Brand.navy950 : Brand.white} />
+        <Text style={[styles.otherMakeText, dark && { color: Brand.navy950 }, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('look.setPrincipal')}</Text>
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.background },
-  scroll: { paddingTop: Spacing.one },
+  scroll: { paddingTop: Spacing.two, gap: Spacing.four },
   column: { width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', paddingHorizontal: Spacing.three, gap: Spacing.three },
   flex: { flex: 1, minWidth: 0 },
   empty: { alignItems: 'center', justifyContent: 'center', gap: Spacing.three, padding: Spacing.four, backgroundColor: C.background },
   centred: { textAlign: 'center' },
   wide: { alignSelf: 'stretch' },
-  passWrap: { gap: Spacing.three },
-  bleed: { marginHorizontal: -Spacing.three },
-  pass: {
-    minHeight: 204,
-    borderRadius: 22,
+  fullNote: { paddingHorizontal: Spacing.three },
+
+  heroWrap: { borderRadius: 28, ...Elevation.lifted },
+  hero: {
+    borderRadius: 28,
     overflow: 'hidden',
-    padding: Spacing.four,
-    paddingBottom: Spacing.four + 6,
-    gap: Spacing.three,
-    backgroundColor: Brand.navy900,
-    ...Elevation.lifted,
+    padding: Spacing.four - 4,
+    paddingBottom: Spacing.four - 4,
+    backgroundColor: Brand.navy950,
   },
-  watermark: { position: 'absolute', top: 26, opacity: 0.08 },
-  watermarkText: { width: 184, fontSize: 120, lineHeight: 184, textAlign: 'center', color: Brand.white },
-  passHead: { alignItems: 'center', gap: Spacing.two },
+  photo: { position: 'absolute' },
+  watermark: { position: 'absolute', top: 54, opacity: 0.07 },
+  watermarkText: { width: 176, fontSize: 116, lineHeight: 176, textAlign: 'center', color: Brand.white },
+  heroHead: { alignItems: 'center', gap: Spacing.two },
   kicker: { fontSize: 12, lineHeight: 16, letterSpacing: 1.6, color: Brand.navy300, textTransform: 'uppercase', flexShrink: 1 },
-  passTag: { alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.pill, backgroundColor: Brand.gold500 },
-  passTagText: { fontSize: 11, lineHeight: 15, color: Brand.navy950 },
-  passMake: { alignItems: 'center', gap: 4, minHeight: 28, paddingHorizontal: 10, borderRadius: Radius.pill, borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
-  passMakeText: { fontSize: 12, lineHeight: 16, color: Brand.white },
-  passName: { fontSize: 26, lineHeight: 31, color: Brand.white, marginTop: Spacing.one },
-  fields: { gap: Spacing.five, flexWrap: 'wrap' },
+  tag: { alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: Radius.pill, backgroundColor: Brand.gold500 },
+  tagText: { fontSize: 11, lineHeight: 15, color: Brand.navy950 },
+  name: { fontSize: 30, lineHeight: 35, letterSpacing: -0.4, color: Brand.white, marginTop: Spacing.three },
+  fields: { gap: Spacing.four, flexWrap: 'wrap', marginTop: Spacing.two },
   field: { gap: 2 },
   fieldLabel: { fontSize: 10, lineHeight: 13, letterSpacing: 1.4, color: Brand.navy300, textTransform: 'uppercase' },
   fieldValue: { fontSize: 16, lineHeight: 21, color: Brand.white },
-  passPressed: { backgroundColor: 'rgba(255,255,255,0.05)' },
-  heroCta: {
+  actions: { alignItems: 'center', gap: Spacing.two, marginTop: Spacing.three + 2 },
+  cta: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.two,
-    minHeight: Tap.primary,
+    minHeight: Tap.primary + 4,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
     backgroundColor: Brand.gold500,
   },
-  passActions: { alignItems: 'center', gap: Spacing.two, marginTop: Spacing.one },
-  passInfo: {
-    width: Tap.primary,
-    height: Tap.primary,
-    borderRadius: Tap.primary / 2,
+  ctaText: { fontSize: 16, color: C.onAccent },
+  info: {
+    width: Tap.primary + 4,
+    height: Tap.primary + 4,
+    borderRadius: (Tap.primary + 4) / 2,
     backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  count: { fontSize: 18, lineHeight: 24, color: C.text },
-  seeAllText: { fontSize: 15, lineHeight: 20, color: C.text, textDecorationLine: 'underline' },
-  group: { borderRadius: Radius.card, backgroundColor: C.surface, overflow: 'hidden' },
-  door: { alignItems: 'center', gap: Spacing.three, minHeight: 68, paddingHorizontal: Spacing.three, paddingVertical: Spacing.three },
-  doorRule: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border },
-  doorPressed: { backgroundColor: C.surfacePressed },
-  doorIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: Brand.navy900, alignItems: 'center', justifyContent: 'center' },
-  doorIconAccent: { backgroundColor: Brand.gold500 },
-  doorLabel: { fontSize: 16, lineHeight: 21, color: C.text },
-  heroCtaText: { fontSize: 16, color: C.onAccent },
-  pressed: { backgroundColor: C.surface },
+
+  tiles: { gap: Spacing.two + 2 },
+  tile: {
+    flex: 1,
+    minHeight: 118,
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 22,
+    backgroundColor: C.surface,
+  },
+  tileDark: { backgroundColor: Brand.navy900 },
+  tilePressed: { backgroundColor: C.surfacePressed },
+  tileDarkPressed: { backgroundColor: Brand.navy800 },
+  tileIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: Brand.white },
+  tileIconDark: { backgroundColor: 'rgba(255,255,255,0.14)' },
+  tileIconAccent: { backgroundColor: Brand.gold500 },
+  tileWords: { gap: 2, alignSelf: 'stretch' },
+  tileLabel: { fontSize: 13, lineHeight: 17, color: C.text },
+  tileValue: { fontSize: 12, lineHeight: 16, color: C.textMuted },
+  onDark: { color: Brand.white },
+  onDarkMuted: { color: Brand.navy300 },
   disabled: { opacity: 0.45 },
-  head: { alignItems: 'center', justifyContent: 'space-between' },
-  section: { fontSize: 18, lineHeight: 24, color: C.text },
-  seeAll: { minHeight: Tap.min, minWidth: Tap.min, justifyContent: 'center' },
-  list: { gap: Spacing.two },
-  carousel: { marginHorizontal: -2 },
-  dots: { justifyContent: 'center', gap: 6, paddingTop: Spacing.two },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.border },
-  dotOn: { width: 18, backgroundColor: C.text },
+
+  sectionHead: { alignItems: 'center', justifyContent: 'space-between', marginBottom: -Spacing.two },
+  section: { fontSize: 19, lineHeight: 25, color: C.text },
+  seeAll: { alignItems: 'center', gap: 4, minHeight: Tap.min },
+  rail: { gap: Spacing.two + 4, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
+  other: {
+    width: 208,
+    minHeight: 196,
+    justifyContent: 'space-between',
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: Brand.white,
+    borderWidth: 1,
+    borderColor: C.border,
+    ...Elevation.resting,
+  },
+  otherDark: { backgroundColor: Brand.navy900, borderColor: Brand.navy900 },
+  otherMark: { position: 'absolute', top: -14, opacity: 0.07 },
+  otherBody: { gap: Spacing.two },
+  otherName: { fontSize: 17, lineHeight: 22, color: C.text },
+  otherEngine: { fontSize: 13, lineHeight: 17, color: C.textMuted },
+  otherMake: { alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 14, borderRadius: Radius.pill, backgroundColor: Brand.navy900 },
+  otherMakeDark: { backgroundColor: Brand.gold500 },
+  otherMakeText: { fontSize: 13, lineHeight: 17, color: Brand.white },
 });
