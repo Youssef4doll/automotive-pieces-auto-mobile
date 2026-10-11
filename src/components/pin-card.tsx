@@ -29,7 +29,7 @@ export function PinCard({ pin, onPress, height = 150, testID }: { pin: LatLng | 
         style={({ pressed }) => [styles.map, pressed && styles.pressed]}
       >
         <MapPreview center={pin} height={height} />
-        <View style={[styles.edit, row, rtl ? styles.editRtl : null]} pointerEvents="none">
+        <View style={[styles.edit, row, rtl ? styles.editRtl : styles.editLtr]} pointerEvents="none">
           <Feather name="edit-2" size={13} color={C.text} />
           <Text style={[styles.editText, { fontFamily: familyFor('bodySemi', rtl) }]}>{t('addr.mapEdit')}</Text>
         </View>
@@ -64,7 +64,6 @@ const styles = StyleSheet.create({
   edit: {
     position: 'absolute',
     top: Spacing.two + 2,
-    right: Spacing.two + 2,
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
@@ -73,7 +72,8 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.white,
     ...Elevation.resting,
   },
-  editRtl: { right: undefined, left: Spacing.two + 2 },
+  editLtr: { right: Spacing.two + 2 },
+  editRtl: { left: Spacing.two + 2 },
   editText: { fontSize: 13, lineHeight: 17, color: C.text },
   invite: {
     alignItems: 'center',
