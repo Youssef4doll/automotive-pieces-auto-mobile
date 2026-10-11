@@ -1,5 +1,6 @@
 import { useStaff } from '@/store/staff';
 import { ApiError, send } from './client';
+import type { DeliveryEstimate } from '@/lib/delivery-estimate';
 
 /**
  * The staff screens' side of /api/v1/admin. Nothing here is cached: every
@@ -157,6 +158,12 @@ export type OrderDetail = {
   accountEmail: string | null;
   governorate: string;
   address: string | null;
+  /** What the driver needs where the street has no number. Absent from an older shop. */
+  landmark?: string | null;
+  pin?: { lat: number; lng: number } | null;
+  /** The date promised with the order, and whether the customer was told it is late. */
+  estimate?: DeliveryEstimate | null;
+  late?: boolean;
   deliveryMethod: 'DELIVERY' | 'PICKUP';
   paymentMethod: 'COD' | 'CARD';
   notes: string | null;

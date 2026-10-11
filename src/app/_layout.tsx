@@ -6,13 +6,13 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ToastHost } from '@/components/ui/toast';
-import { C, familyFor } from '@/constants/theme';
 import { useAppFonts } from '@/hooks/use-app-fonts';
-import { I18nProvider, useI18n } from '@/i18n/provider';
+import { I18nProvider } from '@/i18n/provider';
 import { catalogueApi } from '@/api/catalogue';
 import { promotionsApi } from '@/api/promotions';
 import { shopApi } from '@/api/shop';
 import { AuthMoment } from '@/components/auth-moment';
+import { useStackOptions } from '@/components/stack-options';
 import { NotificationRouter } from '@/components/notification-router';
 import { OrderWatch } from '@/components/order-watch';
 import { Preloader } from '@/components/preloader';
@@ -57,7 +57,6 @@ export default function RootLayout() {
 
 function App() {
   const fontsSettled = useAppFonts();
-  const { rtl, t } = useI18n();
   useRemoteUpdates();
   const [launched, setLaunched] = useState(automated);
   const [warm, setWarm] = useState(false);
@@ -96,13 +95,14 @@ function App() {
   // the last, so the app arriving underneath it does not restart it.
   return (
     <>
-      {fontsSettled ? <Shell rtl={rtl} backLabel={t('common.back')} launching={!launched} /> : null}
+      {fontsSettled ? <Shell launching={!launched} /> : null}
       {preloader}
     </>
   );
 }
 
-function Shell({ rtl, backLabel, launching }: { rtl: boolean; backLabel: string; launching: boolean }) {
+function Shell({ launching }: { launching: boolean }) {
+  const stackOptions = useStackOptions();
   return (
     <>
       {/* Headers are white, as in the reference, so the clock is dark. The
@@ -110,24 +110,8 @@ function Shell({ rtl, backLabel, launching }: { rtl: boolean; backLabel: string;
           the launch screen is still over the app, its night wins: this one
           mounts after the launch screen's and would otherwise be on top. */}
       <StatusBar style={launching ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{
-          // White headers with navy type, the reference's chrome: the screen
-          // under them is white, and a navy bar on every page read as a
-          // second hero the design never had.
-          headerStyle: { backgroundColor: C.background },
-          headerTintColor: C.text,
-          headerShadowVisible: false,
-          headerTitleStyle: { fontFamily: familyFor('heading', rtl), fontSize: 18 },
-          headerBackButtonDisplayMode: 'minimal',
-          // What a screen reader says for the arrow. Without it the label is
-          // the previous route's name, and from any tab that is "(tabs)".
-          headerBackTitle: backLabel,
-          contentStyle: { backgroundColor: C.background },
-        }}
-      >
+      <Stack screenOptions={stackOptions}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="recherche" options={{ headerShown: false, animation: 'fade' }} />
         {/* The staff screens bring their own stack and headers. */}
         <Stack.Screen name="gestion" options={{ headerShown: false }} />
       </Stack>

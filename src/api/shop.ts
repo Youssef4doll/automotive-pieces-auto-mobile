@@ -19,6 +19,15 @@ export type ShopSettings = {
     /** "24h", "48–72h" — the shop's own words. Null when unset. */
     grandTunis: string | null;
     regions: string | null;
+    /**
+     * What the estimated date is worked out from (lib/delivery-estimate):
+     * the cut-off "14:00", the courier's hours "10:00–18:00", the working
+     * days "1,2,3,4,5,6". Null until the shop states them; absent from an
+     * older shop. No cut-off, no date.
+     */
+    cutoff?: string | null;
+    window?: string | null;
+    days?: string | null;
   };
   tax: { vatRate: number; stampDuty: number };
   supplierLeadTime: string | null;

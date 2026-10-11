@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { QuestionThread } from '@/components/ui/question-thread';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { arrivalWindow, sameDay } from '@/lib/arrival';
+import { estimateLine } from '@/lib/estimate-text';
 import { deliveryDelay } from '@/lib/checkout';
 import { OrderSummary } from '@/components/ui/order-summary';
 import { Failed, Loading } from '@/components/ui/states';
@@ -151,7 +152,12 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
   const delay = settings.status === 'loaded' && order.deliveryMethod === 'DELIVERY' ? deliveryDelay(settings.data, order.governorate) : null;
   const shippedAt = when('SHIPPED');
   const window = order.status === 'SHIPPED' && shippedAt ? arrivalWindow(shippedAt, delay) : null;
-  const arrivalLine = window
+  // The date promised with the order (lib/delivery-estimate) comes first:
+  // it is what the shop said, and what a delay is measured against.
+  const promised = order.estimate && order.deliveryMethod === 'DELIVERY' && (order.status === 'PENDING' || order.status === 'CONFIRMED' || order.status === 'PREPARED' || order.status === 'SHIPPED') ? order.estimate : null;
+  const arrivalLine = promised
+    ? t('eta.line', { when: estimateLine(promised, locale) })
+    : window
     ? sameDay(window.from, window.to)
       ? t('track.arrivesOn', { date: formatDate(window.from.toISOString(), locale) })
       : t('track.arrivesBetween', { from: formatDate(window.from.toISOString(), locale), to: formatDate(window.to.toISOString(), locale) })
@@ -213,6 +219,15 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
           </View>
         ) : null}
 
+        {/* Said before the customer has to ask (website lib/order-delays). */}
+        {order.late && promised ? (
+          <View style={[styles.late, row]} testID="order-late">
+            <Feather name="alert-circle" size={IconSize.large} color={C.caution} />
+            <Text variant="body" tone={C.text} style={styles.flexText}>
+              {t(order.status === 'SHIPPED' ? 'eta.lateShipped' : 'eta.late')}
+            </Text>
+          </View>
+        ) : null}
         {arrivalLine ? (
           <View style={[styles.arrival, row]}>
             <Feather name="truck" size={IconSize.medium} color={C.text} />
@@ -264,7 +279,7 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
               key={`${item.sku}-${item.name}`}
               accessibilityRole={item.slug ? 'button' : undefined}
               disabled={!item.slug}
-              onPress={() => item.slug && router.push({ pathname: '/produit/[slug]', params: { slug: item.slug } })}
+              onPress={() => item.slug && router.push({ pathname: '/piece/[slug]', params: { slug: item.slug } })}
               style={({ pressed }) => [styles.item, row, pressed && styles.pressed]}
             >
               <View style={styles.art}>
@@ -293,6 +308,8 @@ function Tracking({ order, onRefresh }: { order: Order; onRefresh: () => void })
           <Text variant="body">{order.customerName}</Text>
           <Text variant="body">{order.phone}</Text>
           {order.address ? <Text variant="body">{`${order.address}, ${order.governorate}`}</Text> : null}
+          {order.landmark ? <Text variant="hint">{t('staff.order.landmark', { text: order.landmark })}</Text> : null}
+          {order.pin ? <Text variant="hint">{t('addr.pinSet')}</Text> : null}
           {order.vehicleLabel ? <Text variant="hint">{t('checkout.forVehicle', { vehicle: order.vehicleLabel })}</Text> : null}
           <Text variant="hint">{t('checkout.cod')}</Text>
         </View>
@@ -331,6 +348,16 @@ const styles = StyleSheet.create({
   cancelText: { textDecorationLine: 'underline' },
   scroll: { paddingBottom: Spacing.six },
   arrival: { alignItems: 'center', gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.tile, backgroundColor: C.surface, marginTop: Spacing.three },
+  late: {
+    alignItems: 'center',
+    gap: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Radius.tile,
+    backgroundColor: C.cautionSurface,
+    borderWidth: 1,
+    borderColor: C.cautionBorder,
+    marginTop: Spacing.three,
+  },
   flexText: { flex: 1 },
   help: { gap: Spacing.two, marginTop: Spacing.four },
   sheet: { gap: Spacing.three, padding: Spacing.three },

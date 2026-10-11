@@ -51,9 +51,10 @@ export default function FindScreen() {
   ];
 
   const go = (way: Way) => {
-    if (way === 'car') return active ? router.push({ pathname: '/pieces-compatibles', params: { engine: active.engineId } }) : router.push('/garage/ajouter');
+    // Into Accueil's own stack (components/tab-header), where this screen was opened from.
+    if (way === 'car') return active ? router.navigate({ pathname: '/(tabs)/(home)/pieces-compatibles', params: { engine: active.engineId } }) : router.push('/garage/ajouter');
     if (way === 'part') return router.navigate('/catalogue');
-    if (way === 'ref') return router.push({ pathname: '/recherche', params: { mode: 'reference' } });
+    if (way === 'ref') return router.navigate({ pathname: '/(tabs)/(home)/recherche', params: { mode: 'reference' } });
     router.push({ pathname: '/demande', params: { photo: '1' } });
   };
 

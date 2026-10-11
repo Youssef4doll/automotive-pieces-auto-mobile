@@ -1,5 +1,6 @@
 import type { Product } from './catalogue';
 import { send } from './client';
+import type { DeliveryEstimate } from '@/lib/delivery-estimate';
 
 export type CartQuoteLine = {
   productId: string;
@@ -104,6 +105,13 @@ export type Order = {
   email: string | null;
   governorate: string;
   address: string | null;
+  /** What the driver needs where the street has no number. Absent from an older shop. */
+  landmark?: string | null;
+  pin?: { lat: number; lng: number } | null;
+  /** The date promised when the order was placed (lib/delivery-estimate); null when none was. */
+  estimate?: DeliveryEstimate | null;
+  /** The shop told the customer the promised date will be missed. */
+  late?: boolean;
   deliveryMethod: DeliveryMethod;
   paymentMethod: 'COD' | 'CARD';
   vehicleLabel: string | null;
@@ -149,6 +157,12 @@ export type OrderInput = {
   /** Required for delivery; collected in store, none is asked for. */
   governorate?: string;
   address?: string;
+  /** A landmark in the customer's words, and the pin they placed — for the driver. */
+  landmark?: string;
+  latitude?: number;
+  longitude?: number;
+  /** The saved address this goes to, so it comes first next time. Never read for the address itself. */
+  savedAddressId?: string;
   deliveryMethod: DeliveryMethod;
   paymentMethod: 'COD';
   notes?: string;

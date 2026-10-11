@@ -22,6 +22,12 @@ export type CheckoutDetails = {
   /** Where the governorate has a delegation list (lib/delegations); '' otherwise. Optional: older saved details have none. */
   delegation?: string;
   address: string;
+  /** What the driver needs where the street has no number. Optional: older saved details have none. */
+  landmark?: string;
+  /** The point the customer placed on the map (components/ui/pin-map), or none. */
+  pin?: { lat: number; lng: number } | null;
+  /** The account's saved address these details came from, so it comes first next time. */
+  savedAddressId?: string;
   notes: string;
   deliveryMethod: DeliveryMethod;
 };

@@ -1,5 +1,6 @@
 import { account } from './account';
 import { commerce } from './commerce';
+import { delivery } from './delivery';
 import { care } from './care';
 import { expert } from './expert';
 import { returns } from './returns';
@@ -441,9 +442,9 @@ const base = {
 
 /** The first dictionary, the buying one (commerce.ts) and the shop's own (staff.ts), as one. */
 const dict = {
-  fr: { ...base.fr, ...commerce.fr, ...staff.fr, ...look.fr, ...account.fr, ...expert.fr, ...care.fr, ...returns.fr, ...reach.fr },
-  en: { ...base.en, ...commerce.en, ...staff.en, ...look.en, ...account.en, ...expert.en, ...care.en, ...returns.en, ...reach.en },
-  ar: { ...base.ar, ...commerce.ar, ...staff.ar, ...look.ar, ...account.ar, ...expert.ar, ...care.ar, ...returns.ar, ...reach.ar },
+  fr: { ...base.fr, ...commerce.fr, ...staff.fr, ...look.fr, ...account.fr, ...expert.fr, ...care.fr, ...returns.fr, ...reach.fr, ...delivery.fr },
+  en: { ...base.en, ...commerce.en, ...staff.en, ...look.en, ...account.en, ...expert.en, ...care.en, ...returns.en, ...reach.en, ...delivery.en },
+  ar: { ...base.ar, ...commerce.ar, ...staff.ar, ...look.ar, ...account.ar, ...expert.ar, ...care.ar, ...returns.ar, ...reach.ar, ...delivery.ar },
 } as const;
 
 export type DictKey = keyof (typeof dict)['fr'];

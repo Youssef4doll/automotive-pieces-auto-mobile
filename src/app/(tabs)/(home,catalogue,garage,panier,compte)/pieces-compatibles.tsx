@@ -13,6 +13,7 @@ import { Text } from '@/components/ui/text';
 import { Border, C, IconSize, Radius, Spacing } from '@/constants/theme';
 import { useResource } from '@/hooks/use-resource';
 import { EmptyBay } from '@/illustrations/vehicle';
+import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel } from '@/store/garage';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
@@ -44,6 +45,7 @@ import { ltr } from '@/lib/format';
 export default function CompatiblePartsScreen() {
   const router = useRouter();
   const { t, rtl } = useI18n();
+  const tabBarSpace = useTabBarSpace();
   const { engine } = useLocalSearchParams<{ engine?: string }>();
 
   const active = useGarage((s) => s.active);
@@ -118,7 +120,7 @@ export default function CompatiblePartsScreen() {
               { key: 'likely', data: parts.data.likely.products },
             ].filter((section) => section.data.length > 0)}
             keyExtractor={(product) => product.id}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
             showsVerticalScrollIndicator={false}
             refreshControl={refreshControl}
             stickySectionHeadersEnabled={false}

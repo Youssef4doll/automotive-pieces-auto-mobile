@@ -12,6 +12,7 @@ import { Text } from '@/components/ui/text';
 import { Brand, C, Spacing } from '@/constants/theme';
 import { useLive } from '@/hooks/use-live';
 import { useI18n } from '@/i18n/provider';
+import { estimateLine } from '@/lib/estimate-text';
 import { formatDate, formatDT } from '@/lib/format';
 import { useToast } from '@/store/toast';
 
@@ -116,7 +117,23 @@ function Detail({ order, onChange }: { order: OrderDetail; onChange: (o: OrderDe
         <Text variant="body">{order.deliveryMethod === 'PICKUP' ? t('staff.pickup') : t('staff.homeDelivery')}</Text>
         <Text variant="body">{order.governorate}</Text>
         {order.address ? <Text variant="body">{order.address}</Text> : null}
+        {order.landmark ? <Text variant="body">{t('staff.order.landmark', { text: order.landmark })}</Text> : null}
+        {order.estimate ? (
+          <Text variant="hint" tone={order.late ? C.danger : C.textMuted}>
+            {t('staff.order.promised', { when: estimateLine(order.estimate, locale) })}
+            {order.late ? ` · ${t('staff.order.late')}` : ''}
+          </Text>
+        ) : null}
         <Text variant="hint">{order.paymentMethod === 'COD' ? t('staff.order.payCod') : t('staff.order.payCard')}</Text>
+        {/* The pin the customer placed: the courier opens it in a map. */}
+        {order.pin ? (
+          <Button
+            label={t('staff.order.map')}
+            variant="secondary"
+            icon="map"
+            onPress={() => open(`https://www.google.com/maps/search/?api=1&query=${order.pin!.lat},${order.pin!.lng}`)}
+          />
+        ) : null}
       </Card>
 
       <Card>

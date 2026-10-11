@@ -188,7 +188,7 @@ try {
   const lastCompat = tiles.map((l) => l.includes(', Compatible')).lastIndexOf(true);
   check(lastCompat >= 0 && (firstIncompat === -1 || lastCompat < firstIncompat), 'family: compatible parts first', tiles.length);
   // The family page covers the tab bar, so the proof is the basket itself.
-  const quick = page.locator('[aria-label^="Ajouter "][aria-label$=" au panier"]').first();
+  const quick = page.locator('[aria-label^="Ajouter "][aria-label$=" au panier"]:visible').first();
   const quickName = ((await quick.getAttribute('aria-label')) ?? '').replace(/^Ajouter /, '').replace(/ au panier$/, '');
   await quick.click();
   await page.waitForTimeout(800);

@@ -47,7 +47,39 @@ export type AccountOrder = { ref: string; status: OrderStatus; placedAt: string;
  * Every call after sign-in carries the session as a bearer token; the shop
  * derives who is asking from it and from nothing the app sends.
  */
+/** A delivery address kept on the account (website lib/saved-addresses). */
+export type SavedAddress = {
+  id: string;
+  label: string;
+  governorate: string;
+  delegation: string | null;
+  address: string;
+  landmark: string | null;
+  pin: { lat: number; lng: number } | null;
+  lastUsedAt: string | null;
+};
+
+export type SavedAddressInput = {
+  label: string;
+  governorate: string;
+  delegation?: string;
+  address: string;
+  landmark?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
 export const accountApi = {
+  /** The account's addresses, the last one used first. */
+  addresses: (token: string, signal?: AbortSignal) =>
+    send<{ addresses: SavedAddress[] }>('/api/v1/account/addresses', { token, signal }),
+  addAddress: (token: string, input: SavedAddressInput) =>
+    send<{ address: SavedAddress }>('/api/v1/account/addresses', { method: 'POST', token, body: input }),
+  updateAddress: (token: string, id: string, input: SavedAddressInput) =>
+    send<{ address: SavedAddress }>(`/api/v1/account/addresses/${encodeURIComponent(id)}`, { method: 'PATCH', token, body: input }),
+  deleteAddress: (token: string, id: string) =>
+    send<{ ok: true }>(`/api/v1/account/addresses/${encodeURIComponent(id)}`, { method: 'DELETE', token }),
+
   signIn: (email: string, password: string) =>
     send<{ token: string; account: Account; staff?: StaffGrant }>('/api/v1/auth/session', {
       method: 'POST',

@@ -103,7 +103,7 @@ for (const width of SCREEN_VIEWPORTS) {
 
     // Open a part from the list, put it in the basket, then walk the basket
     // and the first checkout step.
-    await page.locator('[aria-label*=" DT"]').first().click();
+    await page.locator('[aria-label*=" DT"]:visible').first().click();
     await page.waitForTimeout(2500);
     let r = await inspect(page, width);
     if (r.hScroll || r.offscreen.length || r.clipped.length || r.small.length) fail(`product ${width}`, r);

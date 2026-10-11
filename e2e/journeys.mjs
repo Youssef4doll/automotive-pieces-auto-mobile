@@ -80,9 +80,9 @@ await journey('1 car, no part', async ({ page }) => {
   await addBmw(page);
   await page.goto(`${APP_URL}/pieces-compatibles`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(2500);
-  const cards = await page.locator('[aria-label*=" DT"]').count();
+  const cards = await page.locator('[aria-label*=" DT"]:visible').count();
   check(cards > 0, '1 car, no part: confirmed parts listed', { cards });
-  await page.locator('[aria-label*=" DT"]').first().click();
+  await page.locator('[aria-label*=" DT"]:visible').first().click();
   await page.waitForTimeout(2500);
   check((await bodyText(page)).includes('Compatible avec votre BMW'), '1 car, no part: the part page says it fits, naming the car');
 });
@@ -157,7 +157,7 @@ await journey('7/8 order, track, again', async ({ page }) => {
   await addBmw(page);
   await page.goto(`${APP_URL}/pieces-compatibles`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(2500);
-  await page.locator('[aria-label^="Ajouter "][aria-label$=" au panier"]').first().click();
+  await page.locator('[aria-label^="Ajouter "][aria-label$=" au panier"]:visible').first().click();
   await page.waitForTimeout(1200);
   const ref = await checkout(page);
   check(Boolean(ref), '8 order: placed and numbered', ref);
@@ -218,14 +218,16 @@ await journey('10 guest checkout by SMS', async ({ page }) => {
     const lines = fs.existsSync(outbox) ? fs.readFileSync(outbox, 'utf8').trim().split('\n') : [];
     for (const line of lines.reverse()) {
       const m = JSON.parse(line);
-      if (m.to === `+216${digits}`) return m.body.match(/\d{6}/)?.[0] ?? null;
+      // The latest message carrying a code: order texts (lib/order-texts) go to the same number.
+      const code = m.to === `+216${digits}` ? m.body.match(/\b\d{6}\b/)?.[0] : null;
+      if (code) return code;
     }
     return null;
   };
   await addBmw(page);
   await page.goto(`${APP_URL}/pieces-compatibles`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(2500);
-  await page.locator('[aria-label^="Ajouter "][aria-label$=" au panier"]').first().click();
+  await page.locator('[aria-label^="Ajouter "][aria-label$=" au panier"]:visible').first().click();
   await page.waitForTimeout(1200);
   await page.goto(`${APP_URL}/panier`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(3000);

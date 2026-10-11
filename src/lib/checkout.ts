@@ -2,6 +2,7 @@ import type { ShopSettings } from '@/api/shop';
 import type { DictKey } from '@/i18n/dictionaries';
 import type { CheckoutDetails } from '@/store/checkout';
 import { DELEGATIONS } from './delegations';
+import { estimateDelivery, type DeliveryEstimate } from './delivery-estimate';
 
 /**
  * A Tunisian number's 8 digits, first digit 2–9, with +216 / 00216 and any
@@ -77,4 +78,21 @@ export function delaySpan(a: string | null, b: string | null): string | null {
   if (!x || !y || !x.length || !y.length) return `${a} / ${b}`;
   const all = [...x, ...y];
   return `${Math.min(...all)}–${Math.max(...all)}h`;
+}
+
+/**
+ * The date the shop's settings promise for an order going to `governorate`
+ * now (lib/delivery-estimate) — the same sum the shop does when the order
+ * arrives, and stores. Null without a governorate, or when the shop has not
+ * stated a cut-off: the delay as written is shown then, as before.
+ */
+export function estimateFor(settings: ShopSettings, governorate: string, now = new Date()): DeliveryEstimate | null {
+  if (!governorate) return null;
+  return estimateDelivery({
+    now,
+    delay: settings.grandTunis.includes(governorate) ? settings.delivery.grandTunis : settings.delivery.regions,
+    cutoff: settings.delivery.cutoff,
+    window: settings.delivery.window,
+    days: settings.delivery.days,
+  });
 }

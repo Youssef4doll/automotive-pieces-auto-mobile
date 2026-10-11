@@ -29,9 +29,15 @@ const GROUPS: { title: DictKey; keys: string[]; hint?: DictKey }[] = [
     keys: ['free_shipping_threshold', 'delivery_grand_tunis', 'delivery_regions', 'supplier_lead_time'],
     hint: 'staff.set.leadHint',
   },
+  // The estimated date (website lib/delivery-estimate): no cut-off, no date anywhere.
+  {
+    title: 'staff.set.estimate',
+    keys: ['delivery_cutoff', 'delivery_window', 'delivery_days', 'sms_order_updates'],
+    hint: 'staff.set.estimateHint',
+  },
   { title: 'staff.set.tax', keys: ['shop_tax_id', 'vat_rate', 'stamp_duty'], hint: 'staff.set.taxHint' },
 ];
-const LTR = new Set(['shop_phone', 'shop_whatsapp', 'shop_email', 'shop_tax_id', 'vat_rate', 'stamp_duty', 'free_shipping_threshold', 'shop_founded_year']);
+const LTR = new Set(['delivery_cutoff', 'delivery_window', 'delivery_days', 'sms_order_updates', 'shop_phone', 'shop_whatsapp', 'shop_email', 'shop_tax_id', 'vat_rate', 'stamp_duty', 'free_shipping_threshold', 'shop_founded_year']);
 const NUMERIC = new Set(['vat_rate', 'stamp_duty', 'free_shipping_threshold', 'shop_founded_year']);
 /** Where a placeholder matters: these are hidden from customers until filled. */
 const CONTACT = new Set(['shop_phone', 'shop_whatsapp', 'shop_email', 'shop_address']);

@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { FormField } from '@/components/ui/form-field';
 import { PartImage } from '@/components/ui/part-image';
 import { QuantityStepper } from '@/components/ui/quantity-stepper';
+import { StickyBar } from '@/components/ui/sticky-bar';
 import { Failed, Loading } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
 import { Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
@@ -89,7 +90,6 @@ function ReturnForm({ order }: { order: Order }) {
   const [reason, setReason] = useState<ReturnReason | null>(null);
   const [wish, setWish] = useState<ReturnWish>('EXCHANGE');
   const [note, setNote] = useState('');
-  const [unmounted, setUnmounted] = useState(false);
   const [photos, setPhotos] = useState<PickedPhoto[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +126,6 @@ function ReturnForm({ order }: { order: Order }) {
     if (!chosen) return setError(t('returns.err.items'));
     if (!rule) return setError(t('returns.err.reason'));
     if (rule.photo === 'required' && photos.length === 0) return setError(t('returns.err.photo'));
-    if (rule.unmounted && !unmounted) return setError(t('returns.err.unmounted'));
     setBusy(true);
     try {
       const token = await tokenFor(order.ref);
@@ -138,7 +137,8 @@ function ReturnForm({ order }: { order: Order }) {
           reason,
           wish,
           note: note.trim() || undefined,
-          unmounted: rule.unmounted ? unmounted : false,
+          // Said under the button for the reasons that ask it: sending is the declaration.
+          unmounted: rule.unmounted,
           items: Object.entries(qty)
             .filter(([, n]) => n > 0)
             .map(([orderItemId, n]) => ({ orderItemId, qty: n })),
@@ -334,37 +334,28 @@ function ReturnForm({ order }: { order: Order }) {
               <Text variant="hint" style={align}>
                 {t('returns.form.wishHint')}
               </Text>
-
-              {rule.unmounted ? (
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: unmounted }}
-                  onPress={() => {
-                    setUnmounted((v) => !v);
-                    setError(null);
-                  }}
-                  style={({ pressed }) => [styles.check, row, unmounted && styles.checkOn, pressed && styles.pressed]}
-                >
-                  <View style={[styles.box, unmounted && styles.boxOn]}>{unmounted ? <Feather name="check" size={16} color={Brand.white} /> : null}</View>
-                  <Text variant="body" tone={C.text} style={[styles.flex, align]}>
-                    {t('returns.form.unmounted')}
-                  </Text>
-                </Pressable>
-              ) : null}
             </>
           ) : null}
 
-          {error ? (
-            <Text variant="body" tone={C.danger} accessibilityLiveRegion="polite" style={align}>
-              {error}
-            </Text>
-          ) : null}
-          <Button label={t('returns.form.send')} icon="send" loading={busy} onPress={() => void send()} />
           <Text variant="hint" style={[styles.centred]}>
             {t('returns.form.honest')}
           </Text>
         </View>
       </ScrollView>
+      {/* Always under the thumb: the part (picked when there is one), the reason, send — three taps. */}
+      <StickyBar>
+        {error ? (
+          <Text variant="body" tone={C.danger} accessibilityLiveRegion="polite" style={align}>
+            {error}
+          </Text>
+        ) : null}
+        {rule?.unmounted ? (
+          <Text variant="hint" tone={C.text} style={align}>
+            {t('returns.form.unmountedImplied')}
+          </Text>
+        ) : null}
+        <Button label={t('returns.form.send')} icon="send" loading={busy} onPress={() => void send()} testID="return-send" />
+      </StickyBar>
     </KeyboardAvoidingView>
   );
 }

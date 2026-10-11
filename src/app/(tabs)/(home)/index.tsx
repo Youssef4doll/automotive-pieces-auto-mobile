@@ -32,7 +32,7 @@ import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { useSvgId } from '@/hooks/use-svg-id';
 import { Rail } from '@/components/ui/rail';
 
-const LOGO = require('../../../assets/images/logo-lockup.png');
+const LOGO = require('@/assets/images/logo-lockup.png');
 
 /** Where the disc is in the hero render, as fractions of its width and height. */
 const DISC = { x: 0.53, y: 0.55 };

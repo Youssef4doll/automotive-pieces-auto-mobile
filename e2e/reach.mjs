@@ -60,7 +60,9 @@ const lastCode = (digits) => {
   const lines = fs.existsSync(OUTBOX) ? fs.readFileSync(OUTBOX, 'utf8').trim().split('\n') : [];
   for (const line of lines.reverse()) {
     const m = JSON.parse(line);
-    if (m.to === `+216${digits}`) return m.body.match(/\d{6}/)?.[0] ?? null;
+    // The latest message carrying a code: order texts (lib/order-texts) go to the same number.
+    const code = m.to === `+216${digits}` ? m.body.match(/\b\d{6}\b/)?.[0] : null;
+    if (code) return code;
   }
   return null;
 };

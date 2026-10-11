@@ -4,6 +4,7 @@ import type { Product } from '@/api/catalogue';
 import { Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
+import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { ProductTile } from './product-tile';
 
 /**
@@ -28,6 +29,8 @@ export function ProductGrid({
 }) {
   const { rtl } = useI18n();
   const refreshControl = usePullRefresh();
+  // Inside a tab's stack: the list ends above the tab bar (components/tab-header).
+  const tabBarSpace = useTabBarSpace();
   const rows: (Product | null)[][] = [];
   for (let i = 0; i < products.length; i += 2) rows.push([products[i], products[i + 1] ?? null]);
 
@@ -41,7 +44,7 @@ export function ProductGrid({
       onEndReachedThreshold={0.6}
       refreshControl={refreshControl}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.list}
+      contentContainerStyle={[styles.list, { paddingBottom: tabBarSpace }]}
       renderItem={({ item: pair }) => (
         <View style={[styles.row, { flexDirection: rtl ? 'row-reverse' : 'row' }]}>
           {pair.map((p, i) => (p ? <ProductTile key={p.id} product={p} /> : <View key={`gap-${i}`} style={styles.spacer} />))}

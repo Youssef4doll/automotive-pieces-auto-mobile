@@ -35,9 +35,11 @@ import { useCartCount } from '@/store/cart';
  * lens only while it moves. The active tab is still three signals, never
  * colour alone — see there.
  *
- * The titles of Catalogue, Garage, Panier and Compte are drawn by each tab's
- * own layout (components/tab-header), not by the navigator: the system's bar
- * draws none, and this way the title is the same with either.
+ * Each tab is a stack of its own (components/tab-header), so it keeps what
+ * was opened in it: a part opened from the catalogue is still there after a
+ * look at the basket. The titles of Catalogue, Garage, Panier and Compte are
+ * drawn by those stacks, not by the navigator: the system's bar draws none,
+ * and this way the title is the same with either.
  *
  * ## The icons
  *
@@ -68,11 +70,11 @@ function SystemTabs() {
   const { t, rtl } = useI18n();
   const cartCount = useCartCount();
   const tabs = [
-    { name: 'index', label: t('tab.home'), icon: ICONS.home },
-    { name: 'catalogue', label: t('tab.catalog'), icon: ICONS.catalogue },
-    { name: 'garage', label: t('tab.garage'), icon: ICONS.garage },
-    { name: 'panier', label: t('tab.cart'), icon: ICONS.cart, badge: cartCount > 0 ? (cartCount > 99 ? '99+' : String(cartCount)) : null },
-    { name: 'compte', label: t('tab.account'), icon: ICONS.account },
+    { name: '(home)', label: t('tab.home'), icon: ICONS.home },
+    { name: '(catalogue)', label: t('tab.catalog'), icon: ICONS.catalogue },
+    { name: '(garage)', label: t('tab.garage'), icon: ICONS.garage },
+    { name: '(panier)', label: t('tab.cart'), icon: ICONS.cart, badge: cartCount > 0 ? (cartCount > 99 ? '99+' : String(cartCount)) : null },
+    { name: '(compte)', label: t('tab.account'), icon: ICONS.account },
   ];
 
   return (
@@ -110,7 +112,7 @@ function DrawnTabs() {
   return (
     <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false }}>
       <Tabs.Screen
-        name="index"
+        name="(home)"
         options={{
           title: t('app.name'),
           tabBarLabel: t('tab.home'),
@@ -118,7 +120,7 @@ function DrawnTabs() {
         }}
       />
       <Tabs.Screen
-        name="catalogue"
+        name="(catalogue)"
         options={{
           title: t('catalog.title'),
           tabBarLabel: t('tab.catalog'),
@@ -126,7 +128,7 @@ function DrawnTabs() {
         }}
       />
       <Tabs.Screen
-        name="garage"
+        name="(garage)"
         options={{
           title: t('garage.title'),
           tabBarLabel: t('tab.garage'),
@@ -134,7 +136,7 @@ function DrawnTabs() {
         }}
       />
       <Tabs.Screen
-        name="panier"
+        name="(panier)"
         options={{
           title: t('cart.title'),
           tabBarLabel: t('tab.cart'),
@@ -144,7 +146,7 @@ function DrawnTabs() {
         }}
       />
       <Tabs.Screen
-        name="compte"
+        name="(compte)"
         options={{
           title: t('account.me'),
           tabBarLabel: t('tab.account'),

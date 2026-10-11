@@ -32,6 +32,12 @@
       ],
       "expo-localization",
       [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Pour placer votre adresse de livraison sur la carte, afin que le livreur trouve votre porte."
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Pour ajouter les photos des pièces au catalogue de la boutique.",

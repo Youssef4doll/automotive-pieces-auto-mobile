@@ -91,10 +91,9 @@ try {
   await page.getByRole('radio', { name: /Je n’en ai plus besoin/ }).click();
   await page.waitForTimeout(400);
   check(await says('Retour sous 14 jours'), 'app: the 14-day conditions for that reason');
-  await page.getByRole('button', { name: /Envoyer la demande/ }).click();
-  await page.waitForTimeout(500);
-  check(await says('Confirmez que la pièce n’a pas été montée'), 'app: will not send without « never fitted »');
-  await page.getByRole('checkbox').click();
+  // Three taps (the owner, October 2026): the part is picked, the reason,
+  // send — the « never fitted » declaration is said above the button.
+  check(await says('En envoyant, vous confirmez que la pièce n’a pas été montée'), 'app: sending is the « never fitted » declaration, said by the button');
   await page.getByRole('radio', { name: 'Un remboursement' }).click();
   await page.screenshot({ path: `${SHOTS}-details.png`, fullPage: false });
   await page.getByRole('button', { name: /Envoyer la demande/ }).click();

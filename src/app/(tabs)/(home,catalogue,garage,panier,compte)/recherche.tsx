@@ -22,6 +22,7 @@ import { useI18n } from '@/i18n/provider';
 import { useGarage, vehicleLabel } from '@/store/garage';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import { whatsappUrl } from '@/components/ui/shop-contact';
+import { useTabBarSpace } from '@/hooks/use-tab-bar-space';
 import { useRecentSearches } from '@/store/recent-searches';
 import { track } from '@/services/analytics';
 import { Button } from '@/components/ui/button';
@@ -63,6 +64,8 @@ export default function SearchScreen() {
   const params = useLocalSearchParams<{ q?: string; mode?: 'reference' }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // Inside a tab's stack (components/tab-header): results end above the tab bar.
+  const tabBarSpace = useTabBarSpace();
   const { t, rtl } = useI18n();
 
   const engineId = useGarage((s) => s.active?.engineId);
@@ -390,7 +393,7 @@ export default function SearchScreen() {
         <ScrollView
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          contentContainerStyle={[styles.column, styles.idle, { paddingBottom: insets.bottom + Spacing.five }]}
+          contentContainerStyle={[styles.column, styles.idle, { paddingBottom: tabBarSpace + Spacing.two }]}
         >
           {recents.queries.length ? (
             <View style={styles.group}>
@@ -515,7 +518,7 @@ export default function SearchScreen() {
           keyExtractor={(p) => p.id}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          contentContainerStyle={[styles.column, styles.list, { paddingBottom: insets.bottom + Spacing.five }]}
+          contentContainerStyle={[styles.column, styles.list, { paddingBottom: tabBarSpace + Spacing.two }]}
           ListHeaderComponent={header}
           ItemSeparatorComponent={Gap}
           renderItem={({ item }) => (

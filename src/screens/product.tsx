@@ -1,6 +1,6 @@
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Linking, Modal, Platform, Pressable, ScrollView, Share, StyleSheet, useWindowDimensions, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming, ZoomIn } from 'react-native-reanimated';
@@ -29,7 +29,8 @@ import { useGarage, vehicleLabel } from '@/store/garage';
 import { track } from '@/services/analytics';
 import { usePullRefresh } from '@/hooks/use-pull-refresh';
 import { useCheckout } from '@/store/checkout';
-import { delaySpan, deliveryDelay } from '@/lib/checkout';
+import { delaySpan, deliveryDelay, estimateFor } from '@/lib/checkout';
+import { estimateDays } from '@/lib/estimate-text';
 import { useCartCount } from '@/store/cart';
 import { ProductTile } from '@/components/ui/product-tile';
 import { Rail } from '@/components/ui/rail';
@@ -37,7 +38,7 @@ import { whatsappUrl } from '@/components/ui/shop-contact';
 import { MakeLogo } from '@/components/ui/make-logo';
 import { useVehicleLine } from '@/components/ui/vehicle-card';
 import { StockAlert } from '@/components/ui/stock-alert';
-import { SYSTEM_TAB_BAR } from '@/components/tab-bar';
+import { SYSTEM_TAB_BAR, tabBarFootprint } from '@/components/tab-bar';
 
 /** iOS 26 and later: the header's buttons are the system's own, in liquid glass (SystemIsland). */
 const SYSTEM_GLASS = SYSTEM_TAB_BAR;
@@ -117,11 +118,16 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   // none known yet, both of the shop's delays, each with its area — never
   // the fast one alone, which the checkout would then contradict.
   const governorate = useCheckout((s) => s.details.governorate);
-  const { t: tr } = useI18n();
+  const { t: tr, locale: trLocale } = useI18n();
   const delay = settings && governorate ? deliveryDelay(settings, governorate) : null;
+  // With the shop's cut-off stated and the governorate known, a date:
+  // "Livraison estimée : mardi 13 octobre" (lib/delivery-estimate).
+  const estimate = settings && governorate ? estimateFor(settings, governorate) : null;
   const shipLine = !settings
     ? null
-    : delay
+    : estimate
+      ? tr('eta.line', { when: estimateDays(estimate, trLocale) })
+      : delay
       ? tr('product.shipTo', { t: delay, g: governorate })
       : settings.delivery.grandTunis && settings.delivery.regions
         ? tr('product.shipBoth', { a: settings.delivery.grandTunis, b: settings.delivery.regions })
@@ -142,6 +148,10 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   // (the owner, October 2026) — no jump down the page to find them.
   const [fitsOpen, setFitsOpen] = useState(false);
   const insets = useSafeAreaInsets();
+  // In a tab's stack (components/tab-header) the button sits above the tab
+  // bar; opened over the tabs (/piece, from an order) above the home bar.
+  const inTabs = useSegments()[0] === '(tabs)';
+  const bottom = inTabs ? tabBarFootprint(insets.bottom) : insets.bottom;
 
   // The purchase bar is pinned to the foot of the screen, always within
   // reach, and it does not change shape: "Ajouter au panier" stays "Ajouter
@@ -238,7 +248,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   return (
     <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: BAR_HEIGHT + insets.bottom + Spacing.four }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: BAR_HEIGHT + bottom + Spacing.four }]}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}
       >
@@ -505,7 +515,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
         </View>
       </ScrollView>
 
-      <View style={[styles.bar, { paddingBottom: insets.bottom + Spacing.three }]}>
+      <View style={[styles.bar, { paddingBottom: bottom + Spacing.three }]}>
         <View style={[styles.barInner, row]}>
           {!buyable ? (
             <Button label={t('stock.unavailable')} onPress={() => undefined} disabled style={styles.flex} />

@@ -1,13 +1,15 @@
 import { Feather } from '@expo/vector-icons';
 import { Redirect, Stack, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
+import { accountApi } from '@/api/account';
 import { ApiError, newIdempotencyKey, type ApiFailure } from '@/api/client';
 import { justPlaced, ordersApi, type OrderInput } from '@/api/orders';
 import type { ShopSettings } from '@/api/shop';
 import { PhoneSignIn } from '@/components/phone-sign-in';
+import { PinPicker } from '@/components/pin-picker';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/form-field';
@@ -18,10 +20,13 @@ import { StickyBar } from '@/components/ui/sticky-bar';
 import { Text } from '@/components/ui/text';
 import { Border, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
 import { quoteOf, useCartQuote } from '@/hooks/use-cart-quote';
+import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
 import type { DictKey } from '@/i18n/dictionaries';
 import { useI18n } from '@/i18n/provider';
-import { checkoutProblems, deliveryDelay, type CheckoutField } from '@/lib/checkout';
+import { checkoutProblems, deliveryDelay, estimateFor, type CheckoutField } from '@/lib/checkout';
+import { estimateLine } from '@/lib/estimate-text';
+import { governorateFromRegion } from '@/lib/map-tiles';
 import { DELEGATIONS, otherGovernorateIn } from '@/lib/delegations';
 import { fitState, FIT_LOOK } from '@/lib/fit';
 import { formatDT, ltr } from '@/lib/format';
@@ -84,8 +89,13 @@ export default function CheckoutScreen() {
 type Sheet = 'address' | 'contact' | 'note' | 'confirm' | null;
 const CONTACT: CheckoutField[] = ['customerName', 'phone', 'email'];
 
+/** The fields that make an address: editing one makes it a new address, not the saved one. */
+const ADDRESS_FIELDS: CheckoutField[] = ['governorate', 'delegation', 'address'];
+type SaveLabel = 'addr.labelHome' | 'addr.labelWork' | 'addr.labelOther';
+const SAVE_LABELS: SaveLabel[] = ['addr.labelHome', 'addr.labelWork', 'addr.labelOther'];
+
 function Checkout({ settings }: { settings: ShopSettings }) {
-  const { t, rtl } = useI18n();
+  const { t, rtl, locale } = useI18n();
   const router = useRouter();
   const details = useCheckout((s) => s.details);
   const update = useCheckout((s) => s.update);
@@ -102,7 +112,18 @@ function Checkout({ settings }: { settings: ShopSettings }) {
   // Inside the address sheet: the form, or one of its two lists. One sheet
   // whose content changes — iOS cannot present a modal while another is
   // still closing, and the lists as sheets of their own never appeared.
-  const [pick, setPick] = useState<'governorate' | 'delegation' | null>(null);
+  const [pick, setPick] = useState<'governorate' | 'delegation' | 'map' | null>(null);
+  // The account's own addresses (api/v1/account/addresses), the last used first:
+  // one tap fills the address, its landmark and its pin.
+  const loadAddresses = useCallback(async (signal: AbortSignal) => {
+    const token = accountToken();
+    return token ? (await accountApi.addresses(token, signal)).addresses : [];
+  }, []);
+  const saved = useResource(loadAddresses);
+  const addresses = saved.status === 'loaded' ? saved.data : [];
+  // A new address typed here goes into the account too, under a name, unless unticked.
+  const [saveIt, setSaveIt] = useState(true);
+  const [saveLabel, setSaveLabel] = useState<SaveLabel>('addr.labelHome');
   const openSheet = (next: Sheet) => {
     setPick(null);
     setSheet(next);
@@ -124,7 +145,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
 
   // An error belongs to what was typed when it was raised; editing the field clears it.
   const edit = (field: CheckoutField, value: string) => {
-    update({ [field]: value });
+    update({ [field]: value, ...(ADDRESS_FIELDS.includes(field) ? { savedAddressId: undefined } : {}) });
     if (errors[field]) setErrors((e) => ({ ...e, [field]: undefined }));
   };
 
@@ -141,6 +162,11 @@ function Checkout({ settings }: { settings: ShopSettings }) {
         governorate: method === 'DELIVERY' ? details.governorate : undefined,
         // The delegation leads the address the driver reads.
         address: method === 'DELIVERY' ? [details.delegation, details.address.trim()].filter(Boolean).join(', ') : undefined,
+        // Where the street has no number: the landmark and the pin, for the driver.
+        landmark: method === 'DELIVERY' ? details.landmark?.trim() || undefined : undefined,
+        latitude: method === 'DELIVERY' && details.pin ? details.pin.lat : undefined,
+        longitude: method === 'DELIVERY' && details.pin ? details.pin.lng : undefined,
+        savedAddressId: method === 'DELIVERY' ? details.savedAddressId : undefined,
         deliveryMethod: method,
         paymentMethod: 'COD',
         notes: details.notes.trim() || undefined,
@@ -175,6 +201,23 @@ function Checkout({ settings }: { settings: ShopSettings }) {
       });
       clearCart();
       settle();
+      // A new address goes into the account, as asked — after the order,
+      // never in its way: a failure here costs nothing but the shortcut.
+      const token = accountToken();
+      if (token && method === 'DELIVERY' && savingAddress) {
+        accountApi
+          .addAddress(token, {
+            label: t(saveLabel),
+            governorate: details.governorate,
+            delegation: details.delegation || undefined,
+            address: details.address.trim(),
+            landmark: details.landmark?.trim() || undefined,
+            latitude: details.pin?.lat ?? null,
+            longitude: details.pin?.lng ?? null,
+          })
+          .then(({ address }) => update({ savedAddressId: address.id }))
+          .catch(() => undefined);
+      }
       // The stack ends up [tabs, confirmation]: "back" lands in the app.
       // Reached straight from sign-in, checkout can be alone in the stack.
       if (router.canDismiss()) router.dismissAll();
@@ -207,12 +250,19 @@ function Checkout({ settings }: { settings: ShopSettings }) {
   };
 
   const delay = deliveryDelay(settings, details.governorate);
+  // "Livraison estimée : mardi 13 octobre, 10 h–18 h" once the governorate is known
+  // and the shop has stated its cut-off; the delay as written otherwise.
+  const estimate = estimateFor(settings, details.governorate);
+  // Shown, and so sent, only for a signed-in customer typing an address not yet kept.
+  const savingAddress = !guest && saved.status === 'loaded' && !details.savedAddressId && addresses.length < 10 && saveIt;
   const delegations = details.governorate ? DELEGATIONS[details.governorate] : undefined;
   const elsewhere = details.governorate && details.address ? otherGovernorateIn(details.address, details.governorate, settings.governorates) : null;
   const count = items.reduce((n, i) => n + i.qty, 0);
   const toCheck = active && quote ? quote.lines.filter((l) => l.product && fitState(l.product) !== 'FITS').length : 0;
   const canPlace = state.status === 'loaded' && !state.data.blocked && !placing;
-  const where = [details.delegation, details.governorate].filter(Boolean).join(', ');
+  const where = [[details.delegation, details.governorate].filter(Boolean).join(', '), details.landmark?.trim(), details.pin ? t('addr.pinSet') : null]
+    .filter(Boolean)
+    .join(' · ');
   const addressSet = Boolean(details.governorate && details.address.trim());
   const contactSet = Boolean(details.customerName.trim() && details.phone.trim());
   const addressError = errors.governorate ?? errors.delegation ?? errors.address;
@@ -317,7 +367,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
             <Option
               selected={method === 'DELIVERY'}
               title={t('checkout.home')}
-              sub={delay}
+              sub={estimate ? t('eta.line', { when: estimateLine(estimate, locale) }) : delay}
               price={fee === 0 ? t('cart.free') : formatDT(fee)}
               free={fee === 0}
               onPress={() => update({ deliveryMethod: 'DELIVERY' })}
@@ -339,6 +389,58 @@ function Checkout({ settings }: { settings: ShopSettings }) {
           {/* Collected in store: the shop is the place — no address to give. */}
           {method === 'PICKUP' && settings.pickup ? (
             <Row icon="home" title={settings.pickup.address} sub={settings.pickup.hours} />
+          ) : null}
+          {method === 'DELIVERY' && addresses.length ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.savedRow, row]} testID="saved-addresses">
+              {addresses.map((a) => {
+                const on = a.id === details.savedAddressId;
+                return (
+                  <Pressable
+                    key={a.id}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: on }}
+                    accessibilityLabel={`${a.label}, ${a.address}, ${a.governorate}`}
+                    onPress={() => {
+                      update({
+                        governorate: a.governorate,
+                        delegation: a.delegation ?? '',
+                        address: a.address,
+                        landmark: a.landmark ?? '',
+                        pin: a.pin,
+                        savedAddressId: a.id,
+                      });
+                      setErrors((e) => ({ ...e, governorate: undefined, delegation: undefined, address: undefined }));
+                    }}
+                    style={({ pressed }) => [styles.savedChip, on && styles.savedChipOn, pressed && !on && styles.pressed]}
+                  >
+                    <View style={[row, styles.savedHead]}>
+                      <Feather name={on ? 'check-circle' : 'map-pin'} size={15} color={on ? C.success : C.text} />
+                      <Text numberOfLines={1} style={[styles.savedLabel, { fontFamily: familyFor('bodySemi', rtl) }]}>
+                        {a.label}
+                      </Text>
+                    </View>
+                    <Text variant="hint" numberOfLines={1} style={start}>
+                      {[a.delegation, a.governorate].filter(Boolean).join(', ')}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  update({ address: '', landmark: '', pin: null, delegation: '', savedAddressId: undefined });
+                  openSheet('address');
+                }}
+                style={({ pressed }) => [styles.savedChip, styles.savedNew, pressed && styles.pressed]}
+              >
+                <View style={[row, styles.savedHead]}>
+                  <Feather name="plus" size={15} color={C.text} />
+                  <Text numberOfLines={1} style={[styles.savedLabel, { fontFamily: familyFor('bodySemi', rtl) }]}>
+                    {t('addr.new')}
+                  </Text>
+                </View>
+              </Pressable>
+            </ScrollView>
           ) : null}
           {method === 'DELIVERY' ? (
             <Row
@@ -434,9 +536,26 @@ function Checkout({ settings }: { settings: ShopSettings }) {
       <BottomSheet
         visible={sheet === 'address'}
         onClose={() => (pick ? setPick(null) : setSheet(null))}
-        title={t(pick === 'governorate' ? 'checkout.chooseGovernorate' : pick === 'delegation' ? 'checkout.chooseDelegation' : 'checkout.addressTitle')}
+        title={t(
+          pick === 'governorate' ? 'checkout.chooseGovernorate' : pick === 'delegation' ? 'checkout.chooseDelegation' : pick === 'map' ? 'addr.pinTitle' : 'checkout.addressTitle',
+        )}
       >
-        {pick === 'governorate' ? (
+        {pick === 'map' ? (
+          <PinPicker
+            initial={details.pin ?? null}
+            governorate={details.governorate}
+            onConfirm={(pin, region) => {
+              // The phone named the governorate and none is chosen yet: fill it in, in view.
+              const named = details.governorate ? null : governorateFromRegion(region, settings.governorates);
+              update({ pin, savedAddressId: undefined, ...(named ? { governorate: named, delegation: '' } : {}) });
+              setPick(null);
+            }}
+            onRemove={() => {
+              update({ pin: null, savedAddressId: undefined });
+              setPick(null);
+            }}
+          />
+        ) : pick === 'governorate' ? (
           <ScrollView style={styles.sheetList}>
             {settings.governorates.map((g) => (
               <Choice
@@ -445,7 +564,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
                 selected={g === details.governorate}
                 onPress={() => {
                   // A delegation belongs to its governorate; changing one clears the other.
-                  update({ governorate: g, ...(g !== details.governorate ? { delegation: '' } : {}) });
+                  update({ governorate: g, savedAddressId: undefined, ...(g !== details.governorate ? { delegation: '' } : {}) });
                   setErrors((e) => ({ ...e, governorate: undefined }));
                   setPick(null);
                 }}
@@ -460,7 +579,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
                 label={d}
                 selected={d === details.delegation}
                 onPress={() => {
-                  update({ delegation: d });
+                  update({ delegation: d, savedAddressId: undefined });
                   setErrors((e) => ({ ...e, delegation: undefined }));
                   setPick(null);
                 }}
@@ -497,6 +616,58 @@ function Checkout({ settings }: { settings: ShopSettings }) {
                 multiline
                 maxLength={500}
               />
+              <FormField
+                label={t('addr.landmark')}
+                placeholder={t('addr.landmarkHint')}
+                value={details.landmark ?? ''}
+                onChangeText={(v) => update({ landmark: v, savedAddressId: undefined })}
+                maxLength={200}
+              />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setPick('map')}
+                testID="checkout-pin"
+                style={({ pressed }) => [styles.pinRow, row, details.pin && styles.pinRowOn, pressed && styles.pressed]}
+              >
+                <Feather name={details.pin ? 'check-circle' : 'map'} size={IconSize.large} color={details.pin ? C.success : C.text} />
+                <Text style={[styles.flex, styles.rowTitle, start, { fontFamily: familyFor('bodySemi', rtl) }]}>
+                  {t(details.pin ? 'addr.pinSet' : 'addr.pinNone')}
+                </Text>
+                <Feather name={rtl ? 'chevron-left' : 'chevron-right'} size={IconSize.large} color={C.textMuted} />
+              </Pressable>
+              {!guest && saved.status === 'loaded' && !details.savedAddressId && addresses.length < 10 ? (
+                <View style={styles.saveBox}>
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: saveIt }}
+                    onPress={() => setSaveIt((v) => !v)}
+                    style={[row, styles.saveCheck]}
+                    testID="checkout-save-address"
+                  >
+                    <View style={[styles.box, saveIt && styles.boxOn]}>{saveIt ? <Feather name="check" size={15} color={C.onAccent} /> : null}</View>
+                    <Text variant="body" tone={C.text} style={[styles.flex, start]}>
+                      {t('addr.saveIt')}
+                    </Text>
+                  </Pressable>
+                  {saveIt ? (
+                    <View style={[row, styles.labels]}>
+                      {SAVE_LABELS.map((l) => (
+                        <Pressable
+                          key={l}
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: saveLabel === l }}
+                          onPress={() => setSaveLabel(l)}
+                          style={[styles.labelChip, saveLabel === l && styles.labelChipOn]}
+                        >
+                          <Text variant="hint" tone={saveLabel === l ? C.onAccent : C.text}>
+                            {t(l)}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
               <Button label={t('checkout.save')} onPress={() => setSheet(null)} />
             </View>
           </ScrollView>
@@ -797,6 +968,41 @@ const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0, gap: 2 },
   pressed: { backgroundColor: C.surface },
   underline: { textDecorationLine: 'underline' },
+  savedRow: { gap: Spacing.two, paddingBottom: Spacing.two },
+  savedChip: {
+    minWidth: 132,
+    maxWidth: 200,
+    minHeight: Tap.min + 12,
+    justifyContent: 'center',
+    gap: 2,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Radius.tile,
+    borderWidth: Border.thin,
+    borderColor: C.border,
+    backgroundColor: C.background,
+  },
+  savedChipOn: { borderColor: C.text, borderWidth: Border.selected, backgroundColor: C.surface },
+  savedNew: { minWidth: 0, borderStyle: 'dashed' },
+  savedHead: { alignItems: 'center', gap: 6 },
+  savedLabel: { fontSize: 15, lineHeight: 20, color: C.text, flexShrink: 1 },
+  pinRow: {
+    alignItems: 'center',
+    gap: Spacing.three,
+    minHeight: Tap.min + 8,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.tile,
+    borderWidth: Border.thin,
+    borderColor: C.border,
+  },
+  pinRowOn: { borderColor: C.success, backgroundColor: C.successSurface },
+  saveBox: { gap: Spacing.two },
+  saveCheck: { alignItems: 'center', gap: Spacing.two, minHeight: Tap.min },
+  box: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: C.text, alignItems: 'center', justifyContent: 'center' },
+  boxOn: { backgroundColor: C.text },
+  labels: { gap: Spacing.two, flexWrap: 'wrap' },
+  labelChip: { minHeight: Tap.min - 8, paddingHorizontal: Spacing.three, borderRadius: Radius.pill, borderWidth: Border.thin, borderColor: C.border, justifyContent: 'center' },
+  labelChipOn: { backgroundColor: C.text, borderColor: C.text },
   toCheckHead: { alignItems: 'center', gap: Spacing.two, minHeight: Tap.min + 4 },
   toCheckTitle: { fontSize: 15, lineHeight: 20, color: C.text },
   toCheckBody: { paddingBottom: Spacing.two },
