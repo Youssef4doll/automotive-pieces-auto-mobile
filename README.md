@@ -15,7 +15,8 @@ put together, what was decided and why, and what is not built.
 
 ```bash
 npm install
-npx expo start          # then scan the QR code with Expo Go
+npm start               # Expo Go: scan the QR code with the iPhone's camera
+npm run start:dev       # the Android development build (expo-dev-client)
 npx expo start --web    # or in a browser
 ```
 
@@ -29,8 +30,8 @@ eas build --platform android --profile development
 
 Open the link EAS gives on the phone to install the APK. Then, each time:
 the website with `npm run dev:lan`, and `npx expo start` here; the app finds
-both on the Wi-Fi. With `expo-dev-client` installed, `npx expo start` serves
-the development build; use `npx expo start --go` for Expo Go.
+both on the Wi-Fi. Start Metro with `npm run start:dev` for this build; `npm start` serves Expo
+Go (the iPhone).
 
 Push on Android needs Firebase: create a project, add an Android app with the
 package `tn.automotivepiecesauto.app.dev`, put its `google-services.json` at
