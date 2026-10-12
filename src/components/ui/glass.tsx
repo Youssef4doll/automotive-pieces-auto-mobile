@@ -2,7 +2,7 @@ import { GlassView } from 'expo-glass-effect';
 import { Platform, StyleSheet, View, type StyleProp, type ViewProps, type ViewStyle } from 'react-native';
 
 import { SYSTEM_TAB_BAR } from '@/components/tab-bar';
-import { Brand } from '@/constants/theme';
+import { Brand, shadow } from '@/constants/theme';
 
 /** iOS draws liquid glass itself (26 and later) — the same test as the tab bar. */
 export const LIQUID_GLASS = SYSTEM_TAB_BAR;
@@ -26,7 +26,8 @@ export type GlassTone = 'light' | 'bright' | 'dark';
  * it refracts what is behind it, catches the light at its edge, and with
  * `interactive` swells and brightens under the finger as the system's
  * controls do. Everywhere else it is drawn — the frost of the drawn tab bar
- * (components/tab-bar), with a backdrop blur on the web.
+ * (components/tab-bar), with a backdrop blur on the web, and on Android the
+ * same soft navy shadow and line of light along the top edge.
  */
 export function Glass({
   tone = 'light',
@@ -57,6 +58,8 @@ export function Glass({
 }
 
 const web = Platform.OS === 'web';
+/** Android has no live blur here, but it can catch the light as glass does: a bright line inside the top edge. */
+const android = Platform.OS === 'android';
 
 export const frost = StyleSheet.create({
   light: {
@@ -72,11 +75,9 @@ export const frost = StyleSheet.create({
       : {
           borderColor: 'rgba(15,35,82,0.08)',
           backgroundColor: 'rgba(244,246,250,0.97)',
-          shadowColor: Brand.navy950,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
-          elevation: 3,
+          ...(android
+            ? ({ boxShadow: '0px 4px 24px rgba(8,22,51,0.10), inset 0px 1px 0px rgba(255,255,255,0.95)' } as object)
+            : shadow(4, 12, 0.1)),
         }),
   },
   bright: {
@@ -92,11 +93,9 @@ export const frost = StyleSheet.create({
       : {
           borderColor: 'rgba(255,255,255,0.6)',
           backgroundColor: Brand.white,
-          shadowColor: Brand.navy950,
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.28,
-          shadowRadius: 22,
-          elevation: 8,
+          ...(android
+            ? ({ boxShadow: '0px 10px 44px rgba(8,22,51,0.28), 0px 2px 6px rgba(8,22,51,0.12)' } as object)
+            : shadow(10, 22, 0.28)),
         }),
   },
   dark: {
@@ -109,6 +108,9 @@ export const frost = StyleSheet.create({
           WebkitBackdropFilter: 'blur(16px) saturate(160%)',
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.28), 0 4px 14px rgba(3,10,26,0.25)',
         } as object)
-      : { backgroundColor: 'rgba(255,255,255,0.14)' }),
+      : {
+          backgroundColor: 'rgba(255,255,255,0.14)',
+          ...(android ? ({ boxShadow: 'inset 0px 1px 0px rgba(255,255,255,0.28), 0px 4px 14px rgba(3,10,26,0.25)' } as object) : {}),
+        }),
   },
 });

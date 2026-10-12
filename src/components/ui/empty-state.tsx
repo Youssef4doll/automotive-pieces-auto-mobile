@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Brand, Spacing } from '@/constants/theme';
+import { Brand, shadow, Spacing } from '@/constants/theme';
 import { Text } from './text';
 
 /**
@@ -64,11 +64,7 @@ const styles = StyleSheet.create({
     backgroundColor: Brand.white,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Brand.navy950,
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    ...shadow(8, 18, 0.08),
   },
   scene: { alignItems: 'center', marginBottom: Spacing.two },
   centred: { textAlign: 'center' },

@@ -51,6 +51,7 @@ export function ListRow({
       accessibilityRole="button"
       accessibilityLabel={[title, subtitle, note].filter(Boolean).join(', ')}
       onPress={onPress}
+      android_ripple={{ color: 'rgba(15,35,82,0.08)', foreground: true }}
       style={({ pressed }) => [
         styles.row,
         { flexDirection: rtl ? 'row-reverse' : 'row' },

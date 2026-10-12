@@ -28,6 +28,7 @@ import { useI18n } from '@/i18n/provider';
 import { MapPin } from '@/illustrations/address-art';
 import { checkoutProblems, deliveryDelay, estimateFor, type CheckoutField } from '@/lib/checkout';
 import { estimateLine } from '@/lib/estimate-text';
+import { feel } from '@/lib/haptics';
 import { governorateFromRegion } from '@/lib/map-tiles';
 import { DELEGATIONS, otherGovernorateIn } from '@/lib/delegations';
 import { fitState, FIT_LOOK } from '@/lib/fit';
@@ -233,6 +234,7 @@ function Checkout({ settings }: { settings: ShopSettings }) {
       // The stack ends up [tabs, confirmation]: "back" lands in the app.
       // Reached straight from sign-in, checkout can be alone in the stack.
       if (router.canDismiss()) router.dismissAll();
+      feel.done();
       router.push({ pathname: '/commande/confirmation/[ref]', params: { ref: result.ref } });
     } catch (err) {
       track('purchase_failed', { reason: err instanceof ApiError ? err.failure.kind : 'offline' });

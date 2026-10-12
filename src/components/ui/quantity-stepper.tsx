@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Border, C, familyFor, IconSize, Radius, Tap } from '@/constants/theme';
+import { feel } from '@/lib/haptics';
 import { useI18n } from '@/i18n/provider';
 import { Text } from './text';
 
@@ -62,7 +63,11 @@ export function QuantityStepper({
         accessibilityState={{ disabled: atFloor && !removes }}
         disabled={atFloor && !removes}
         hitSlop={4}
-        onPress={() => (removes ? onRemove?.() : onChange(value - 1))}
+        onPress={() => {
+          feel.tick();
+          if (removes) onRemove?.();
+          else onChange(value - 1);
+        }}
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       >
         <Feather
@@ -88,7 +93,10 @@ export function QuantityStepper({
         accessibilityState={{ disabled: value >= max }}
         disabled={value >= max}
         hitSlop={4}
-        onPress={() => onChange(value + 1)}
+        onPress={() => {
+          feel.tick();
+          onChange(value + 1);
+        }}
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       >
         <Feather name="plus" size={IconSize.medium} color={value >= max ? C.textFaint : C.text} />

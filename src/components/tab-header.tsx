@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TabBlurTarget } from '@/components/blur-target';
 import { useStackOptions } from '@/components/stack-options';
 import { Text } from '@/components/ui/text';
 import { C, familyFor, Spacing } from '@/constants/theme';
@@ -27,17 +28,22 @@ import { useI18n } from '@/i18n/provider';
  * the line — "Mon garage" as in the reference — drawn here rather than by
  * the tab navigator, which on iOS 26 (the system's own tab bar) draws none.
  * Accueil has no title; its navy hero is the top of the screen.
+ *
+ * On Android 12 and later the stack is what the tab bar blurs
+ * (components/blur-target).
  */
 export function TabStack({ root, title, centered = false }: { root: string; title?: string; centered?: boolean }) {
   const options = useStackOptions();
   return (
-    <Stack screenOptions={options}>
-      <Stack.Screen
-        name={root}
-        options={title ? { header: () => <TabTitle title={title} centered={centered} /> } : { headerShown: false }}
-      />
-      <Stack.Screen name="recherche" options={{ headerShown: false, animation: 'fade' }} />
-    </Stack>
+    <TabBlurTarget>
+      <Stack screenOptions={options}>
+        <Stack.Screen
+          name={root}
+          options={title ? { header: () => <TabTitle title={title} centered={centered} /> } : { headerShown: false }}
+        />
+        <Stack.Screen name="recherche" options={{ headerShown: false, animation: 'fade' }} />
+      </Stack>
+    </TabBlurTarget>
   );
 }
 

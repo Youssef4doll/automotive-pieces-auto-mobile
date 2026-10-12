@@ -17,7 +17,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Empty, Failed } from '@/components/ui/states';
 import { Text } from '@/components/ui/text';
 import { API_BASE_URL } from '@/constants/config';
-import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, Spacing, Tap } from '@/constants/theme';
+import { Border, Brand, C, familyFor, IconSize, MaxContentWidth, Radius, shadow, Spacing, Tap } from '@/constants/theme';
+import { feel } from '@/lib/haptics';
 import { useAddToCart } from '@/hooks/use-add-to-cart';
 import { useResource } from '@/hooks/use-resource';
 import { useShopSettings } from '@/hooks/use-shop-settings';
@@ -164,6 +165,7 @@ function ProductBody({ product, settings }: { product: ProductDetail; settings: 
   const { width: screenWidth } = useWindowDimensions();
   const commit = () => {
     if (!addToCart(product, qty, { silent: true })) return;
+    feel.done();
     setQty(1);
     // The part flies from the button to the basket up in the header (components/add-flight).
     const fallback = { x: rtl && SYSTEM_GLASS ? 38 : screenWidth - 38, y: insets.top + (Platform.OS === 'ios' ? 22 : 28) };
@@ -1181,11 +1183,7 @@ const styles = StyleSheet.create({
       : {
           borderColor: 'rgba(15,35,82,0.08)',
           backgroundColor: 'rgba(244,246,250,0.97)',
-          shadowColor: Brand.navy950,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.12,
-          shadowRadius: 12,
-          elevation: 4,
+          ...shadow(4, 12, 0.12),
         }),
   },
   islandBtn: { width: Tap.min, height: Tap.min, alignItems: 'center', justifyContent: 'center', borderRadius: Tap.min / 2 },

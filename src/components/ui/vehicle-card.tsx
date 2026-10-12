@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { Brand, C, Elevation, familyFor, Radius, Spacing } from '@/constants/theme';
+import { Brand, C, Elevation, familyFor, NoShadow, Radius, Spacing } from '@/constants/theme';
 import { CarKey } from '@/illustrations/car-key';
 import { useI18n } from '@/i18n/provider';
 import { yearSpan } from '@/lib/format';
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     ...Elevation.resting,
   },
-  flat: { shadowOpacity: 0, elevation: 0 },
+  flat: NoShadow,
   selected: { borderColor: Brand.navy700 },
   more: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   main: { flex: 1, minWidth: 0, alignItems: 'center', gap: Spacing.three },

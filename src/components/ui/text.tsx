@@ -62,6 +62,10 @@ export function Text({ variant = 'body', tone, style, ...rest }: Props) {
     color: tone ?? TONE[variant],
     writingDirection: rtl ? 'rtl' : 'ltr',
     textAlign: rtl ? 'right' : 'left',
+    // Android pads a font above and below its line by default, so the same
+    // label sat a pixel or two low in every pill and button. Off, it sits
+    // where it does on the iPhone.
+    includeFontPadding: false,
   };
 
   // Uppercase is applied here rather than to the string, so the same

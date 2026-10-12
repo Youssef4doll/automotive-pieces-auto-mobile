@@ -1,3 +1,4 @@
+import { BlurView } from 'expo-blur';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import type { Tabs } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -14,9 +15,11 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
+import { LIVE_BLUR, useBlurTarget } from '@/components/blur-target';
+import { Text } from '@/components/ui/text';
 import { Brand, C, familyFor, Spacing } from '@/constants/theme';
 import { useI18n } from '@/i18n/provider';
-import { Text } from '@/components/ui/text';
+import { feel } from '@/lib/haptics';
 
 type TabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>>[0];
 
@@ -72,8 +75,18 @@ export function tabBarFootprint(insetBottom: number) {
  * slide: the lens swells under it, follows it, and the tab it is let go over
  * opens.
  *
- * The bar is frosted — blurred on the web, near-opaque on Android, which has
- * no live blur to lean on.
+ * The bar is glass. On Android 12 and later it is blurred live, by the
+ * system, over the open tab's content (components/blur-target): what scrolls
+ * under it shows through, softened and lightened, with a line of light along
+ * its top edge and a soft navy shadow under it — not the grey slab Android's
+ * elevation draws. On the web it is a backdrop blur; on older Androids a
+ * near-opaque frost.
+ *
+ * ## What the hand feels (Android, and iPhones before 26)
+ *
+ * A tick when the open tab changes, a lighter one for each tab the lens
+ * passes as a finger slides along the bar, and a soft catch when the finger
+ * takes hold of it — the phone's own haptics (lib/haptics).
  *
  * ## Still said three ways
  *
@@ -103,6 +116,8 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
   const barRef = useRef<View>(null);
   const barLeft = useRef(0);
   const dragging = useRef(false);
+  // The tab the sliding lens is over, so each new one is felt once.
+  const over = useRef(-1);
   // A slide already sent the lens to the tab it opens: the tab change that follows must not send it again.
   const released = useRef(false);
 
@@ -135,7 +150,10 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
       target: route.key,
       canPreventDefault: true,
     });
-    if (state.index !== index && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+    if (state.index !== index && !event.defaultPrevented) {
+      feel.tick();
+      navigation.navigate(route.name, route.params);
+    }
   };
 
   // Sliding along the bar: the lens follows the finger and the tab under it
@@ -165,6 +183,8 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
       onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dx) > 10 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
       onPanResponderGrant: () => {
         dragging.current = true;
+        over.current = latest.current.visual;
+        feel.grab();
         barRef.current?.measureInWindow((left) => {
           barLeft.current = left;
         });
@@ -175,6 +195,11 @@ export function TabBar({ state, descriptors, navigation }: TabBarProps) {
         if (!s) return;
         const centre = g.moveX - barLeft.current;
         x.set(Math.max(-4, Math.min(n * s - w + 4, centre - w / 2)));
+        const under = Math.max(0, Math.min(n - 1, Math.floor(centre / s)));
+        if (under !== over.current) {
+          over.current = under;
+          feel.glide();
+        }
       },
       onPanResponderRelease: () => release(),
       onPanResponderTerminate: () => release(),
@@ -302,8 +327,28 @@ function Tab({
   );
 }
 
-/** The bar's material. */
+/**
+ * The bar's material: on Android 12 and later the system's live blur of the
+ * open tab, lightened, with a line of light along the top; elsewhere the
+ * frost.
+ */
 function Skin() {
+  const target = useBlurTarget((s) => s.target);
+  if (LIVE_BLUR && target) {
+    return (
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.glassClip]}>
+        <BlurView
+          blurTarget={target}
+          blurMethod="dimezisBlurViewSdk31Plus"
+          tint="light"
+          intensity={70}
+          blurReductionFactor={3.5}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[StyleSheet.absoluteFill, styles.glassEdge]} />
+      </View>
+    );
+  }
   return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: BAR / 2 }, styles.frost]} />;
 }
 
@@ -363,11 +408,23 @@ const styles = StyleSheet.create({
     flex: 1,
     height: BAR,
     borderRadius: BAR / 2,
-    shadowColor: Brand.navy950,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
+    // Android's elevation is a grey slab that shows through glass; a box
+    // shadow is drawn outside the bar only, soft and navy, as on iOS.
+    ...(Platform.OS === 'android'
+      ? ({ boxShadow: '0 10px 28px rgba(3,10,26,0.16), 0 2px 6px rgba(3,10,26,0.08)' } as object)
+      : { shadowColor: Brand.navy950, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 24 }),
   },
+  glassClip: { borderRadius: BAR / 2, overflow: 'hidden' },
+  // Glass catches light at its rim: a bright hairline all round, brighter
+  // along the top, over a whisper of white that keeps navy type legible
+  // over anything.
+  glassEdge: {
+    borderRadius: BAR / 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.85)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(15,35,82,0.06)',
+  } as object,
   frost: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.9)',
@@ -378,7 +435,7 @@ const styles = StyleSheet.create({
           WebkitBackdropFilter: 'blur(22px) saturate(180%)',
           boxShadow: '0 8px 28px rgba(8,22,51,0.14), inset 0 1px 0 rgba(255,255,255,0.8)',
         } as object)
-      : { backgroundColor: 'rgba(244,246,250,0.97)', elevation: 10 }),
+      : ({ backgroundColor: 'rgba(244,246,250,0.97)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)' } as object)),
   },
   lens: { position: 'absolute', top: INSET, left: 0, height: PILL_H },
   pill: { borderRadius: PILL_H / 2, backgroundColor: 'rgba(15,35,82,0.08)' },
@@ -391,14 +448,14 @@ const styles = StyleSheet.create({
           boxShadow: '0 6px 18px rgba(8,22,51,0.16), 0 1px 3px rgba(8,22,51,0.10), inset 0 -3px 8px rgba(15,35,82,0.05)',
         } as object)
       : {
-          // No elevation: an Android shadow does not fade with its view.
+          // A box shadow, not elevation: it fades with the lens, and is
+          // drawn outside it only.
           backgroundColor: '#FFFFFF',
           borderWidth: StyleSheet.hairlineWidth,
           borderColor: 'rgba(15,35,82,0.12)',
-          shadowColor: Brand.navy950,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.16,
-          shadowRadius: 14,
+          ...(Platform.OS === 'android'
+            ? ({ boxShadow: '0 6px 16px rgba(3,10,26,0.18), 0 1px 3px rgba(3,10,26,0.10)' } as object)
+            : { shadowColor: Brand.navy950, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 14 }),
         }),
   },
   row: {

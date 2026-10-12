@@ -2143,3 +2143,33 @@ the material of the tab bar.
 - **Polish**: a signed-in customer's name and number are one line on
   "Demander à la boutique" ("Modifier" opens the fields); the checkout fills
   them from the account when nothing is typed yet.
+
+## 36. Android, at the iPhone's level (October 12, 2026)
+
+The owner tried the app on an Android phone and asked for it to be "top",
+with a tab bar like the iPhone's liquid glass.
+
+- **The tab bar blurs live** on Android 12 and later (expo-blur, the
+  Dimezis BlurView). Android blurs only a named target, and the bar cannot
+  sit inside what it blurs: each tab's stack is wrapped in a
+  `BlurTargetView` (components/blur-target, used by components/tab-header)
+  and the open tab hands its wrapper to the bar. The bar adds a hairline of
+  light and an inset highlight along its top. Before Android 12 nothing is
+  wrapped and the near-opaque frost stays.
+- **Shadows** are `boxShadow` on Android (`shadow()`, `NoShadow`,
+  `Elevation` in theme.ts): soft, navy, drawn outside the view only.
+  `elevation` was a grey slab that showed through anything translucent.
+  The drawn glass (components/ui/glass) also gets the inset line of light.
+- **Haptics** (lib/haptics, expo-haptics): the system's own constants on
+  Android (`performHapticFeedback`, no permission, follows the phone's
+  setting). A tick on a tab change and on the quantity stepper, a lighter
+  one per tab as a finger slides along the bar, a catch when it takes hold,
+  a confirm on add-to-basket and on an order placed. iPhones get the
+  matching selection/success feedback.
+- **Manners**: centred header titles and the iOS-style side slide
+  (`ios_from_right`, `ios_from_left` in Arabic) on Android
+  (components/stack-options); `includeFontPadding: false` on every Text, so
+  labels sit centred in pills and buttons; a ripple inside buttons and list
+  rows.
+- expo-blur and expo-haptics are native: the Android development build must
+  be made again (`eas build --platform android --profile development`).

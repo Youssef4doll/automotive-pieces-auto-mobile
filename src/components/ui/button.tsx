@@ -70,6 +70,8 @@ export function Button({
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
       disabled={disabled || loading}
       onPress={onPress}
+      // Android's own answer to a touch, spreading from the finger, inside the button's corners.
+      android_ripple={{ color: RIPPLE[variant], foreground: true }}
       style={({ pressed }) => [
         styles.base,
         FILL[variant],
@@ -118,6 +120,13 @@ const PRESSED = {
   secondary: { backgroundColor: C.surface },
   danger: { backgroundColor: C.dangerPressed },
   whatsapp: { backgroundColor: Brand.green800 },
+} as const;
+
+const RIPPLE = {
+  primary: 'rgba(8,22,51,0.12)',
+  secondary: 'rgba(15,35,82,0.08)',
+  danger: 'rgba(255,255,255,0.2)',
+  whatsapp: 'rgba(255,255,255,0.2)',
 } as const;
 
 const LABEL = {

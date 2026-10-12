@@ -15,7 +15,7 @@
  *   for anything a finger touches; 48 is what a primary action gets.
  */
 
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet, type ViewStyle } from 'react-native';
 
 /** The brand ramp, whole. Prefer a semantic colour below where one exists. */
 export const Brand = {
@@ -302,27 +302,30 @@ export const Radius = {
  *
  * Tuned dark and wide rather than black and tight. `#081633` at low opacity
  * spread over 24pt reads as depth; `#000` at high opacity over 4pt reads as a
- * border someone got wrong. Android takes `elevation` and ignores the rest,
- * which is why both are set.
+ * border someone got wrong.
+ *
+ * Android draws the same shadow as iOS: a box shadow, soft and navy, outside
+ * the view only. Its `elevation` was a grey slab that ignored the colour,
+ * hardened at the corners and showed through anything translucent — the
+ * first thing that made the Android build look cheaper than the iPhone's.
  */
+export function shadow(y: number, radius: number, opacity: number): ViewStyle {
+  if (Platform.OS === 'android') {
+    // iOS's shadowRadius is about half a CSS blur.
+    return { boxShadow: `0px ${y}px ${radius * 2}px rgba(8,22,51,${opacity})` };
+  }
+  return { shadowColor: Brand.navy950, shadowOffset: { width: 0, height: y }, shadowOpacity: opacity, shadowRadius: radius };
+}
+
+/** No shadow at all, on a view that had one. */
+export const NoShadow: ViewStyle = Platform.OS === 'android' ? { boxShadow: [] } : { shadowOpacity: 0 };
+
 export const Elevation = {
   /** Cards and tiles resting on the background. */
-  resting: {
-    shadowColor: Brand.navy950,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 2,
-  },
+  resting: shadow(4, 12, 0.06),
   /** A sheet overlapping a hero, or anything the eye should read as on top. */
-  lifted: {
-    shadowColor: Brand.navy950,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.12,
-    shadowRadius: 28,
-    elevation: 8,
-  },
-} as const;
+  lifted: shadow(12, 28, 0.12),
+};
 
 /**
  * How tall the tab bar is, before the home-indicator inset.
